@@ -34,10 +34,10 @@ export default function Home() {
         <div className="mb-12 flex flex-col items-center text-center">
           <div className="relative mb-6 transform transition-hover hover:scale-105 duration-300">
             <Image
-              src="/logo_doan.png" 
+              src="/truong-doan-khoa.png" 
               alt="Logo Đoàn"
-              width={300}
-              height={200}
+              width={350}
+              height={250}
               priority
               className="object-contain"
             />
@@ -101,7 +101,7 @@ export default function Home() {
             </button>
           </form>
           <p className="mt-8 text-[10px] text-gray-400 text-center tracking-widest">
-            © 2026 Bản quyền thuộc về Khoa CNPM - Trường ĐH CNTT - ĐHQG-HCM <br/>
+            © 2026 Bản quyền thuộc về Đoàn khoa CNPM, <br/> Đoàn Trường ĐH CNTT - ĐHQG-HCM <br/>
             Thực hiện: Văng Thanh Huy
           </p>
         </div>

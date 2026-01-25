@@ -1,12 +1,19 @@
 import Image from "next/image";
-import { Info, Target, ShieldCheck, Award } from "lucide-react";
+import { Info, Target, ShieldCheck, Award, LayoutDashboard } from "lucide-react";
 
 export default function GioiThieuPage() {
   return (
     <div className="space-y-8">
       {/* 1. Header Trang */}
       <div className="border-b pb-4">
-        <h1 className="text-2xl font-bold text-[#0054a5] uppercase">Giới thiệu hệ thống</h1>
+        <div className="flex items-center gap-3 pb-3">
+          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
+            <LayoutDashboard size={24} />
+          </div>
+          <h1 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">
+            Giới thiệu hệ thống
+          </h1>
+        </div>
         <p className="text-gray-500 text-sm">Thông tin tổng quan về Hệ thống nghiệp vụ công tác Đoàn của Đoàn khoa Công nghệ Phần mềm trực thuộc Đoàn trường Đại học Công nghệ Thông tin - Đại học Quốc gia thành phố Hồ Chí Minh</p>
       </div>
 

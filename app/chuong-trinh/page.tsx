@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import ProgramView from "./ProgramView";
 import ProgramAdd from "./ProgramAdd";
+import ProgramEdit from "./ProgramEdit";
 import ConfirmDelete from "./ConfirmDelete";
 
 const initialData = [
@@ -35,14 +36,22 @@ export default function ToChucPage() {
   const [data, setData] = useState(initialData);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [viewItem, setViewItem] = useState<any>(null);
+  const [editItem, setEditItem] = useState<any>(null);
   const [deleteItem, setDeleteItem] = useState<any>(null);
 
-  // States cho bộ lọc và tìm kiếm
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSemester, setFilterSemester] = useState("");
   const [filterAcademicYear, setFilterAcademicYear] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
   const [filterYear, setFilterYear] = useState("");
+
+  const handleAddProgram = (newItem: any) => {
+    setData([...data, { ...newItem, id: Date.now() }]);
+  };
+
+  const handleUpdateProgram = (updatedItem: any) => {
+    setData(data.map(item => item.id === updatedItem.id ? updatedItem : item));
+  };
 
   const handleConfirmDelete = () => {
     if (deleteItem) {
@@ -63,11 +72,10 @@ export default function ToChucPage() {
 
   return (
     <div className="space-y-6 text-black">
-      {/* HEADER */}
       <div className="flex items-center justify-between border-b border-gray-200 pb-4">
         <div className="flex items-center gap-2">
           <Calendar className="text-[#0054a5]" size={24} />
-          <h2 className="text-xl font-bold uppercase text-[#0054a5]">Kế hoạch chương trình năm</h2>
+          <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">Chương trình năm</h2>
         </div>
         <button 
           onClick={() => setIsAddOpen(true)}
@@ -77,9 +85,7 @@ export default function ToChucPage() {
         </button>
       </div>
 
-      {/* THANH TÌM KIẾM VÀ BỘ LỌC */}
       <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
-        {/* Tìm kiếm theo tên */}
         <div className="relative max-w-md">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <Search size={18} className="text-gray-400" />
@@ -93,7 +99,6 @@ export default function ToChucPage() {
           />
         </div>
 
-        {/* Lưới bộ lọc */}
         <div className="flex flex-wrap gap-4 items-end pt-2 border-t border-gray-100">
           <div className="flex items-center gap-2 text-[#0054a5] font-bold mb-1 mr-2 text-sm">
             <Filter size={16} /> <span>Lọc theo:</span>
@@ -165,7 +170,6 @@ export default function ToChucPage() {
         </div>
       </div>
 
-      {/* BẢNG DANH SÁCH */}
       <div className="overflow-x-auto rounded-xl border border-gray-200 shadow-sm bg-white">
         <table className="w-full text-sm text-left">
           <thead className="bg-[#0054a5] text-white text-[14px] font-bold">
@@ -188,7 +192,7 @@ export default function ToChucPage() {
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button onClick={() => setViewItem(item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"><Eye size={18} /></button>
-                      <button className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"><Edit size={18} /></button>
+                      <button onClick={() => setEditItem(item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"><Edit size={18} /></button>
                       <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"><Trash2 size={18} /></button>
                     </div>
                   </td>
@@ -206,7 +210,8 @@ export default function ToChucPage() {
       </div>
 
       {viewItem && <ProgramView data={viewItem} onClose={() => setViewItem(null)} />}
-      {isAddOpen && <ProgramAdd onClose={() => setIsAddOpen(false)} />}
+      {isAddOpen && <ProgramAdd onClose={() => setIsAddOpen(false)} onSave={handleAddProgram} />}
+      {editItem && <ProgramEdit data={editItem} onClose={() => setEditItem(null)} onSave={handleUpdateProgram} />}
       {deleteItem && (
         <ConfirmDelete 
           title={deleteItem.name}

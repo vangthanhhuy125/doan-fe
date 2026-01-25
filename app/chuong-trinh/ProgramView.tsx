@@ -1,4 +1,4 @@
-import { X, Link as LinkIcon, FileText, DollarSign, Award } from "lucide-react";
+import { X, Link as LinkIcon, FileText, DollarSign, Award, Calendar } from "lucide-react";
 
 interface ProgramViewProps {
   data: any;
@@ -28,9 +28,9 @@ export default function ProgramView({ data, onClose }: ProgramViewProps) {
         <div className="bg-[#0054a5] p-6 flex items-center justify-between text-white">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg"><FileText size={20} /></div>
-            <h3 className="font-bold uppercase tracking-widest text-sm">Thông tin chi tiết</h3>
+            <h3 className="font-bold uppercase tracking-widest text-sm text-white">Thông tin chi tiết</h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"><X size={20} /></button>
         </div>
 
         <div className="p-8 space-y-8">
@@ -39,15 +39,25 @@ export default function ProgramView({ data, onClose }: ProgramViewProps) {
             <h2 className="text-xl font-black text-[#0054a5] leading-tight">{data.name}</h2>
           </div>
 
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase text-gray-400">Thời gian</p>
-              <p className="font-bold text-gray-700">{data.time}</p>
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-[#0054a5] font-bold text-[10px] uppercase border-b border-slate-100 pb-1">
+              <Calendar size={12} /> Phân loại thời gian
             </div>
-            <div className="space-y-1">
-              <p className="text-[10px] font-bold uppercase text-gray-400">Đối tượng liên quan</p>
-              <p className="font-bold text-gray-700">{data.stakeholder}</p>
+            <div className="grid grid-cols-2 gap-y-4 gap-x-6 bg-slate-50 p-4 rounded-2xl">
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase text-gray-400">Tháng / Năm</p>
+                <p className="font-bold text-gray-700 text-sm">{data.month} / {data.year}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-[10px] font-bold uppercase text-gray-400">Học kỳ / Năm học</p>
+                <p className="font-bold text-gray-700 text-sm">{data.semester} - {data.academicYear}</p>
+              </div>
             </div>
+          </div>
+
+          <div className="space-y-1">
+            <p className="text-[10px] font-bold uppercase text-gray-400">Stakeholder</p>
+            <p className="font-semibold text-gray-700">{data.stakeholder}</p>
           </div>
 
           <div className="grid grid-cols-2 gap-4 pt-6 border-t border-gray-100">

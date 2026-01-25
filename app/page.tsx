@@ -32,12 +32,12 @@ export default function Home() {
       
       <div className="relative z-10 flex w-full flex-col items-center justify-center p-8 md:w-[450px] lg:w-[500px] shrink-0 bg-white shadow-2xl md:shadow-none">
         <div className="mb-12 flex flex-col items-center text-center">
-          <div className="relative mb-6 h-36 w-36 transform transition-hover hover:scale-105 duration-300">
+          <div className="relative mb-6 transform transition-hover hover:scale-105 duration-300">
             <Image
               src="/logo_doan.png" 
               alt="Logo Đoàn"
-              width={130}
-              height={130}
+              width={300}
+              height={200}
               priority
               className="object-contain"
             />
@@ -100,8 +100,9 @@ export default function Home() {
               {isLoading ? "ĐANG KIỂM TRA..." : "ĐĂNG NHẬP"}
             </button>
           </form>
-          <p className="mt-8 text-[10px] text-gray-400 text-center uppercase tracking-widest">
-            © 2026 Bản quyền thuộc về Khoa CNPM - ĐH CNTT - ĐHQG-HCM
+          <p className="mt-8 text-[10px] text-gray-400 text-center tracking-widest">
+            © 2026 Bản quyền thuộc về Khoa CNPM - Trường ĐH CNTT - ĐHQG-HCM <br/>
+            Thực hiện: Văng Thanh Huy
           </p>
         </div>
       </div>

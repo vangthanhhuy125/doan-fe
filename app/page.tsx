@@ -1,65 +1,136 @@
+'use client';
+
 import Image from "next/image";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function Home() {
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  
+  const router = useRouter();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+
+    setTimeout(() => {
+      if (username === "admin" && password === "admin") {
+        router.push("/gioi-thieu"); 
+      } else {
+        setError("Tài khoản hoặc mật khẩu không chính xác!");
+        setIsLoading(false);
+      }
+    }, 1000); 
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
+    <main className="flex min-h-screen w-full flex-col md:flex-row bg-white overflow-hidden text-black">
+      
+      <div className="relative z-10 flex w-full flex-col items-center justify-center p-8 md:w-[450px] lg:w-[500px] shrink-0 bg-white shadow-2xl md:shadow-none">
+        <div className="mb-12 flex flex-col items-center text-center">
+          <div className="relative mb-6 h-36 w-36 transform transition-hover hover:scale-105 duration-300">
+            <Image
+              src="/logo_doan.png" 
+              alt="Logo Đoàn"
+              width={130}
+              height={130}
+              priority
+              className="object-contain"
+            />
+          </div>
+          <h1 className="text-xl font-bold uppercase leading-tight text-[#0054a5] tracking-tight">
+            Hệ thống nghiệp vụ công tác <br /> 
+            <span className="text-2xl">Đoàn TNCS Hồ Chí Minh <br /> </span>
+            <span className="text-xl opacity-80">Khoa Công nghệ Phần mềm <br /> SE - UIT - VNUHCM</span>
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+        </div>
+
+        <div className="w-full max-w-[340px]">
+          <div className="mb-8 relative">
+            <h3 className="inline-block pb-2 text-sm font-bold uppercase text-[#0070d2] border-b-2 border-[#0070d2] relative z-10">
+              Thông tin đăng nhập
+            </h3>
+            <div className="absolute bottom-0 left-0 w-full h-[1px] bg-gray-100"></div>
+          </div>
+
+          <form className="space-y-5 flex flex-col items-center" onSubmit={handleLogin}>
+            {error && (
+              <div className="w-full text-red-500 text-xs italic bg-red-50 p-2 rounded border border-red-100">
+                {error}
+              </div>
+            )}
+
+            <div className="w-full group relative border-b-2 border-gray-200 focus-within:border-[#0070d2] transition-all">
+              <div className="absolute inset-y-0 left-0 flex items-center text-gray-400 group-focus-within:text-[#0070d2]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              </div>
+              <input
+                type="text"
+                required
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Tài khoản"
+                className="w-full py-3 pl-8 pr-4 text-[15px] outline-none bg-transparent placeholder:text-gray-400"
+              />
+            </div>
+
+            <div className="w-full group relative border-b-2 border-gray-200 focus-within:border-[#0070d2] transition-all">
+              <div className="absolute inset-y-0 left-0 flex items-center text-gray-400 group-focus-within:text-[#0070d2]">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Mật khẩu"
+                className="w-full py-3 pl-8 pr-10 text-[15px] outline-none bg-transparent placeholder:text-gray-400"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`mt-4 w-full md:w-auto bg-[#1d92ff] hover:bg-[#0070d2] px-12 py-3 text-sm font-bold text-white rounded-md shadow-lg shadow-blue-200 transition-all active:scale-95 ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              {isLoading ? "ĐANG KIỂM TRA..." : "ĐĂNG NHẬP"}
+            </button>
+          </form>
+          <p className="mt-8 text-[10px] text-gray-400 text-center uppercase tracking-widest">
+            © 2026 Bản quyền thuộc về Khoa CNPM - ĐH CNTT - ĐHQG-HCM
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+
+      <div className="relative hidden md:flex flex-1 bg-blue-50">
+        <div className="absolute inset-0">
+          <Image
+            src="/cnpm.jpg" 
+            alt="Banner Đoàn"
+            fill
+            className="object-cover object-center"
+            priority
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-white via-white/10 to-transparent"></div>
         </div>
-      </main>
-    </div>
+
+        <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
+           <svg className="w-80 h-80 fill-[#1d92ff] opacity-20 transform -translate-x-20 -translate-y-20" viewBox="0 0 200 200">
+              <path d="M0,0 Q100,0 200,200 L0,200 Z" />
+           </svg>
+        </div>
+
+        <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-[0]">
+          <svg className="relative block w-full h-[150px] lg:h-[220px]" viewBox="0 0 1200 120" preserveAspectRatio="none">
+            <path d="M0,0 C300,120 600,0 900,100 L1200,40 L1200,120 L0,120 Z" fill="#1d92ff" opacity="0.4"></path>
+            <path d="M0,50 C400,150 800,50 1200,110 L1200,120 L0,120 Z" fill="#0054a5"></path>
+          </svg>
+        </div>
+      </div>
+    </main>
   );
 }

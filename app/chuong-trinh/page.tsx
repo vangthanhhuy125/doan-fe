@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { 
-  Calendar, Plus, Edit, Trash2, Eye, Filter, Search
+  Calendar, Plus, Edit, Trash2, Eye, Filter, Search,
+  CalendarDays
 } from "lucide-react";
 import ProgramView from "./ProgramView";
 import ProgramAdd from "./ProgramAdd";
@@ -73,9 +74,13 @@ export default function ToChucPage() {
   return (
     <div className="space-y-6 text-black">
       <div className="flex items-center justify-between border-b border-gray-200 pb-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="text-[#0054a5]" size={24} />
-          <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">Chương trình năm</h2>
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
+            <CalendarDays size={24} /> 
+          </div>
+          <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">
+            Chương trình năm
+          </h2>
         </div>
         <button 
           onClick={() => setIsAddOpen(true)}

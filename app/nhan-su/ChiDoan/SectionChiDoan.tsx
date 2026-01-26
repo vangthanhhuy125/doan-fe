@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from "react";
-import { School, LayoutGrid, UserCircle, Edit, Trash2 } from "lucide-react";
+import { School, LayoutGrid, UserCircle, Edit, Trash2, Plus } from "lucide-react";
 import EditUnitModal from "./EditUnitModal";
 import DeleteUnitConfirm from "./DeleteUnitConfirm";
+import AddUnitModal from "./AddUnitModal";
 
 interface Props {
   chiDoanTruocThuoc: any[];
@@ -13,10 +14,16 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
   const [units, setUnits] = useState(initialData);
   const [editingUnit, setEditingUnit] = useState<any>(null);
   const [deletingUnit, setDeletingUnit] = useState<any>(null);
+  const [isAddOpen, setIsAddOpen] = useState(false);
 
   const handleSaveEdit = (updatedUnit: any) => {
     setUnits(units.map(u => u.ten === editingUnit.ten ? updatedUnit : u));
     setEditingUnit(null);
+  };
+
+  const handleAddUnit = (newUnit: any) => {
+    setUnits([...units, newUnit]);
+    setIsAddOpen(false);
   };
 
   const handleConfirmDelete = () => {
@@ -30,32 +37,29 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
 
     let members: any[] = [];
 
-    if (isCLB) {
+    if (isCLB || unit.unitType === 'TAPTHE') {
+      const sourceMembers = unit.members || [];
       members = [
-        { role: "Chủ nhiệm", name: unit.chuNhiem, color: "bg-red-50/40 border-red-50 text-red-400" },
-        { role: "Phó Chủ nhiệm 1", name: unit.phoChuNhiem1, color: "bg-amber-50/40 border-amber-50 text-amber-500" },
-        { role: "Phó Chủ nhiệm 2", name: unit.phoChuNhiem2, color: "bg-blue-50/40 border-blue-50 text-blue-500" }
+        { role: sourceMembers[0]?.role || "Chủ nhiệm", name: sourceMembers[0]?.name || unit.chuNhiem, color: "bg-red-50/40 border-red-50 text-red-400" },
+        { role: sourceMembers[1]?.role || "Phó Chủ nhiệm", name: sourceMembers[1]?.name || unit.phoChuNhiem1, color: "bg-amber-50/40 border-amber-50 text-amber-500" },
+        { role: sourceMembers[2]?.role || "Phó Chủ nhiệm", name: sourceMembers[2]?.name || unit.phoChuNhiem2, color: "bg-blue-50/40 border-blue-50 text-blue-500" }
       ];
     } else if (isBan) {
       members = [
         { role: "Trưởng ban", name: unit.truongBan, color: "bg-red-50/40 border-red-50 text-red-400" },
-        { role: "Phó ban 1", name: unit.phoBan1, color: "bg-amber-50/40 border-amber-50 text-amber-500" },
-        { role: "Phó ban 2", name: unit.phoBan2, color: "bg-blue-50/40 border-blue-50 text-blue-500" }
+        { role: "Phó ban", name: unit.phoBan1, color: "bg-amber-50/40 border-amber-50 text-amber-500" },
+        { role: "Phó ban", name: unit.phoBan2, color: "bg-blue-50/40 border-blue-50 text-blue-500" }
       ];
     } else {
-      // Cấu trúc Chi đoàn: Luôn có BT và PBT
       members = [
         { role: "Bí thư", name: unit.biThu, color: "bg-red-50/40 border-red-50 text-red-400" },
         { role: "Phó Bí thư", name: unit.phoBiThu, color: "bg-amber-50/40 border-amber-50 text-amber-500" },
       ];
       
-      // Thêm UVBCH (1 hoặc 3 người)
-      if (unit.uvBch1 && unit.uvBch2 && unit.uvBch3) {
-        members.push(
-          { role: "UV BCH 1", name: unit.uvBch1, color: "bg-blue-50/40 border-blue-50 text-blue-500" },
-          { role: "UV BCH 2", name: unit.uvBch2, color: "bg-blue-50/40 border-blue-50 text-blue-500" },
-          { role: "UV BCH 3", name: unit.uvBch3, color: "bg-blue-50/40 border-blue-50 text-blue-500" }
-        );
+      if (unit.uvBch1) {
+        members.push({ role: "UV BCH", name: unit.uvBch1, color: "bg-blue-50/40 border-blue-50 text-blue-500" });
+        if (unit.uvBch2) members.push({ role: "UV BCH", name: unit.uvBch2, color: "bg-blue-50/40 border-blue-50 text-blue-500" });
+        if (unit.uvBch3) members.push({ role: "UV BCH", name: unit.uvBch3, color: "bg-blue-50/40 border-blue-50 text-blue-500" });
       } else {
         members.push({ role: "UV BCH", name: unit.uvBch, color: "bg-blue-50/40 border-blue-50 text-blue-500" });
       }
@@ -63,13 +67,13 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
 
     return (
       <div className="p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 bg-white text-black">
-        {members.map((m, i) => (
+        {members.map((m, i) => m.name && (
           <div key={i} className={`p-4 rounded-[1.5rem] border relative overflow-hidden group/item ${m.color}`}>
             <div className="absolute top-0 right-0 p-2 opacity-10 group-hover/item:scale-110 transition-transform">
               <UserCircle size={40} />
             </div>
             <p className="text-[10px] font-black uppercase mb-2 tracking-widest">{m.role}</p>
-            <p className="text-sm font-black text-slate-800 truncate">{m.name || "Chưa cập nhật"}</p>
+            <p className="text-sm font-black text-slate-800 truncate">{m.name}</p>
           </div>
         ))}
       </div>
@@ -78,11 +82,19 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
 
   return (
     <section className="space-y-8 text-black">
-      <div className="flex items-center gap-3 border-b-2 border-purple-600 pb-3">
-        <div className="p-2 bg-purple-600 rounded-xl text-white shadow-lg shadow-purple-100">
-          <LayoutGrid size={24} />
+      <div className="flex items-center justify-between border-b-2 border-purple-600 pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-purple-600 rounded-xl text-white shadow-lg shadow-purple-100">
+            <LayoutGrid size={24} />
+          </div>
+          <h2 className="text-2xl font-black uppercase text-purple-600 tracking-tight">Chi đoàn & Tập thể trực thuộc</h2>
         </div>
-        <h2 className="text-2xl font-black uppercase text-purple-600 tracking-tight">Chi đoàn & Tập thể trực thuộc</h2>
+        <button 
+          onClick={() => setIsAddOpen(true)}
+          className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-purple-700 transition-all active:scale-95 text-xs uppercase tracking-wider"
+        >
+          <Plus size={18} /> Thêm đơn vị
+        </button>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
@@ -108,6 +120,13 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
           </div>
         ))}
       </div>
+
+      {isAddOpen && (
+        <AddUnitModal 
+          onClose={() => setIsAddOpen(false)} 
+          onSave={handleAddUnit} 
+        />
+      )}
 
       {editingUnit && (
         <EditUnitModal 

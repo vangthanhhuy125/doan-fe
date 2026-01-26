@@ -31,7 +31,7 @@ const chiDoanTruocThuoc = [
     phoChuNhiem2: "Trần Văn Z" 
   },
   { 
-    ten: "Chi đoàn SE114.O11", 
+    ten: "Chi đoàn KTPM2021", 
     biThu: "Đặng Văn F", 
     phoBiThu: "Lý Thị G",
     uvBch1: "Lê Văn M", 

@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
-  Info, Users, Flag, Trophy, UserSquare2, Settings, LogOut, CalendarDays
+  Info, Flag, Trophy, UserSquare2, Settings, LogOut, CalendarDays, FileText
 } from "lucide-react"; 
 
 const menuItems = [
   { name: "Giới thiệu", href: "/gioi-thieu", icon: Info },
+  { name: "Tài liệu", href: "/tai-lieu", icon: FileText },
   { name: "Chương trình năm", href: "/chuong-trinh", icon: CalendarDays },
   { name: "Công tác Đoàn", href: "/cong-tac", icon: Flag },
   { name: "Thi đua", href: "/thi-dua", icon: Trophy },

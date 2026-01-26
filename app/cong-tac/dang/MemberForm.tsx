@@ -37,7 +37,7 @@ export default function MemberForm({ data, onClose, onSave, title, color }: any)
 
           <div className="pt-4 flex gap-3">
             <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-[10px] uppercase tracking-widest">Hủy</button>
-            <button type="submit" className={`flex-1 py-3 ${color} text-white rounded-2xl font-bold shadow-lg transition-all text-[10px] uppercase tracking-widest`}>Lưu</button>
+            <button type="submit" className={`flex-1 py-3 ${color} text-white rounded-2xl font-bold shadow-lg transition-all text-[10px] uppercase tracking-widest`}>Cập nhật</button>
           </div>
         </form>
       </div>

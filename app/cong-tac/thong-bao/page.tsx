@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { Bell, Eye, Edit, Trash2, Plus, FileText, Calendar, X } from "lucide-react";
+import { Bell, Eye, Edit, Trash2, Plus, Calendar, X, Search, Filter } from "lucide-react";
 import NoticeForm from "./NoticeForm";
 import ConfirmNoticeDelete from "./ConfirmNoticeDelete";
 
@@ -38,6 +38,10 @@ export default function NotificationPage() {
   const [formMode, setFormMode] = useState<{ open: boolean, data: any }>({ open: false, data: null });
   const [deleteItem, setDeleteItem] = useState<any>(null);
 
+  const [searchTerm, setSearchTerm] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   const handleSave = (item: any) => {
     if (item.id) {
       setNotices(notices.map(n => n.id === item.id ? item : n));
@@ -51,6 +55,20 @@ export default function NotificationPage() {
     setDeleteItem(null);
   };
 
+  const filteredNotices = notices.filter(item => {
+    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const [day, month, year] = item.date.split('/').map(Number);
+    const itemDate = new Date(year, month - 1, day);
+    
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    
+    const matchesDate = (!start || itemDate >= start) && (!end || itemDate <= end);
+    
+    return matchesSearch && matchesDate;
+  });
+
   return (
     <div className="space-y-6 text-black">
       <div className="flex items-center justify-between border-b border-gray-200 pb-4">
@@ -58,7 +76,7 @@ export default function NotificationPage() {
           <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
              <Bell size={24} />
           </div>
-          <h2 className="font-bold uppercase text-sm uppercase text-[#0054a5] tracking-tight">Thông báo - Triển khai - Triệu tập</h2>
+          <h2 className="font-bold text-[#0054a5] tracking-tight uppercase text-sm">Thông báo - Triển khai - Triệu tập</h2>
         </div>
         <button 
           onClick={() => setFormMode({ open: true, data: null })}
@@ -66,6 +84,50 @@ export default function NotificationPage() {
         >
           <Plus size={20} /> Soạn thông báo
         </button>
+      </div>
+
+      <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="relative col-span-1 md:col-span-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm tiêu đề..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-blue-500 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-2 col-span-1 md:col-span-2">
+            <div className="flex items-center gap-2 flex-1">
+              <label className="text-[10px] font-bold uppercase text-gray-400 whitespace-nowrap">Từ ngày</label>
+              <input 
+                type="date" 
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full p-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:border-blue-500"
+              />
+            </div>
+            <div className="flex items-center gap-2 flex-1">
+              <label className="text-[10px] font-bold uppercase text-gray-400 whitespace-nowrap">Đến ngày</label>
+              <input 
+                type="date" 
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full p-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:border-blue-500"
+              />
+            </div>
+            {(searchTerm || startDate || endDate) && (
+              <button 
+                onClick={() => {setSearchTerm(""); setStartDate(""); setEndDate("");}}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                title="Xóa lọc"
+              >
+                <X size={18} />
+              </button>
+            )}
+          </div>
+        </div>
       </div>
 
       <div className="overflow-x-auto rounded-3xl border border-gray-100 shadow-xl bg-white">
@@ -79,20 +141,26 @@ export default function NotificationPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {notices.map((item, index) => (
-              <tr key={item.id} className="hover:bg-blue-50/50 transition-colors group">
-                <td className="px-6 py-5 text-center font-bold text-gray-400 group-hover:text-[#0054a5] transition-colors">{index + 1}</td>
-                <td className="px-6 py-5 font-bold text-slate-700 group-hover:text-[#0054a5] transition-colors line-clamp-1">{item.title}</td>
-                <td className="px-6 py-5 text-center text-gray-500 text-xs font-medium italic">{item.date}</td>
-                <td className="px-6 py-5 text-center">
-                  <div className="flex items-center justify-center gap-2">
-                    <button onClick={() => setSelectedNotice(item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><Eye size={18} /></button>
-                    <button onClick={() => setFormMode({ open: true, data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all" title="Chỉnh sửa"><Edit size={18} /></button>
-                    <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all" title="Xóa"><Trash2 size={18} /></button>
-                  </div>
-                </td>
+            {filteredNotices.length > 0 ? (
+              filteredNotices.map((item, index) => (
+                <tr key={item.id} className="hover:bg-blue-50/50 transition-colors group">
+                  <td className="px-6 py-5 text-center font-bold text-gray-400 group-hover:text-[#0054a5] transition-colors">{index + 1}</td>
+                  <td className="px-6 py-5 font-bold text-slate-700 group-hover:text-[#0054a5] transition-colors line-clamp-1">{item.title}</td>
+                  <td className="px-6 py-5 text-center text-gray-500 text-xs font-medium italic">{item.date}</td>
+                  <td className="px-6 py-5 text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button onClick={() => setSelectedNotice(item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><Eye size={18} /></button>
+                      <button onClick={() => setFormMode({ open: true, data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all" title="Chỉnh sửa"><Edit size={18} /></button>
+                      <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all" title="Xóa"><Trash2 size={18} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic">Không tìm thấy thông báo nào phù hợp.</td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>

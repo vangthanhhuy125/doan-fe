@@ -12,10 +12,32 @@ const banThuongVu = [
 ];
 
 const chiDoanTruocThuoc = [
-  { ten: "Chi đoàn PMCL2023.1", biThu: "Đặng Văn F", phoBiThu: "Lý Thị G" },
-  { ten: "Chi đoàn SE114.O11", biThu: "Mai Văn H", phoBiThu: "Trịnh Thị I" },
-  { ten: "Chi đoàn PMCL2022.2", biThu: "Bùi Văn K", phoBiThu: "Vũ Thị L" },
-  { ten: "Câu lạc bộ Tin học", biThu: "Lê Văn M", phoBiThu: "Nguyễn Thị N" },
+  { 
+    ten: "Chi đoàn PMCL2023.1", 
+    biThu: "Đặng Văn F", 
+    phoBiThu: "Lý Thị G", 
+    uvBch: "Nguyễn Văn X" 
+  },
+  { 
+    ten: "Ban Học tập Đoàn khoa", 
+    truongBan: "Mai Văn H", 
+    phoBan1: "Trịnh Thị I", 
+    phoBan2: "Phạm Văn Y" 
+  },
+  { 
+    ten: "CLB GamApp", 
+    chuNhiem: "Bùi Văn K", 
+    phoChuNhiem1: "Vũ Thị L", 
+    phoChuNhiem2: "Trần Văn Z" 
+  },
+  { 
+    ten: "Chi đoàn SE114.O11", 
+    biThu: "Đặng Văn F", 
+    phoBiThu: "Lý Thị G",
+    uvBch1: "Lê Văn M", 
+    uvBch2: "Phan Văn W", 
+    uvBch3: "Trần Thị V"
+  },
 ];
 
 export default function NhanSuPage() {
@@ -30,7 +52,14 @@ export default function NhanSuPage() {
     <div className="space-y-12 text-black pb-10">
       <SectionBanChapHanh 
         banThuongVu={banThuongVu} 
-        getRoleStyles={getRoleStyles} 
+        getRoleStyles={getRoleStyles}
+        allMembers={[
+          ...banThuongVu, 
+          { name: "Đặng Văn F", chiDoan: "PMCL2023.1" },
+          { name: "Lê Văn M", chiDoan: "SE114.O11" },
+          { name: "Phan Văn W", chiDoan: "SE114.O11" },
+          { name: "Trần Thị V", chiDoan: "SE114.O11" }
+        ]} 
       />
       
       <SectionChiDoan 

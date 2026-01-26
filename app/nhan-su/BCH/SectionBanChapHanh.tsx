@@ -1,20 +1,33 @@
 'use client';
 
-import { Users, UserCircle } from "lucide-react";
+import { useState } from "react";
+import { Users, UserCircle, Edit } from "lucide-react";
+import UpdateBCHModal from "./UpdateBCHModal"; // Import file mới
 
 interface Props {
   banThuongVu: any[];
   getRoleStyles: (index: number) => any;
+  allMembers?: any[]; 
 }
 
-export default function SectionBanChapHanh({ banThuongVu, getRoleStyles }: Props) {
+export default function SectionBanChapHanh({ banThuongVu, getRoleStyles, allMembers = [] }: Props) {
+  const [isUpdateOpen, setIsUpdateOpen] = useState(false);
+
   return (
     <section className="space-y-8">
-      <div className="flex items-center gap-3 border-b-2 border-[#0054a5] pb-3">
-        <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
-          <Users size={24} />
+      <div className="flex items-center justify-between border-b-2 border-[#0054a5] pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
+            <Users size={24} />
+          </div>
+          <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">Ban Chấp hành Đoàn khoa</h2>
         </div>
-        <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">Ban Chấp hành Đoàn khoa</h2>
+        <button 
+          onClick={() => setIsUpdateOpen(true)}
+          className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider"
+        >
+          <Edit size={16} /> Cập nhật nhân sự
+        </button>
       </div>
 
       <div className="space-y-6">
@@ -67,6 +80,13 @@ export default function SectionBanChapHanh({ banThuongVu, getRoleStyles }: Props
           })}
         </div>
       </div>
+
+      {isUpdateOpen && (
+        <UpdateBCHModal 
+          onClose={() => setIsUpdateOpen(false)} 
+          allMembers={allMembers} 
+        />
+      )}
     </section>
   );
 }

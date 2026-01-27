@@ -36,9 +36,9 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
         </div>
         <button 
           onClick={() => onOpenModal('add')}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all flex items-center gap-2 text-[10px] uppercase tracking-widest active:scale-95"
+          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-xs uppercase tracking-wider"
         >
-          <Plus size={16} /> Thêm mô hình mới
+          <Plus size={16} /> Thêm MHGP
         </button>
       </div>
 
@@ -88,7 +88,7 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
               <th className="px-4 py-5 text-center w-16">STT</th>
               <th className="px-6 py-5 text-center">Tên Mô hình - Giải pháp</th>
               <th className="px-6 py-5 text-center w-32">Năm học</th>
-              <th className="px-6 py-5 text-center w-40">Thao tác</th>
+              <th className="px-6 py-5 text-center w-40"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

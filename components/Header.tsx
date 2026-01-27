@@ -2,7 +2,7 @@ import Image from "next/image";
 
 export default function Header() {
   return (
-    <header className="h-16 bg-white border-b flex items-center justify-between px-6 shadow-sm">
+    <header className="h-16 bg-white flex items-center justify-between px-6 shadow-sm">
       <div className="flex items-center gap-3">
         <Image src="/truong-doan-khoa.png" alt="Logo" width={120} height={120} />
         <span className="font-semibold text-[#0054a5] hidden md:block">

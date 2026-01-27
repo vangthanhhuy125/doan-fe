@@ -114,7 +114,7 @@ export default function ProgramAdd({ onClose, onSave }: ProgramAddProps) {
 
           <div className="pt-6 flex justify-end gap-3">
             <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase">Hủy bỏ</button>
-            <button type="submit" className="px-10 py-3 bg-[#1d92ff] text-white rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-[#0054a5] transition-all text-xs tracking-widest uppercase">Lưu dữ liệu</button>
+            <button type="submit" className="px-10 py-3 bg-[#1d92ff] text-white rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-[#0054a5] transition-all text-xs tracking-widest uppercase">Lưu</button>
           </div>
         </form>
       </div>

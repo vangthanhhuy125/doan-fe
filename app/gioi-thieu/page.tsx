@@ -11,7 +11,7 @@ export default function GioiThieuPage() {
             <LayoutDashboard size={24} />
           </div>
           <h1 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">
-            Giới thiệu hệ thống
+            Giới thiệu
           </h1>
         </div>
         <p className="text-gray-500 text-sm">Thông tin tổng quan về Hệ thống nghiệp vụ công tác Đoàn của Đoàn khoa Công nghệ Phần mềm trực thuộc Đoàn trường Đại học Công nghệ Thông tin - Đại học Quốc gia thành phố Hồ Chí Minh</p>

@@ -54,7 +54,7 @@ export default function PartyDevelopment() {
     <div className="space-y-4 pt-6 border-t border-slate-100 text-black">
       <div className="flex items-center gap-2 text-red-600 mb-2">
         <ShieldCheck size={20} />
-        <h3 className="font-bold uppercase text-sm tracking-tight italic">Công tác phát triển Đảng</h3>
+        <h3 className="font-bold uppercase text-sm tracking-tight">Công tác phát triển Đảng</h3>
       </div>
 
       <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4">

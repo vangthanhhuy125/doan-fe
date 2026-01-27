@@ -3,8 +3,10 @@
 import { useState } from "react";
 import SectionBangDiem from "./bang-diem/SectionBangDiem";
 import SectionMHGP from "./MHGP/SectionMHGP";
+import SectionCTTN from "./CTTN/SectionCTTN";
 import MHGPModal from "./MHGP/MHGPModal";
 import BangDiemModal from "./bang-diem/BangDiemModal";
+import CTTNModal from "./CTTN/CTTNModal";
 
 const initialActivities = [
   { 
@@ -30,12 +32,24 @@ const initialMHGP = [
   },
 ];
 
+const initialCTTN = [
+  {
+    id: 1,
+    name: "Sân chơi thiếu nhi từ vật liệu tái chế",
+    unit: "Đoàn khoa Công nghệ Phần mềm",
+    year: "2025-2026",
+    content: "Xây dựng 01 khu vui chơi cho trẻ em tại địa phương..."
+  }
+];
+
 export default function ThiDuaPage() {
   const [activities, setActivities] = useState(initialActivities);
   const [mhgpList, setMhgpList] = useState(initialMHGP);
+  const [cttnList, setCttnList] = useState(initialCTTN);
   
   const [bdModal, setBdModal] = useState<any>({ open: false, mode: 'view', data: null });
   const [mhModal, setMhModal] = useState<any>({ open: false, mode: 'view', data: null });
+  const [ctModal, setCtModal] = useState<any>({ open: false, mode: 'view', data: null });
 
   const handleOpenBangDiem = (mode: string, data: any = null) => {
     setBdModal({ open: true, mode, data });
@@ -45,12 +59,20 @@ export default function ThiDuaPage() {
     setMhModal({ open: true, mode, data });
   };
 
+  const handleOpenCTTN = (mode: string, data: any = null) => {
+    setCtModal({ open: true, mode, data });
+  };
+
   const handleDeleteActivity = (id: number) => {
     setActivities(activities.filter(item => item.id !== id));
   };
 
   const handleDeleteMHGP = (id: number) => {
     setMhgpList(mhgpList.filter(item => item.id !== id));
+  };
+
+  const handleDeleteCTTN = (id: number) => {
+    setCttnList(cttnList.filter(item => item.id !== id));
   };
 
   return (
@@ -63,6 +85,11 @@ export default function ThiDuaPage() {
       <SectionMHGP 
         mhgpList={mhgpList} 
         onOpenModal={handleOpenMHGP} 
+      />
+
+      <SectionCTTN 
+        cttnList={cttnList} 
+        onOpenModal={handleOpenCTTN} 
       />
 
       {bdModal.open && (
@@ -80,6 +107,15 @@ export default function ThiDuaPage() {
           data={mhModal.data} 
           onClose={() => setMhModal({ ...mhModal, open: false })}
           onConfirmDelete={handleDeleteMHGP}
+        />
+      )}
+
+      {ctModal.open && (
+        <CTTNModal 
+          mode={ctModal.mode} 
+          data={ctModal.data} 
+          onClose={() => setCtModal({ ...ctModal, open: false })}
+          onConfirmDelete={handleDeleteCTTN}
         />
       )}
     </div>

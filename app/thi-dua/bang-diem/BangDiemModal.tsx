@@ -1,8 +1,17 @@
 'use client';
 
-import { X, Save, Award, Link as LinkIcon, Trash2, AlertCircle, Calendar } from "lucide-react";
+import { X, Save, Award, Link as LinkIcon, Trash2, AlertCircle, Calendar, PlusCircle, Eye, FileEdit } from "lucide-react";
 
 export default function BangDiemModal({ mode, data, onClose, onConfirmDelete }: any) {
+  const isView = mode === 'view';
+  const isAdd = mode === 'add';
+
+  const renderHeaderIcon = () => {
+    if (isView) return <Eye size={20} />;
+    if (isAdd) return <PlusCircle size={20} />;
+    return <FileEdit size={20} />;
+  };
+
   if (mode === 'delete') {
     return (
       <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200 text-black">
@@ -37,9 +46,6 @@ export default function BangDiemModal({ mode, data, onClose, onConfirmDelete }: 
     );
   }
 
-  const isView = mode === 'view';
-  const isAdd = mode === 'add';
-  
   const headerBg = isView ? "bg-emerald-600" : "bg-amber-500";
   const btnBg = isView ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-500 hover:bg-amber-600";
   const ringColor = isView ? "focus:ring-emerald-400" : "focus:ring-amber-400";
@@ -50,7 +56,9 @@ export default function BangDiemModal({ mode, data, onClose, onConfirmDelete }: 
       <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
         <div className={`${headerBg} p-6 flex items-center justify-between text-white shrink-0 transition-colors`}>
           <div className="flex items-center gap-3">
-            <Award size={20} />
+            <div className="p-2 bg-white/20 rounded-lg">
+              {renderHeaderIcon()}
+            </div>
             <h3 className="font-bold uppercase tracking-widest text-xs [text-decoration:none]">
               {isView ? 'Chi tiết minh chứng' : isAdd ? 'Thêm minh chứng mới' : 'Cập nhật minh chứng'}
             </h3>
@@ -105,7 +113,8 @@ export default function BangDiemModal({ mode, data, onClose, onConfirmDelete }: 
                 type="submit" 
                 className={`flex-1 py-3 ${btnBg} text-white rounded-xl font-bold shadow-lg transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 [text-decoration:none] border-none outline-none`}
               >
-                <Save size={14} /> {isAdd ? 'Lưu hoạt động' : 'Lưu thay đổi'}
+                {isAdd ? <PlusCircle size={14} /> : <Save size={14} />} 
+                {isAdd ? 'Lưu hoạt động' : 'Lưu thay đổi'}
               </button>
             </div>
           )}

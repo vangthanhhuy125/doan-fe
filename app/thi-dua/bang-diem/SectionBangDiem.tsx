@@ -28,7 +28,6 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
 
   return (
     <section className="space-y-6 text-black">
-      {/* HEADER */}
       <div className="flex items-center justify-between border-b-2 border-emerald-600 pb-3">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-emerald-600 rounded-xl text-white shadow-lg shadow-emerald-100">
@@ -38,22 +37,21 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
         </div>
         <button 
           onClick={() => onOpenModal('add')}
-          className="bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-emerald-700 transition-all flex items-center gap-2 text-[10px] uppercase tracking-widest active:scale-95"
+          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-emerald-700 transition-all active:scale-95 text-xs uppercase tracking-wider"
         >
           <Plus size={16} /> Thêm minh chứng
         </button>
       </div>
 
-      {/* THANH TÌM KIẾM & LỌC */}
       <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-wrap items-center gap-4 shadow-sm">
         <div className="relative flex-1 min-w-[250px] group">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
           <input 
             type="text"
-            placeholder="Tìm kiếm tên hoạt động hoặc số hiệu kế hoạch..."
+            placeholder="Tìm kiếm tên hoạt động hoặc số hiệu kế hoạch"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white rounded-xl text-sm font-bold border border-slate-200 focus:border-emerald-400 outline-none transition-all shadow-sm"
+            className="w-full pl-12 pr-4 py-3 bg-white rounded-xl text-sm border border-slate-200 focus:border-emerald-400 outline-none transition-all shadow-sm"
           />
         </div>
 
@@ -84,17 +82,16 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
         </div>
       </div>
 
-      {/* BẢNG DỮ LIỆU */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
         <table className="w-full text-sm text-left">
-          <thead className="bg-emerald-600 text-white font-bold uppercase text-[10px] tracking-widest text-center">
+          <thead className="bg-emerald-600 text-white font-bold text-[13px] tracking-widest text-center">
             <tr>
-              <th className="px-4 py-5 w-16">STT</th>
-              <th className="px-6 py-5 text-left">Tên hoạt động</th>
-              <th className="px-6 py-5 text-left">Kế hoạch</th>
+              <th className="px-4 py-5 w-16 text-center">STT</th>
+              <th className="px-6 py-5 text-center">Tên hoạt động</th>
+              <th className="px-6 py-5 text-center">Kế hoạch</th>
               <th className="px-6 py-5 text-center w-32">Năm học</th>
-              <th className="px-6 py-5">Minh chứng</th>
-              <th className="px-6 py-5 w-40">Thao tác</th>
+              <th className="px-6 py-5 text-center">Minh chứng</th>
+              <th className="px-6 py-5 w-40"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

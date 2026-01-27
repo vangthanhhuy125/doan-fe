@@ -73,9 +73,9 @@ export default function ToChucPage() {
 
   return (
     <div className="space-y-6 text-black">
-      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+      <div className="flex items-center justify-between border-b-2 border-[#0054a5] pb-3">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
+          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100 transition-transform hover:scale-105">
             <CalendarDays size={24} /> 
           </div>
           <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">

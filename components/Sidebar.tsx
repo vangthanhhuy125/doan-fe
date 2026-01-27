@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { 
-  Info, Flag, Trophy, UserSquare2, Settings, LogOut, CalendarDays, FileText
+  Info, Flag, Trophy, UserSquare2, Settings, Network, LogOut, CalendarDays, FileText
 } from "lucide-react"; 
 
 const menuItems = [
@@ -12,6 +12,7 @@ const menuItems = [
   { name: "Chương trình năm", href: "/chuong-trinh", icon: CalendarDays },
   { name: "Công tác Đoàn - Đảng", href: "/cong-tac", icon: Flag },
   { name: "Thi đua", href: "/thi-dua", icon: Trophy },
+  { name: "Tổ chức Đoàn khoa", href: "/to-chuc", icon: Network },
   { name: "Nhân sự", href: "/nhan-su", icon: UserSquare2 },
   { name: "Cài đặt", href: "/cai-dat", icon: Settings },
 ];

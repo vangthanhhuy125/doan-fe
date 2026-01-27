@@ -32,7 +32,7 @@ export default function TaiLieuPage() {
   const handleDeleteTaiLieu = (id: number) => setTaiLieuList(taiLieuList.filter(item => item.id !== id));
 
   return (
-    <div className="p-8 space-y-8 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <SectionTaiLieu taiLieuList={taiLieuList} onOpenModal={handleOpenModal} />
       {modal.open && (
         <TaiLieuModal 

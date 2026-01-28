@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ShieldCheck, Star, Search, Filter, RotateCcw } from "lucide-react";
 import MemberList from "./MemberList";
 import MemberForm from "./MemberForm";
-import ConfirmNoticeDelete from "../thong-bao/ConfirmNoticeDelete";
+import ConfirmPartyDelete from "./ConfirmPartyDelete";
 
 export default function PartyDevelopment() {
   const [dangVien, setDangVien] = useState([
@@ -138,8 +138,9 @@ export default function PartyDevelopment() {
       )}
 
       {deleteItem && (
-        <ConfirmNoticeDelete 
+        <ConfirmPartyDelete 
           title={deleteItem.item.name}
+          subtitle={deleteItem.type === 'DV' ? "Đảng viên" : "Đoàn viên ưu tú"}
           onClose={() => setDeleteItem(null)}
           onConfirm={handleDelete}
         />

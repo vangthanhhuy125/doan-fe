@@ -134,7 +134,7 @@ export default function SectionNhanSu({ nhanSuList, onOpenModal }: Props) {
               filteredList.map((item: any, index: number) => (
                 <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group text-black font-medium">
                   <td className="px-4 py-4 text-center font-bold text-slate-400 group-hover:text-[#0054a5]">{index + 1}</td>
-                  <td className="px-6 py-4 font-bold text-slate-700 leading-relaxed uppercase text-xs tracking-tight">{item.name}</td>
+                  <td className="px-6 py-4 font-bold text-slate-700 leading-relaxed text-xs tracking-tight">{item.name}</td>
                   <td className="px-6 py-4 text-center font-bold text-slate-500">{item.mssv}</td>
                   <td className="px-6 py-4 text-center font-bold text-slate-500">{item.class}</td>
                   <td className="px-6 py-4">

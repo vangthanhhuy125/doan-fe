@@ -1,10 +1,24 @@
 'use client';
 
-import { X, Save, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, GraduationCap, Phone, Mail, Calendar } from "lucide-react";
+import { useState, useRef } from "react";
+import { X, Save, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, GraduationCap, Phone, Mail, Calendar, Camera } from "lucide-react";
 
 export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: any) {
   const isView = mode === 'view';
   const isAdd = mode === 'add';
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(data?.avatar || null);
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatarPreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   if (mode === 'delete') {
     return (
@@ -61,6 +75,36 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
         </div>
         
         <form className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={(e) => e.preventDefault()}>
+          {/* Avatar Section */}
+          <div className="flex flex-col items-center space-y-3">
+            <div className="relative group">
+              <div className={`w-32 h-32 rounded-full border-4 ${isView ? 'border-[#0054a5]/20' : 'border-[#f59e0b]/20'} overflow-hidden bg-gray-100 flex items-center justify-center shadow-inner`}>
+                {avatarPreview ? (
+                  <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  <User size={64} className="text-gray-300" />
+                )}
+              </div>
+              {!isView && (
+                <button 
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="absolute bottom-0 right-0 p-2 bg-[#f59e0b] text-white rounded-full shadow-lg hover:bg-[#d97706] transition-all transform hover:scale-110"
+                >
+                  <Camera size={18} />
+                </button>
+              )}
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                onChange={handleImageChange} 
+                accept="image/*" 
+                className="hidden" 
+              />
+            </div>
+            <label className="text-[10px] font-bold uppercase text-gray-400">Ảnh đại diện</label>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Họ và tên</label>

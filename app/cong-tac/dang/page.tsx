@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { ShieldCheck, Star, Search, Filter, X } from "lucide-react";
+import { ShieldCheck, Star, Search, Filter, RotateCcw } from "lucide-react";
 import MemberList from "./MemberList";
 import MemberForm from "./MemberForm";
 import ConfirmNoticeDelete from "../thong-bao/ConfirmNoticeDelete";
@@ -42,6 +42,13 @@ export default function PartyDevelopment() {
     setDeleteItem(null);
   };
 
+  const resetFilters = () => {
+    setSearchTerm("");
+    setFilterChiDoan("");
+  };
+
+  const isFiltering = searchTerm !== "" || filterChiDoan !== "";
+
   const filterData = (data: any[]) => {
     return data.filter(item => {
       const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.mssv.includes(searchTerm);
@@ -52,9 +59,15 @@ export default function PartyDevelopment() {
 
   return (
     <div className="space-y-4 pt-6 border-t border-slate-100 text-black">
-      <div className="flex items-center gap-2 text-red-600 mb-2">
-        <ShieldCheck size={20} />
-        <h3 className="font-bold uppercase text-sm tracking-tight">Công tác phát triển Đảng</h3>
+      <div className="flex items-center justify-between border-b-2 border-red-600 pb-3">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-red-600 rounded-xl text-white shadow-lg shadow-red-100">
+            <ShieldCheck size={24} />
+          </div>
+          <h2 className="text-2xl font-black uppercase text-red-600 tracking-tight">
+            Công tác Đoàn - Đảng
+          </h2>
+        </div>
       </div>
 
       <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4">
@@ -77,20 +90,20 @@ export default function PartyDevelopment() {
                 <select 
                   value={filterChiDoan}
                   onChange={(e) => setFilterChiDoan(e.target.value)}
-                  className="bg-transparent outline-none text-xs font-bold text-slate-600 w-full"
+                  className="bg-transparent outline-none text-xs font-bold text-slate-600 w-full cursor-pointer"
                 >
                   <option value="">Tất cả Chi đoàn</option>
                   {chiDoanList.map(cd => <option key={cd} value={cd}>{cd}</option>)}
                 </select>
               </div>
             </div>
-            {(searchTerm || filterChiDoan) && (
+            {isFiltering && (
               <button 
-                onClick={() => {setSearchTerm(""); setFilterChiDoan("");}}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                onClick={resetFilters}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500 border-none bg-transparent outline-none"
                 title="Xóa lọc"
               >
-                <X size={18} />
+                <RotateCcw size={18} />
               </button>
             )}
           </div>

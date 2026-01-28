@@ -17,14 +17,7 @@ export default function CongTacPage() {
   return (
     <div className="space-y-12 text-black pb-10">
       
-      <div className="flex items-center justify-between border-b-2 border-[#0054a5] pb-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
-            <Briefcase size={24} />
-          </div>
-          <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">Công tác Đoàn - Đảng</h2>
-        </div>
-      </div>
+
 
       <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
         <NotificationPage />

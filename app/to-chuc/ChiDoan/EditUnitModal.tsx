@@ -68,7 +68,7 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
           <div className="pt-4 flex gap-3 shrink-0">
             <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl font-bold text-slate-400 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest text-black">Hủy</button>
             <button type="submit" className="flex-1 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
-              <Save size={14} /> Cập nhật
+              Cập nhật            
             </button>
           </div>
         </form>

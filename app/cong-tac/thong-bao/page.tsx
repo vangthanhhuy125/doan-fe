@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { Bell, Eye, Edit, Trash2, Plus, Calendar, X, Search, Filter } from "lucide-react";
+import { Bell, Eye, Edit, Trash2, Plus, Calendar, X, Search, RotateCcw } from "lucide-react";
 import NoticeForm from "./NoticeForm";
 import ConfirmNoticeDelete from "./ConfirmNoticeDelete";
 
@@ -55,6 +55,14 @@ export default function NotificationPage() {
     setDeleteItem(null);
   };
 
+  const resetFilters = () => {
+    setSearchTerm("");
+    setStartDate("");
+    setEndDate("");
+  };
+
+  const isFiltering = searchTerm !== "" || startDate !== "" || endDate !== "";
+
   const filteredNotices = notices.filter(item => {
     const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
     
@@ -71,18 +79,18 @@ export default function NotificationPage() {
 
   return (
     <div className="space-y-6 text-black">
-      <div className="flex items-center justify-between border-b border-gray-200 pb-4">
+      <div className="flex items-center justify-between border-b-2 border-[#0054a5] pb-3">
         <div className="flex items-center gap-2">
-          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
+          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100 transition-transform hover:scale-105">
              <Bell size={24} />
           </div>
-          <h2 className="font-bold text-[#0054a5] tracking-tight uppercase text-sm">Thông báo - Triển khai - Triệu tập</h2>
+          <h2 className="font-black text-[#0054a5] tracking-tight uppercase text-2xl">Thông báo - Triển khai - Triệu tập</h2>
         </div>
         <button 
           onClick={() => setFormMode({ open: true, data: null })}
-          className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider"
+          className="flex items-center gap-2 bg-[#0054a5] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-[10px] uppercase tracking-widest border-none outline-none"
         >
-          <Plus size={20} /> Soạn thông báo
+          <Plus size={16} /> Soạn thông báo
         </button>
       </div>
 
@@ -117,13 +125,13 @@ export default function NotificationPage() {
                 className="w-full p-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:border-blue-500"
               />
             </div>
-            {(searchTerm || startDate || endDate) && (
+            {isFiltering && (
               <button 
-                onClick={() => {setSearchTerm(""); setStartDate(""); setEndDate("");}}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-all"
+                onClick={resetFilters}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500 border-none bg-transparent outline-none"
                 title="Xóa lọc"
               >
-                <X size={18} />
+                <RotateCcw size={20} />
               </button>
             )}
           </div>
@@ -137,7 +145,7 @@ export default function NotificationPage() {
               <th className="px-6 py-5 text-center uppercase w-16">STT</th>
               <th className="px-6 py-5 text-center">Nội dung thông báo</th>
               <th className="px-6 py-5 text-center w-40">Ngày đăng</th>
-              <th className="px-6 py-5 text-center w-40"></th>
+              <th className="px-6 py-5 text-center w-40">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -149,16 +157,16 @@ export default function NotificationPage() {
                   <td className="px-6 py-5 text-center text-gray-500 text-xs font-medium italic">{item.date}</td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => setSelectedNotice(item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-xl transition-all" title="Xem chi tiết"><Eye size={18} /></button>
-                      <button onClick={() => setFormMode({ open: true, data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all" title="Chỉnh sửa"><Edit size={18} /></button>
-                      <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all" title="Xóa"><Trash2 size={18} /></button>
+                      <button onClick={() => setSelectedNotice(item)} className="p-2 text-[#0054a5] hover:bg-blue-100 rounded-xl transition-all border-none outline-none" title="Xem chi tiết"><Eye size={18} /></button>
+                      <button onClick={() => setFormMode({ open: true, data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all border-none outline-none" title="Chỉnh sửa"><Edit size={18} /></button>
+                      <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all border-none outline-none" title="Xóa"><Trash2 size={18} /></button>
                     </div>
                   </td>
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic">Không tìm thấy thông báo nào phù hợp.</td>
+                <td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic font-bold">Không tìm thấy thông báo nào phù hợp.</td>
               </tr>
             )}
           </tbody>
@@ -170,9 +178,9 @@ export default function NotificationPage() {
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20">
             <div className="bg-[#0054a5] p-6 flex items-center justify-between text-white">
               <h3 className="font-bold uppercase tracking-widest text-sm">Nội dung chi tiết</h3>
-              <button onClick={() => setSelectedNotice(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20}/></button>
+              <button onClick={() => setSelectedNotice(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20}/></button>
             </div>
-            <div className="p-10 space-y-6">
+            <div className="p-10 space-y-6 text-black">
               <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase">
                 <Calendar size={12}/> Ngày đăng: {selectedNotice.date}
               </div>

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { 
-  Calendar, Plus, Edit, Trash2, Eye, Filter, Search,
-  CalendarDays
+  Plus, Edit, Trash2, Eye, Filter, Search,
+  CalendarDays, RotateCcw
 } from "lucide-react";
 import ProgramView from "./ProgramView";
 import ProgramAdd from "./ProgramAdd";
@@ -60,6 +60,16 @@ export default function ToChucPage() {
       setDeleteItem(null);
     }
   };
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setFilterSemester("");
+    setFilterAcademicYear("");
+    setFilterMonth("");
+    setFilterYear("");
+  };
+
+  const isFiltering = searchTerm !== "" || filterSemester !== "" || filterAcademicYear !== "" || filterMonth !== "" || filterYear !== "";
 
   const filteredData = data.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -166,12 +176,14 @@ export default function ToChucPage() {
             </select>
           </div>
 
-          <button 
-            onClick={() => { setSearchTerm(""); setFilterSemester(""); setFilterAcademicYear(""); setFilterMonth(""); setFilterYear(""); }}
-            className="text-xs text-red-500 font-bold hover:underline pb-2 ml-auto"
-          >
-            Làm mới bộ lọc
-          </button>
+          {isFiltering && (
+            <button 
+              onClick={resetFilters}
+              className="p-2 mb-0.5 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500"
+            >
+              <RotateCcw size={20} />
+            </button>
+          )}
         </div>
       </div>
 

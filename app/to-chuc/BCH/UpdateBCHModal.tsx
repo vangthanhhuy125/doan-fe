@@ -63,7 +63,7 @@ export default function UpdateBCHModal({ onClose, allMembers }: UpdateBCHModalPr
             Hủy bỏ
           </button>
           <button className="px-10 py-3 bg-[#0054a5] text-white rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-800 transition-all uppercase text-[10px] tracking-widest flex items-center gap-2">
-            <Save size={14} /> Lưu thay đổi
+            Cập nhật
           </button>
         </div>
       </div>

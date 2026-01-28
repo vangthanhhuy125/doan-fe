@@ -6,37 +6,32 @@ export default function BangDiemModal({ mode, data, onClose, onConfirmDelete }: 
   const isView = mode === 'view';
   const isAdd = mode === 'add';
 
-  const renderHeaderIcon = () => {
-    if (isView) return <Eye size={20} />;
-    if (isAdd) return <PlusCircle size={20} />;
-    return <FileEdit size={20} />;
-  };
-
   if (mode === 'delete') {
     return (
-      <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200 text-black">
-        <div className="bg-white w-full max-w-sm rounded-xl shadow-2xl overflow-hidden border border-red-50">
-          <div className="p-8 text-center space-y-4">
+      <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+        <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-red-100 animate-in zoom-in duration-300 text-black">
+          <div className="p-6 text-center space-y-4">
             <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full mx-auto flex items-center justify-center shadow-inner">
               <AlertCircle size={32} />
             </div>
             <div className="space-y-2">
-              <h3 className="text-xl font-black text-slate-800 tracking-tight">Xóa hoạt động?</h3>
-              <p className="text-[13px] text-slate-500 leading-relaxed px-4">
-                Bạn chắc chắn muốn xóa <span className="font-bold text-red-600">"{data?.name}"</span>?
+              <h3 className="text-xl font-black text-slate-800 tracking-tight">Xác nhận xóa?</h3>
+              <p className="text-sm text-slate-500 leading-relaxed px-4">
+                Bạn chắc chắn muốn xóa hoạt động <br/>
+                <span className="font-bold text-red-600">"{data?.name}"</span>?
               </p>
             </div>
           </div>
-          <div className="flex p-6 gap-3 bg-slate-50">
+          <div className="flex p-4 gap-3 bg-slate-50">
             <button 
               onClick={onClose} 
-              className="flex-1 py-3 px-4 rounded-xl font-bold text-slate-400 hover:bg-slate-200 transition-all uppercase text-[10px] tracking-widest text-black [text-decoration:none] border-none outline-none"
+              className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[11px] tracking-widest border-none outline-none"
             >
-              Hủy
+              Hủy bỏ
             </button>
             <button 
               onClick={() => { onConfirmDelete(data.id); onClose(); }}
-              className="flex-1 py-3 px-4 bg-red-600 text-white rounded-xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition-all uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 [text-decoration:none] border-none outline-none"
+              className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-200 hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none"
             >
               <Trash2 size={14} /> Xác nhận xóa
             </button>
@@ -45,76 +40,75 @@ export default function BangDiemModal({ mode, data, onClose, onConfirmDelete }: 
       </div>
     );
   }
-
-  const headerBg = isView ? "bg-emerald-600" : "bg-amber-500";
-  const btnBg = isView ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-500 hover:bg-amber-600";
-  const ringColor = isView ? "focus:ring-emerald-400" : "focus:ring-amber-400";
-  const labelActiveColor = isView ? "text-emerald-600" : "text-amber-600";
+ 
+  const headerBg = isView ? "bg-[#10b981]" : "bg-[#f59e0b]";
+  const btnBg = isView ? "bg-[#10b981] hover:bg-[#059669]" : "bg-[#f59e0b] hover:bg-[#d97706]";
+  const ringColor = isView ? "focus:border-[#10b981]" : "focus:border-[#f59e0b]";
+  const labelColor = isView ? "text-[#10b981]" : "text-[#f59e0b]";
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in zoom-in duration-200 text-black">
-      <div className="bg-white w-full max-w-2xl rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        <div className={`${headerBg} p-6 flex items-center justify-between text-white shrink-0 transition-colors`}>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in zoom-in duration-200 text-black">
+      <div className="bg-white w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden border border-white/20 flex flex-col max-h-[90vh]">
+        <div className={`${headerBg} p-6 flex items-center justify-between text-white shrink-0 transition-colors duration-300`}>
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg">
-              {renderHeaderIcon()}
+              {isView ? <Eye size={20} /> : isAdd ? <PlusCircle size={20} /> : <FileEdit size={20} />}
             </div>
-            <h3 className="font-bold uppercase tracking-widest text-xs [text-decoration:none]">
+            <h3 className="font-bold uppercase tracking-widest text-sm">
               {isView ? 'Chi tiết minh chứng' : isAdd ? 'Thêm minh chứng mới' : 'Cập nhật minh chứng'}
             </h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20} /></button>
         </div>
         
-        <form className="p-8 space-y-6 overflow-y-auto" onSubmit={(e) => e.preventDefault()}>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="col-span-2 space-y-1">
-              <label className={`text-[10px] font-black uppercase ml-1 ${isView ? 'text-slate-400' : 'text-amber-600'}`}>Tên hoạt động thi đua</label>
-              <input disabled={isView} defaultValue={data?.name} required className={`w-full p-3 bg-slate-50 rounded-xl border-none font-bold outline-none focus:ring-2 ${ringColor} disabled:ring-0`} />
+        <form className="p-8 space-y-6 overflow-y-auto max-h-[85vh]" onSubmit={(e) => e.preventDefault()}>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="md:col-span-2 space-y-2">
+              <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Tên hoạt động thi đua</label>
+              <input disabled={isView} defaultValue={data?.name} required className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập tên hoạt động..." />
             </div>
-            <div className="col-span-1 space-y-1">
-              <label className={`text-[10px] font-black uppercase ml-1 ${isView ? 'text-slate-400' : 'text-amber-600'}`}>Năm học</label>
+            <div className="md:col-span-1 space-y-2">
+              <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Năm học</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.namHoc} placeholder="2025-2026" required className={`w-full p-3 bg-slate-50 rounded-xl border-none font-bold outline-none focus:ring-2 ${ringColor} disabled:ring-0`} />
-                <Calendar size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input disabled={isView} defaultValue={data?.namHoc} placeholder="2025-2026" required className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} />
               </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <label className={`text-[10px] font-black uppercase ml-1 ${isView ? 'text-slate-400' : 'text-amber-600'}`}>Kế hoạch triển khai</label>
-              <input disabled={isView} defaultValue={data?.plan} placeholder="KH số... / KH-ĐK" className={`w-full p-3 bg-slate-50 rounded-xl border-none font-bold outline-none focus:ring-2 ${ringColor} disabled:ring-0`} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Kế hoạch triển khai</label>
+              <input disabled={isView} defaultValue={data?.plan} placeholder="KH số... / KH-ĐK" className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} />
             </div>
-            <div className="space-y-1">
-              <label className={`text-[10px] font-black uppercase ml-1 ${isView ? 'text-slate-400' : 'text-amber-600'}`}>Minh chứng (Link bài đăng)</label>
+            <div className="space-y-2">
+              <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Minh chứng (Link bài đăng)</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.evidence} className={`w-full p-3 bg-slate-50 rounded-xl border-none font-bold outline-none pr-10 focus:ring-2 ${ringColor} disabled:ring-0 text-blue-600`} />
-                <LinkIcon size={16} className={`absolute right-3 top-1/2 -translate-y-1/2 ${isView ? 'text-slate-400' : 'text-amber-400'}`} />
+                <input disabled={isView} defaultValue={data?.evidence} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} text-blue-600 disabled:opacity-70`} placeholder="https://..." />
+                <LinkIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
           </div>
 
-          <div className="space-y-1">
-            <label className={`text-[10px] font-black uppercase ml-1 ${labelActiveColor}`}>Nội dung thi đua / Ghi chú</label>
-            <textarea disabled={isView} rows={4} defaultValue={data?.content} className={`w-full p-4 bg-slate-50 rounded-xl border-none font-medium outline-none focus:ring-2 ${ringColor} disabled:ring-0`} />
+          <div className="space-y-2">
+            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Nội dung thi đua / Ghi chú</label>
+            <textarea disabled={isView} rows={4} defaultValue={data?.content} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-medium ${ringColor} disabled:opacity-70`} placeholder="Nhập nội dung chi tiết..." />
           </div>
 
           {!isView && (
-            <div className="pt-4 flex gap-3 border-t">
+            <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
               <button 
                 type="button" 
                 onClick={onClose} 
-                className="flex-1 py-3 rounded-xl font-bold text-slate-400 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest text-black [text-decoration:none] border-none outline-none"
+                className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none"
               >
-                Hủy
+                Hủy bỏ
               </button>
               <button 
                 type="submit" 
-                className={`flex-1 py-3 ${btnBg} text-white rounded-xl font-bold shadow-lg transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 [text-decoration:none] border-none outline-none`}
+                className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none`}
               >
                 {isAdd ? <PlusCircle size={14} /> : <Save size={14} />} 
-                {isAdd ? 'Lưu hoạt động' : 'Lưu thay đổi'}
+                {isAdd ? 'Lưu' : 'Cập nhật'}
               </button>
             </div>
           )}

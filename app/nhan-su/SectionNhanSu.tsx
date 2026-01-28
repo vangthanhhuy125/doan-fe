@@ -118,15 +118,15 @@ export default function SectionNhanSu({ nhanSuList, onOpenModal }: Props) {
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
         <table className="w-full text-sm text-left border-collapse">
-          <thead className="bg-[#0054a5] text-white font-bold uppercase text-[10px] tracking-widest text-center">
+          <thead className="bg-[#0054a5] text-white font-bold text-[13px] tracking-widest text-center">
             <tr>
-              <th className="px-4 py-5 w-16">STT</th>
-              <th className="px-6 py-5 text-left">Họ và tên</th>
-              <th className="px-6 py-5">MSSV</th>
-              <th className="px-6 py-5">Chi đoàn</th>
-              <th className="px-6 py-5">SĐT / Email</th>
-              <th className="px-6 py-5">Ngày sinh</th>
-              <th className="px-6 py-5 w-40">Thao tác</th>
+              <th className="px-4 py-5 w-16 text-center">STT</th>
+              <th className="px-6 py-5 text-center">Họ và tên</th>
+              <th className="px-6 py-5 text-center">MSSV</th>
+              <th className="px-6 py-5 text-center">Chi đoàn</th>
+              <th className="px-6 py-5 text-center">SĐT / Email</th>
+              <th className="px-6 py-5 text-center">Ngày sinh</th>
+              <th className="px-6 py-5 text-center w-40"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">

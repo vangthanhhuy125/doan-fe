@@ -61,7 +61,7 @@ export default function CaiDatModal({ mode, data, onClose, onConfirmDelete, nhan
               <select 
                 disabled={isView} 
                 defaultValue={data?.displayName}
-                className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold appearance-none cursor-pointer ${ringColor} disabled:opacity-70`}
+                className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm appearance-none cursor-pointer ${ringColor} disabled:opacity-70`}
               >
                 <option value="">Chọn từ danh sách nhân sự...</option>
                 {nhanSuList.map((ns: any) => (
@@ -76,7 +76,7 @@ export default function CaiDatModal({ mode, data, onClose, onConfirmDelete, nhan
             <div className="space-y-2">
               <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Tên đăng nhập</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.username} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="VD: admin_khoa" />
+                <input disabled={isView} defaultValue={data?.username} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm  ${ringColor} disabled:opacity-70`} placeholder="VD: admin_khoa" />
                 <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -84,7 +84,7 @@ export default function CaiDatModal({ mode, data, onClose, onConfirmDelete, nhan
             <div className="space-y-2">
               <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Mật khẩu truy cập</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.password} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập mật khẩu..." />
+                <input disabled={isView} defaultValue={data?.password} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm  ${ringColor} disabled:opacity-70`} placeholder="Nhập mật khẩu..." />
                 <Key size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>

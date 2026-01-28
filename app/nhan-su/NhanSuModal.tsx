@@ -109,14 +109,14 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Họ và tên</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.name} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập họ và tên..." />
+                <input disabled={isView} defaultValue={data?.name} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập họ và tên..." />
                 <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Mã số sinh viên (MSSV)</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.mssv} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập MSSV..." />
+                <input disabled={isView} defaultValue={data?.mssv} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập MSSV..." />
                 <GraduationCap size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -125,12 +125,12 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Chi đoàn</label>
-              <input disabled={isView} defaultValue={data?.class} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="VD: PMCL2023" />
+              <input disabled={isView} defaultValue={data?.class} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="VD: PMCL2023" />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Số điện thoại</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.phone} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập SĐT..." />
+                <input disabled={isView} defaultValue={data?.phone} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập SĐT..." />
                 <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -140,14 +140,14 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Ngày sinh</label>
               <div className="relative">
-                <input type="date" disabled={isView} defaultValue={data?.birthday} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} />
+                <input type="date" disabled={isView} defaultValue={data?.birthday} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} />
                 <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Email</label>
               <div className="relative">
-                <input disabled defaultValue={data?.mssv ? `${data.mssv}@gm.uit.edu.vn` : "MSSV để tạo email..."} className="w-full p-4 pl-12 bg-slate-100 rounded-2xl border-none text-sm font-bold text-slate-400 outline-none" />
+                <input disabled defaultValue={data?.mssv ? `${data.mssv}@gm.uit.edu.vn` : ""} className="w-full p-4 pl-12 bg-slate-100 rounded-2xl border-none text-sm text-slate-400 outline-none" />
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
               </div>
             </div>

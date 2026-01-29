@@ -40,7 +40,7 @@ export default function BangDiemModal({ mode, data, onClose, onConfirmDelete }: 
       </div>
     );
   }
- 
+
   const headerBg = isView ? "bg-[#10b981]" : "bg-[#f59e0b]";
   const btnBg = isView ? "bg-[#10b981] hover:bg-[#059669]" : "bg-[#f59e0b] hover:bg-[#d97706]";
   const ringColor = isView ? "focus:border-[#10b981]" : "focus:border-[#f59e0b]";
@@ -77,8 +77,11 @@ export default function BangDiemModal({ mode, data, onClose, onConfirmDelete }: 
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Kế hoạch triển khai</label>
-              <input disabled={isView} defaultValue={data?.plan} placeholder="KH số... / KH-ĐK" className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} />
+              <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Kế hoạch triển khai (Link)</label>
+              <div className="relative">
+                <input disabled={isView} defaultValue={data?.plan} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} text-emerald-600 disabled:opacity-70`} placeholder="https://..." />
+                <LinkIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              </div>
             </div>
             <div className="space-y-2">
               <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Minh chứng (Link bài đăng)</label>

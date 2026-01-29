@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { Award, Plus, Eye, Edit, Trash2, Search, Link as LinkIcon, RotateCcw, Filter } from "lucide-react";
+import { Award, Plus, Eye, Edit, Trash2, Search, Link as LinkIcon, RotateCcw, Filter, FileText } from "lucide-react";
 
 interface Props {
   activities: any[];
@@ -100,7 +100,11 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
                 <tr key={item.id} className="hover:bg-emerald-50/30 transition-colors group text-black">
                   <td className="px-4 py-4 text-center font-bold text-slate-400 group-hover:text-emerald-600">{index + 1}</td>
                   <td className="px-6 py-4 font-bold text-slate-700 leading-relaxed">{item.name}</td>
-                  <td className="px-6 py-4 font-medium text-slate-500 italic">{item.plan}</td>
+                  <td className="px-6 py-4 text-center">
+                    <a href={item.plan} target="_blank" className="inline-flex items-center gap-1 text-emerald-600 hover:underline font-bold text-xs bg-emerald-50 px-3 py-1 rounded-full">
+                      <FileText size={12} /> Kế hoạch
+                    </a>
+                  </td>
                   <td className="px-6 py-4 text-center font-bold text-slate-400 group-hover:text-emerald-600">{item.namHoc}</td>
                   <td className="px-6 py-4 text-center">
                     <a href={item.evidence} target="_blank" className="inline-flex items-center gap-1 text-blue-600 hover:underline font-bold text-xs bg-blue-50 px-3 py-1 rounded-full">

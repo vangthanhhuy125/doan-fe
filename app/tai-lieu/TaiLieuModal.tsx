@@ -63,7 +63,7 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: a
         
         <form className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={(e) => e.preventDefault()}>
           <div className="space-y-2">
-            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Tên tài liệu / Văn kiện</label>
+            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Tên tài liệu</label>
             <input disabled={isView} defaultValue={data?.name} required className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập tên tài liệu..." />
           </div>
 
@@ -96,7 +96,7 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: a
           </div>
 
           <div className="space-y-2">
-            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Link văn kiện (Drive/Cloud)</label>
+            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Link văn kiện (Drive)</label>
             <div className="relative">
               <input disabled={isView} defaultValue={data?.link} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} text-blue-600 disabled:opacity-70`} placeholder="https://..." />
               <LinkIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />

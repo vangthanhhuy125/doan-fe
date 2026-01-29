@@ -8,19 +8,21 @@ interface Props {
   onOpenModal: (mode: string, data?: any) => void;
 }
 
-export default function SectionNhanSu({ nhanSuList, onOpenModal }: Props) {
+export default function SectionNhanSu({ nhanSuList = [], onOpenModal }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClass, setFilterClass] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
   const [filterYear, setFilterYear] = useState("");
 
-  const classes = Array.from(new Set(nhanSuList.map((item: any) => item.class))).filter(Boolean).sort();
-  const birthYears = Array.from(new Set(nhanSuList.map((item: any) => item.birthday?.split('-')[0]))).filter(Boolean).sort().reverse();
+  const safeList = Array.isArray(nhanSuList) ? nhanSuList : [];
 
-  const filteredList = nhanSuList.filter((item: any) => {
+  const classes = Array.from(new Set(safeList.map((item: any) => item.class))).filter(Boolean).sort();
+  const birthYears = Array.from(new Set(safeList.map((item: any) => item.birthday?.split('-')[0]))).filter(Boolean).sort().reverse();
+
+  const filteredList = safeList.filter((item: any) => {
     const birthdayParts = item.birthday?.split('-'); 
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          item.mssv.includes(searchTerm);
+    const matchesSearch = (item.full_name || item.name || "").toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (item.student_id || item.mssv || "").includes(searchTerm);
     const matchesClass = filterClass === "" || item.class === filterClass;
     const matchesMonth = filterMonth === "" || (birthdayParts && parseInt(birthdayParts[1]) === parseInt(filterMonth));
     const matchesYear = filterYear === "" || (birthdayParts && birthdayParts[0] === filterYear);
@@ -132,14 +134,14 @@ export default function SectionNhanSu({ nhanSuList, onOpenModal }: Props) {
           <tbody className="divide-y divide-slate-100">
             {filteredList.length > 0 ? (
               filteredList.map((item: any, index: number) => (
-                <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group text-black font-medium">
+                <tr key={item._id || item.id} className="hover:bg-blue-50/30 transition-colors group text-black font-medium">
                   <td className="px-4 py-4 text-center font-bold text-slate-400 group-hover:text-[#0054a5]">{index + 1}</td>
-                  <td className="px-6 py-4 font-bold text-slate-700 leading-relaxed text-xm tracking-tight">{item.name}</td>
-                  <td className="px-6 py-4 text-center font-bold text-slate-500">{item.mssv}</td>
+                  <td className="px-6 py-4 font-bold text-slate-700 leading-relaxed text-xm tracking-tight">{item.full_name || item.name}</td>
+                  <td className="px-6 py-4 text-center font-bold text-slate-500">{item.student_id || item.mssv}</td>
                   <td className="px-6 py-4 text-center font-bold text-slate-500">{item.class}</td>
                   <td className="px-6 py-4">
-                     <div className="text-[11px] font-bold text-blue-600">{item.phone}</div>
-                     <div className="text-[10px] text-slate-400 italic">{item.mssv}@gm.uit.edu.vn</div>
+                      <div className="text-[11px] font-bold text-blue-600">{item.phone}</div>
+                      <div className="text-[10px] text-slate-400 italic">{(item.student_id || item.mssv)}@gm.uit.edu.vn</div>
                   </td>
                   <td className="px-6 py-4 text-center font-bold text-slate-500">
                     {item.birthday ? new Date(item.birthday).toLocaleDateString('vi-VN') : "---"}

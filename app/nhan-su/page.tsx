@@ -1,34 +1,52 @@
+// app/nhan-su/page.tsx
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import SectionNhanSu from "./SectionNhanSu";
 import NhanSuModal from "./NhanSuModal";
 
-const initialNhanSu = [
-  { 
-    id: 1, 
-    name: "Nguyễn Văn A", 
-    mssv: "21520001", 
-    class: "PMCL2021", 
-    phone: "0901234567", 
-    birthday: "2003-05-15" 
-  },
-  { 
-    id: 2, 
-    name: "Lê Thị B", 
-    mssv: "22520002", 
-    class: "KTPM2022", 
-    phone: "0987654321", 
-    birthday: "2004-12-20" 
-  },
-];
-
 export default function NhanSuPage() {
-  const [nhanSuList, setNhanSuList] = useState(initialNhanSu);
+  const [nhanSuList, setNhanSuList] = useState<any[]>([]);
   const [modal, setModal] = useState<any>({ open: false, mode: 'view', data: null });
 
+  const fetchNhanSu = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`);
+      const data = await res.json();
+      setNhanSuList(Array.isArray(data) ? data : []);
+    } catch (error) {
+      setNhanSuList([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchNhanSu();
+  }, []);
+
   const handleOpenModal = (mode: string, data: any = null) => setModal({ open: true, mode, data });
-  const handleDelete = (id: number) => setNhanSuList(nhanSuList.filter(item => item.id !== id));
+
+  const handleDelete = async (id: string) => {
+    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su/${id}`, {
+      method: 'DELETE',
+    });
+    fetchNhanSu();
+  };
+
+  const handleSave = async (payload: any) => {
+    const isAdd = modal.mode === 'add';
+    const url = isAdd 
+      ? `${process.env.NEXT_PUBLIC_API_URL}/nhan-su` 
+      : `${process.env.NEXT_PUBLIC_API_URL}/nhan-su/${payload._id}`;
+    
+    await fetch(url, {
+      method: isAdd ? 'POST' : 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    setModal({ open: false, mode: 'view', data: null });
+    fetchNhanSu();
+  };
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -39,6 +57,7 @@ export default function NhanSuPage() {
           data={modal.data} 
           onClose={() => setModal({ ...modal, open: false })}
           onConfirmDelete={handleDelete}
+          onSave={handleSave}
         />
       )}
     </div>

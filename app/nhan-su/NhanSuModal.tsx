@@ -3,11 +3,12 @@
 import { useState, useRef } from "react";
 import { X, Save, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, GraduationCap, Phone, Mail, Calendar, Camera } from "lucide-react";
 
-export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: any) {
+export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSave }: any) {
   const isView = mode === 'view';
   const isAdd = mode === 'add';
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(data?.avatar || null);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(data?.image_url || null);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -18,6 +19,24 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isView) return;
+
+    const formData = new FormData(formRef.current!);
+    const payload = {
+      ...data,
+      name: formData.get("name"),
+      mssv: formData.get("mssv"),
+      class: formData.get("class"),
+      phone: formData.get("phone"),
+      birthday: formData.get("birthday"),
+      image_url: avatarPreview,
+    };
+
+    onSave(payload);
   };
 
   if (mode === 'delete') {
@@ -32,7 +51,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
               <h3 className="text-xl font-black text-slate-800">Xác nhận xóa?</h3>
               <p className="text-sm text-slate-500 leading-relaxed px-4">
                 Bạn chắc chắn muốn xóa nhân sự <br/>
-                <span className="font-bold text-red-600">"{data?.name}"</span>?
+                <span className="font-bold text-red-600">"{data?.full_name || data?.name}"</span>?
               </p>
             </div>
           </div>
@@ -44,7 +63,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
               Hủy bỏ
             </button>
             <button 
-              onClick={() => { onConfirmDelete(data.id); onClose(); }} 
+              onClick={() => { onConfirmDelete(data._id || data.id); onClose(); }} 
               className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-200 hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none"
             >
               <Trash2 size={14} /> Xác nhận xóa
@@ -74,8 +93,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20} /></button>
         </div>
         
-        <form className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={(e) => e.preventDefault()}>
-          {/* Avatar Section */}
+        <form ref={formRef} className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={handleSubmit}>
           <div className="flex flex-col items-center space-y-3">
             <div className="relative group">
               <div className={`w-32 h-32 rounded-full border-4 ${isView ? 'border-[#0054a5]/20' : 'border-[#f59e0b]/20'} overflow-hidden bg-gray-100 flex items-center justify-center shadow-inner`}>
@@ -109,14 +127,14 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Họ và tên</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.name} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập họ và tên..." />
+                <input name="name" disabled={isView} defaultValue={data?.full_name || data?.name} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập họ và tên..." />
                 <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Mã số sinh viên (MSSV)</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.mssv} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập MSSV..." />
+                <input name="mssv" disabled={isView} defaultValue={data?.student_id || data?.mssv} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập MSSV..." />
                 <GraduationCap size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -125,12 +143,12 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Chi đoàn</label>
-              <input disabled={isView} defaultValue={data?.class} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="VD: PMCL2023" />
+              <input name="class" disabled={isView} defaultValue={data?.class} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="VD: PMCL2023" />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Số điện thoại</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.phone} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập SĐT..." />
+                <input name="phone" disabled={isView} defaultValue={data?.phone} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập SĐT..." />
                 <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -140,14 +158,14 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Ngày sinh</label>
               <div className="relative">
-                <input type="date" disabled={isView} defaultValue={data?.birthday} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} />
+                <input name="birthday" type="date" disabled={isView} defaultValue={data?.birthday} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} />
                 <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Email</label>
               <div className="relative">
-                <input disabled defaultValue={data?.mssv ? `${data.mssv}@gm.uit.edu.vn` : ""} className="w-full p-4 pl-12 bg-slate-100 rounded-2xl border-none text-sm text-slate-400 outline-none" />
+                <input disabled value={data?.student_id || data?.mssv ? `${data.student_id || data.mssv}@gm.uit.edu.vn` : ""} className="w-full p-4 pl-12 bg-slate-100 rounded-2xl border-none text-sm text-slate-400 outline-none" />
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
               </div>
             </div>
@@ -157,6 +175,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete }: an
             <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
               <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none">Hủy bỏ</button>
               <button type="submit" className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none`}>
+                {isAdd ? <PlusCircle size={14} /> : <Save size={14} />} 
                 {isAdd ? 'Lưu' : 'Cập nhật'}
               </button>
             </div>

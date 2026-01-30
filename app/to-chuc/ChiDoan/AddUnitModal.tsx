@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { Plus, X, Save, School, Users, ChevronDown } from "lucide-react";
+import { Plus, X, School, Users, ChevronDown } from "lucide-react";
 
 interface AddUnitModalProps {
   onClose: () => void;
@@ -12,13 +12,13 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
   const [type, setType] = useState<'CHIDOAN' | 'TAPTHE'>('CHIDOAN');
   const [formData, setFormData] = useState<any>({
     ten: "",
+    group_name: "",
     khoa: "",
+    intake: "",
     biThu: "",
     phoBiThu: "",
-    uvBch1: "",
-    uvBch2: "",
-    uvBch3: "",
-    members: [
+    uvbch: [],
+    member: [
       { role: "", name: "" },
       { role: "", name: "" },
       { role: "", name: "" }
@@ -30,13 +30,19 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ ...formData, unitType: type });
+    const payload = { 
+        ...formData, 
+        unitType: type, 
+        group_name: formData.ten,
+        intake: formData.khoa 
+    };
+    onSave(payload);
   };
 
   const updateMember = (index: number, field: 'role' | 'name', value: string) => {
-    const newMembers = [...formData.members];
+    const newMembers = [...formData.member];
     newMembers[index][field] = value;
-    setFormData({ ...formData, members: newMembers });
+    setFormData({ ...formData, member: newMembers });
   };
 
   return (
@@ -69,7 +75,7 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto">
           {type === 'CHIDOAN' ? (
-            <div className="space-y-4 text-black">
+            <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Tên Chi đoàn</label>
@@ -94,13 +100,13 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
 
               <div className="space-y-3 border-t pt-4">
                 <label className="text-[10px] font-black uppercase text-blue-500 ml-1">Ủy viên Ban Chấp hành</label>
-                <input required placeholder="UV BCH 1" value={formData.uvBch1} onChange={(e) => setFormData({...formData, uvBch1: e.target.value})} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
-                <input placeholder="UV BCH 2" value={formData.uvBch2} onChange={(e) => setFormData({...formData, uvBch2: e.target.value})} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
-                <input placeholder="UV BCH 3" value={formData.uvBch3} onChange={(e) => setFormData({...formData, uvBch3: e.target.value})} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
+                <input required placeholder="UV BCH 1" value={formData.uvbch[0] || ""} onChange={(e) => { const newUv = [...formData.uvbch]; newUv[0] = e.target.value; setFormData({...formData, uvbch: newUv}); }} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
+                <input placeholder="UV BCH 2" value={formData.uvbch[1] || ""} onChange={(e) => { const newUv = [...formData.uvbch]; newUv[1] = e.target.value; setFormData({...formData, uvbch: newUv}); }} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
+                <input placeholder="UV BCH 3" value={formData.uvbch[2] || ""} onChange={(e) => { const newUv = [...formData.uvbch]; newUv[2] = e.target.value; setFormData({...formData, uvbch: newUv}); }} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
               </div>
             </div>
           ) : (
-            <div className="space-y-5 text-black">
+            <div className="space-y-5">
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Tên CLB / Ban / Đội</label>
                 <input required placeholder="CLB GamApp" value={formData.ten} onChange={(e) => setFormData({...formData, ten: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm text-slate-800" />
@@ -108,7 +114,7 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
 
               <div className="space-y-4 border-t pt-4">
                 <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Cơ cấu nhân sự</label>
-                {formData.members.map((member: any, index: number) => (
+                {formData.member.map((member: any, index: number) => (
                   <div key={index} className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
                     <div className="relative">
                       <select 

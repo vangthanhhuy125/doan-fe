@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { School, X, Save } from "lucide-react";
+import { School, X } from "lucide-react";
 
 interface Props {
   unit: any;
@@ -10,10 +10,21 @@ interface Props {
 }
 
 export default function EditUnitModal({ unit, onClose, onSave }: Props) {
-  const [formData, setFormData] = useState({ ...unit });
-  const isCLB = formData.ten?.toUpperCase().includes("CLB");
+  const [formData, setFormData] = useState({ 
+    ...unit, 
+    ten: unit.ten || unit.group_name || "",
+    member: Array.isArray(unit.member) ? unit.member : [],
+    uvbch: Array.isArray(unit.uvbch) ? unit.uvbch : [],
+    biThu: unit.biThu || "",
+    phoBiThu: unit.phoBiThu || "",
+    truongBan: unit.truongBan || "",
+    phoBan1: unit.phoBan1 || "",
+    phoBan2: unit.phoBan2 || ""
+  });
+
+  const isCLB = formData.ten?.toUpperCase().includes("CLB") || formData.unitType === 'TAPTHE';
   const isBan = formData.ten?.toUpperCase().includes("BAN");
-  const [hasThreeUV, setHasThreeUV] = useState(!!formData.uvBch1);
+  const [hasThreeUV, setHasThreeUV] = useState(formData.uvbch?.length > 1 || !!unit.uvBch1);
 
   const getLabels = () => {
     if (isCLB) return ["Chủ nhiệm", "Phó Chủ nhiệm 1", "Phó Chủ nhiệm 2"];
@@ -23,8 +34,33 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
 
   const labels = getLabels();
 
+  const handleInputChange = (field: string, value: string) => {
+    if (isCLB) {
+      const fieldIndexMap: Record<string, number> = { "chuNhiem": 0, "phoChuNhiem1": 1, "phoChuNhiem2": 2 };
+      const index = fieldIndexMap[field];
+      if (index !== undefined) {
+        const newMembers = [...formData.member];
+        const roles = ["Chủ nhiệm", "Phó Chủ nhiệm", "Phó Chủ nhiệm"];
+        newMembers[index] = { role: roles[index], name: value };
+        setFormData({ ...formData, member: newMembers });
+        return;
+      }
+    }
+
+    if (field.startsWith('uvBch')) {
+      const uvIndexMap: Record<string, number> = { "uvBch": 0, "uvBch1": 0, "uvBch2": 1, "uvBch3": 2 };
+      const idx = uvIndexMap[field];
+      const newUv = [...formData.uvbch];
+      newUv[idx] = value;
+      setFormData({ ...formData, uvbch: newUv, [field]: value });
+      return;
+    }
+
+    setFormData({ ...formData, [field]: value });
+  };
+
   return (
-    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in zoom-in duration-200">
+    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in zoom-in duration-200 text-black">
       <div className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-purple-100 max-h-[90vh] flex flex-col">
         <div className="bg-purple-600 p-6 flex items-center justify-between text-white shrink-0">
           <div className="flex items-center gap-3">
@@ -34,7 +70,7 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
         </div>
 
-        <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="p-8 space-y-5 overflow-y-auto">
+        <form onSubmit={(e) => { e.preventDefault(); onSave({...formData, group_name: formData.ten}); }} className="p-8 space-y-5 overflow-y-auto">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Tên Chi đoàn / Tập thể</label>
             <input required value={formData.ten} onChange={(e) => setFormData({...formData, ten: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-black text-slate-800" />
@@ -49,25 +85,37 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
 
           <div className="grid grid-cols-1 gap-4">
             {labels.map((label, idx) => {
-              const fieldMap: any = {
+              const fieldMap: Record<string, string> = {
                 "Chủ nhiệm": "chuNhiem", "Phó Chủ nhiệm 1": "phoChuNhiem1", "Phó Chủ nhiệm 2": "phoChuNhiem2",
                 "Trưởng ban": "truongBan", "Phó ban 1": "phoBan1", "Phó ban 2": "phoBan2",
                 "Bí thư": "biThu", "Phó Bí thư": "phoBiThu", "UV BCH": "uvBch",
                 "UV BCH 1": "uvBch1", "UV BCH 2": "uvBch2", "UV BCH 3": "uvBch3"
               };
               const field = fieldMap[label];
+              let val = formData[field] || "";
+              
+              if (isCLB && ["chuNhiem", "phoChuNhiem1", "phoChuNhiem2"].includes(field)) {
+                const i = ({ "chuNhiem": 0, "phoChuNhiem1": 1, "phoChuNhiem2": 2 } as Record<string, number>)[field];
+                val = formData.member[i]?.name || "";
+              }
+
+              if (field.startsWith('uvBch')) {
+                const i = ({ "uvBch": 0, "uvBch1": 0, "uvBch2": 1, "uvBch3": 2 } as Record<string, number>)[field];
+                val = formData.uvbch[i] || "";
+              }
+
               return (
                 <div key={idx} className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1">{label}</label>
-                  <input required value={formData[field] || ""} onChange={(e) => setFormData({...formData, [field]: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-bold text-slate-800" />
+                  <input required value={val} onChange={(e) => handleInputChange(field, e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-bold text-slate-800" />
                 </div>
               );
             })}
           </div>
 
-          <div className="pt-4 flex gap-3 shrink-0">
-            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl font-bold text-slate-400 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest text-black">Hủy</button>
-            <button type="submit" className="flex-1 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
+          <div className="pt-4 flex gap-3 shrink-0 text-black">
+            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl font-bold text-slate-400 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest border-none outline-none">Hủy</button>
+            <button type="submit" className="flex-1 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 border-none outline-none">
               Cập nhật            
             </button>
           </div>

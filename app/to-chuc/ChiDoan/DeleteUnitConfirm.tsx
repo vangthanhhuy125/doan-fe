@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2, AlertCircle, X } from "lucide-react";
+import { Trash2, AlertCircle } from "lucide-react";
 
 interface Props {
   unitName: string;

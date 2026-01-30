@@ -59,13 +59,19 @@ export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: P
               <div key={person._id || index} className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center group">
                 <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center font-bold text-2xl shadow-lg ${styles.circle} ${styles.shadow} text-white group-hover:scale-110 transition-transform duration-500 relative overflow-hidden`}>
                   {person.avatar ? (
-                    <Image src={person.avatar} alt={person.full_name || person.name} fill className="object-cover" />
+                    <Image 
+                      src={person.avatar} 
+                      alt={person.full_name || person.name} 
+                      fill 
+                      className="object-cover" 
+                      unoptimized
+                    />
                   ) : (
                     <span>{(person.full_name || person.name || "").split(' ').pop()?.charAt(0)}</span>
                   )}
                 </div>
                 <h4 className="font-bold text-base text-slate-800 tracking-tight">{person.full_name || person.name}</h4>
-                <p className={`${styles.text} ${styles.bg} text-[9px] font-black mt-3 px-4 py-1.5 rounded-full inline-block border ${styles.border} tracking-wider uppercase`}>
+                <p className={`${styles.text} ${styles.bg} text-[9px] font-black mt-3 px-4 py-1.5 rounded-full inline-block border ${styles.border} tracking-wider`}>
                   {person.role}
                 </p>
               </div>
@@ -86,7 +92,13 @@ export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: P
               <div key={person._id || index} className="flex items-center gap-4 p-4 bg-white border border-slate-50 rounded-2xl shadow-sm hover:border-blue-200 hover:shadow-md transition-all duration-300">
                 <div className={`w-11 h-11 ${styles.bg} rounded-xl flex items-center justify-center ${styles.text} font-bold shadow-inner relative overflow-hidden`}>
                   {person.avatar ? (
-                    <Image src={person.avatar} alt={person.full_name || person.name} fill className="object-cover" />
+                    <Image 
+                      src={person.avatar} 
+                      alt={person.full_name || person.name} 
+                      fill 
+                      className="object-cover" 
+                      unoptimized
+                    />
                   ) : (
                     <UserCircle size={24} strokeWidth={2.5} />
                   )}

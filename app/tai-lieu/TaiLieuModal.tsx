@@ -1,10 +1,19 @@
 'use client';
 
+import { useState } from "react";
 import { X, Save, FileText, Link as LinkIcon, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, Calendar } from "lucide-react";
 
-export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: any) {
+export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onSave }: any) {
   const isView = mode === 'view';
   const isAdd = mode === 'add';
+
+  const [formData, setFormData] = useState({
+    document_name: data?.document_name || "",
+    semester: data?.semester || "Học kỳ 1",
+    academic_year: data?.academic_year || "",
+    document_type: data?.document_type || "Văn kiện đoàn khoa",
+    document_url: data?.document_url || ""
+  });
 
   if (mode === 'delete') {
     return (
@@ -18,7 +27,7 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: a
               <h3 className="text-xl font-black text-slate-800">Xác nhận xóa?</h3>
               <p className="text-sm text-slate-500 leading-relaxed px-4">
                 Bạn chắc chắn muốn xóa tài liệu <br/>
-                <span className="font-bold text-red-600">"{data?.name}"</span>?
+                <span className="font-bold text-red-600">"{data?.document_name}"</span>?
               </p>
             </div>
           </div>
@@ -30,7 +39,7 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: a
               Hủy bỏ
             </button>
             <button 
-              onClick={() => { onConfirmDelete(data.id); onClose(); }} 
+              onClick={() => { onConfirmDelete(data._id); onClose(); }} 
               className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none"
             >
               <Trash2 size={14} /> Xác nhận xóa
@@ -61,16 +70,16 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: a
           <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20} /></button>
         </div>
         
-        <form className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={(e) => e.preventDefault()}>
+        <form className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={(e) => { e.preventDefault(); onSave(formData); }}>
           <div className="space-y-2">
             <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Tên tài liệu</label>
-            <input disabled={isView} defaultValue={data?.name} required className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập tên tài liệu..." />
+            <input disabled={isView} value={formData.document_name} onChange={(e) => setFormData({...formData, document_name: e.target.value})} required className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập tên tài liệu..." />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Học kỳ</label>
-              <select disabled={isView} defaultValue={data?.semester} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} appearance-none cursor-pointer disabled:opacity-70`}>
+              <select disabled={isView} value={formData.semester} onChange={(e) => setFormData({...formData, semester: e.target.value})} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} appearance-none cursor-pointer disabled:opacity-70`}>
                 <option value="Học kỳ 1">Học kỳ 1</option>
                 <option value="Học kỳ 2">Học kỳ 2</option>
                 <option value="Học kỳ hè">Học kỳ hè</option>
@@ -79,7 +88,7 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: a
             <div className="space-y-2">
               <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Năm học</label>
               <div className="relative">
-                <input disabled={isView} defaultValue={data?.year} placeholder="2025-2026" className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} />
+                <input disabled={isView} value={formData.academic_year} onChange={(e) => setFormData({...formData, academic_year: e.target.value})} placeholder="2025-2026" className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} />
                 <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -87,7 +96,7 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: a
 
           <div className="space-y-2">
             <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Loại tài liệu</label>
-            <select disabled={isView} defaultValue={data?.category} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} appearance-none cursor-pointer disabled:opacity-70`}>
+            <select disabled={isView} value={formData.document_type} onChange={(e) => setFormData({...formData, document_type: e.target.value})} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} appearance-none cursor-pointer disabled:opacity-70`}>
               <option value="Văn kiện đoàn khoa">Văn kiện đoàn khoa</option>
               <option value="Hành chính">Hành chính</option>
               <option value="Tổ chức - Hoạt động">Tổ chức - Hoạt động</option>
@@ -98,7 +107,7 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete }: a
           <div className="space-y-2">
             <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Link văn kiện (Drive)</label>
             <div className="relative">
-              <input disabled={isView} defaultValue={data?.link} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} text-blue-600 disabled:opacity-70`} placeholder="https://..." />
+              <input disabled={isView} value={formData.document_url} onChange={(e) => setFormData({...formData, document_url: e.target.value})} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} text-blue-600 disabled:opacity-70`} placeholder="https://..." />
               <LinkIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
           </div>

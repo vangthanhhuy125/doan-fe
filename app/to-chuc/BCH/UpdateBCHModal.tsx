@@ -44,6 +44,7 @@ export default function UpdateBCHModal({ onClose, allMembers, currentBCH }: Upda
       return {
         role: item.role,
         isBanThuongVu: item.isBanThuongVu,
+        user_id: existing?.user_id || existing?._id || null,
         name: existing?.full_name || existing?.name || "",
         avatar: existing?.avatar || "", 
         order: idx
@@ -64,8 +65,9 @@ export default function UpdateBCHModal({ onClose, allMembers, currentBCH }: Upda
 
   const handleSelectUser = (idx: number, user: any) => {
     const newData = [...formData];
+    newData[idx].user_id = user._id;
     newData[idx].name = user.full_name || user.name;
-    newData[idx].avatar = user.avatar || ""; 
+    newData[idx].avatar = user.image_url || ""; 
     setFormData(newData);
     setActiveIdx(null);
     setSearchTerm("");

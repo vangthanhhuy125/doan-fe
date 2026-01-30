@@ -66,7 +66,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
               onClick={() => { onConfirmDelete(data._id || data.id); onClose(); }} 
               className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-200 hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none"
             >
-              <Trash2 size={14} /> Xác nhận xóa
+              Xóa
             </button>
           </div>
         </div>
@@ -175,7 +175,6 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
             <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
               <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none">Hủy bỏ</button>
               <button type="submit" className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none`}>
-                {isAdd ? <PlusCircle size={14} /> : <Save size={14} />} 
                 {isAdd ? 'Lưu' : 'Cập nhật'}
               </button>
             </div>

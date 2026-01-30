@@ -3,9 +3,28 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { LogOut } from "lucide-react";
+import { useState, useEffect } from "react";
 
 export default function Header() {
   const router = useRouter();
+  const [userName, setUserName] = useState("Khách");
+
+  useEffect(() => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserName(user.displayName || "Thành viên");
+      } catch (err) {
+        setUserName("Thành viên");
+      }
+    }
+  }, []);
+
+  const handleLogout = () => {
+    localStorage.removeItem("user");
+    router.push("/");
+  };
 
   return (
     <header className="h-16 bg-white flex items-center justify-between px-6 shadow-sm">
@@ -19,12 +38,12 @@ export default function Header() {
       <div className="flex items-center gap-6">
         <div className="flex items-center gap-3 border-r pr-6 border-gray-100">
           <div className="text-right">
-            <p className="text-sm font-black text-[#0054a5] uppercase tracking-tight">Nguyễn Văn Anh</p>
+            <p className="text-sm font-black text-[#0054a5] uppercase tracking-tight">{userName}</p>
           </div>
         </div>
 
         <button 
-          onClick={() => router.push("/")}
+          onClick={handleLogout}
           className="flex items-center gap-2 text-gray-400 hover:text-red-600 transition-all group border-none bg-transparent outline-none"
           title="Đăng xuất"
         >

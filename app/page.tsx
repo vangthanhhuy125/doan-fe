@@ -17,19 +17,30 @@ export default function Home() {
     setIsLoading(true);
     setError("");
 
-    setTimeout(() => {
-      if (username === "admin" && password === "admin") {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem("user", JSON.stringify(data));
         router.push("/gioi-thieu"); 
       } else {
-        setError("Tài khoản hoặc mật khẩu không chính xác!");
-        setIsLoading(false);
+        setError(data.message || "Tài khoản hoặc mật khẩu không chính xác!");
       }
-    }, 1000); 
+    } catch (err) {
+      setError("Không thể kết nối đến máy chủ!");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <main className="flex min-h-screen w-full flex-col md:flex-row bg-white overflow-hidden text-black">
-      
       <div className="relative z-10 flex w-full flex-col items-center justify-center p-8 md:w-[450px] lg:w-[500px] shrink-0 bg-white shadow-2xl md:shadow-none">
         <div className="mb-12 flex flex-col items-center text-center">
           <div className="relative mb-6 transform transition-hover hover:scale-105 duration-300">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { 
   Plus, Edit, Trash2, Eye, Filter, Search,
   CalendarDays, RotateCcw
@@ -10,31 +10,8 @@ import ProgramAdd from "./ProgramAdd";
 import ProgramEdit from "./ProgramEdit";
 import ConfirmDelete from "./ConfirmDelete";
 
-const initialData = [
-  {
-    id: 1,
-    name: "Chiến dịch Tình nguyện Mùa hè xanh 2026",
-    month: "07",
-    year: "2026",
-    semester: "HK2",
-    academicYear: "2025-2026",
-    stakeholder: "Đoàn trường, Địa phương",
-    linkTaiLieu: "#", linkKeHoach: "#", linkDTKP: "#", linkDRL: "#",
-  },
-  {
-    id: 2,
-    name: "Hội thao Sinh viên Khoa CNPM",
-    month: "10",
-    year: "2026",
-    semester: "HK1",
-    academicYear: "2026-2027",
-    stakeholder: "Ban Thể thao Khoa",
-    linkTaiLieu: "#", linkKeHoach: "#", linkDTKP: "#", linkDRL: "#",
-  },
-];
-
 export default function ToChucPage() {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState<any[]>([]);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [viewItem, setViewItem] = useState<any>(null);
   const [editItem, setEditItem] = useState<any>(null);
@@ -46,18 +23,65 @@ export default function ToChucPage() {
   const [filterMonth, setFilterMonth] = useState("");
   const [filterYear, setFilterYear] = useState("");
 
-  const handleAddProgram = (newItem: any) => {
-    setData([...data, { ...newItem, id: Date.now() }]);
+  const fetchPrograms = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programs`);
+      const result = await res.json();
+      setData(Array.isArray(result) ? result : []);
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleUpdateProgram = (updatedItem: any) => {
-    setData(data.map(item => item.id === updatedItem.id ? updatedItem : item));
+  useEffect(() => {
+    fetchPrograms();
+  }, []);
+
+  const handleAddProgram = async (newItem: any) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newItem),
+      });
+      if (res.ok) {
+        await fetchPrograms();
+        setIsAddOpen(false);
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
-  const handleConfirmDelete = () => {
+  const handleUpdateProgram = async (updatedItem: any) => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programs/${updatedItem._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedItem),
+      });
+      if (res.ok) {
+        await fetchPrograms();
+        setEditItem(null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
     if (deleteItem) {
-      setData(data.filter(item => item.id !== deleteItem.id));
-      setDeleteItem(null);
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programs/${deleteItem._id}`, {
+          method: 'DELETE',
+        });
+        if (res.ok) {
+          await fetchPrograms();
+          setDeleteItem(null);
+        }
+      } catch (error) {
+        console.error(error);
+      }
     }
   };
 
@@ -72,9 +96,9 @@ export default function ToChucPage() {
   const isFiltering = searchTerm !== "" || filterSemester !== "" || filterAcademicYear !== "" || filterMonth !== "" || filterYear !== "";
 
   const filteredData = data.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (item.program_name || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSemester = filterSemester === "" || item.semester === filterSemester;
-    const matchesAcademicYear = filterAcademicYear === "" || item.academicYear === filterAcademicYear;
+    const matchesAcademicYear = filterAcademicYear === "" || item.academic_year === filterAcademicYear;
     const matchesMonth = filterMonth === "" || item.month === filterMonth;
     const matchesYear = filterYear === "" || item.year === filterYear;
 
@@ -94,7 +118,7 @@ export default function ToChucPage() {
         </div>
         <button 
           onClick={() => setIsAddOpen(true)}
-          className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider"
+          className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none"
         >
           <Plus size={20} /> Thêm chương trình
         </button>
@@ -124,12 +148,11 @@ export default function ToChucPage() {
             <select 
               value={filterSemester}
               onChange={(e) => setFilterSemester(e.target.value)}
-              className="block w-32 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"
+              className="block w-32 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="">Tất cả</option>
               <option value="HK1">Học kỳ 1</option>
               <option value="HK2">Học kỳ 2</option>
-              <option value="HK3">Học kỳ 3</option>
             </select>
           </div>
 
@@ -138,7 +161,7 @@ export default function ToChucPage() {
             <select 
               value={filterAcademicYear}
               onChange={(e) => setFilterAcademicYear(e.target.value)}
-              className="block w-40 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"
+              className="block w-40 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="">Tất cả</option>
               <option value="2024-2025">2024-2025</option>
@@ -152,7 +175,7 @@ export default function ToChucPage() {
             <select 
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="block w-28 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"
+              className="block w-28 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="">Tất cả</option>
               {Array.from({ length: 12 }, (_, i) => {
@@ -167,7 +190,7 @@ export default function ToChucPage() {
             <select 
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value)}
-              className="block w-28 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500"
+              className="block w-28 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
             >
               <option value="">Tất cả</option>
               <option value="2025">2025</option>
@@ -179,7 +202,7 @@ export default function ToChucPage() {
           {isFiltering && (
             <button 
               onClick={resetFilters}
-              className="p-2 mb-0.5 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500"
+              className="p-2 mb-0.5 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500 border-none bg-transparent"
             >
               <RotateCcw size={20} />
             </button>
@@ -200,17 +223,17 @@ export default function ToChucPage() {
           <tbody className="divide-y divide-gray-200">
             {filteredData.length > 0 ? (
               filteredData.map((item, index) => (
-                <tr key={item.id} className="hover:bg-blue-50/40 transition-colors">
+                <tr key={item._id} className="hover:bg-blue-50/40 transition-colors">
                   <td className="px-4 py-4 text-center font-bold text-gray-400">{index + 1}</td>
-                  <td className="px-4 py-4 font-bold text-[#0054a5]">{item.name}</td>
+                  <td className="px-4 py-4 font-bold text-[#0054a5]">{item.program_name}</td>
                   <td className="px-4 py-4 text-center text-gray-600 font-medium whitespace-nowrap">
-                    {item.month}/{item.year} - {item.semester} - {item.academicYear}
+                    {item.month}/{item.year} - {item.semester} - {item.academic_year}
                   </td>
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => setViewItem(item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"><Eye size={18} /></button>
-                      <button onClick={() => setEditItem(item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors"><Edit size={18} /></button>
-                      <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors"><Trash2 size={18} /></button>
+                      <button onClick={() => setViewItem(item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border-none bg-transparent"><Eye size={18} /></button>
+                      <button onClick={() => setEditItem(item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors border-none bg-transparent"><Edit size={18} /></button>
+                      <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors border-none bg-transparent"><Trash2 size={18} /></button>
                     </div>
                   </td>
                 </tr>
@@ -231,7 +254,7 @@ export default function ToChucPage() {
       {editItem && <ProgramEdit data={editItem} onClose={() => setEditItem(null)} onSave={handleUpdateProgram} />}
       {deleteItem && (
         <ConfirmDelete 
-          title={deleteItem.name}
+          title={deleteItem.program_name}
           onClose={() => setDeleteItem(null)}
           onConfirm={handleConfirmDelete}
         />

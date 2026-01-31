@@ -13,16 +13,16 @@ export default function ProgramAdd({ onClose, onSave }: ProgramAddProps) {
     const formData = new FormData(e.currentTarget);
     
     const newItem = {
-      name: formData.get("name"),
-      stakeholder: formData.get("stakeholder"),
+      program_name: formData.get("name"),
+      stakeholders: formData.get("stakeholder"),
       month: formData.get("month"),
       year: formData.get("year"),
       semester: formData.get("semester"),
-      academicYear: formData.get("academicYear"),
-      linkTaiLieu: formData.get("linkTaiLieu") || "#",
-      linkKeHoach: formData.get("linkKeHoach") || "#",
-      linkDTKP: formData.get("linkDTKP") || "#",
-      linkDRL: formData.get("linkDRL") || "#",
+      academic_year: formData.get("academicYear"),
+      source_url: formData.get("linkTaiLieu") || "#",
+      plan_url: formData.get("linkKeHoach") || "#",
+      budget_url: formData.get("linkDTKP") || "#",
+      training_score_list_url: formData.get("linkDRL") || "#",
     };
 
     onSave(newItem);
@@ -32,12 +32,12 @@ export default function ProgramAdd({ onClose, onSave }: ProgramAddProps) {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in zoom-in duration-200">
       <div className="bg-white w-full max-w-3xl rounded-3xl shadow-2xl overflow-hidden border border-white/20">
-        <div className="bg-[#1d92ff] p-6 flex items-center justify-between text-white">
+        <div className="bg-[#1d92ff] p-6 flex items-center justify-between text-white transition-colors">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-white/20 rounded-lg"><Save size={20} /></div>
             <h3 className="font-bold uppercase tracking-widest text-sm text-white">Thêm chương trình năm</h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white border-none bg-transparent outline-none"><X size={20} /></button>
         </div>
 
         <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto max-h-[85vh]">
@@ -60,15 +60,15 @@ export default function ProgramAdd({ onClose, onSave }: ProgramAddProps) {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Tháng</label>
-                <select name="month" className="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none text-sm font-bold text-black focus:border-[#1d92ff]">
+                <select name="month" className="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none text-sm font-bold text-black focus:border-[#1d92ff] cursor-pointer">
                   {Array.from({ length: 12 }, (_, i) => (
-                    <option key={i+1} value={(i+1).toString().padStart(2, '0')}>Tháng {i+1}</option>
+                    <option key={i+1} value={(i+1).toString().padStart(2, '0')}>Tháng {(i+1).toString().padStart(2, '0')}</option>
                   ))}
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Năm</label>
-                <select name="year" className="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none text-sm font-bold text-black focus:border-[#1d92ff]">
+                <select name="year" className="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none text-sm font-bold text-black focus:border-[#1d92ff] cursor-pointer">
                   <option value="2025">2025</option>
                   <option value="2026">2026</option>
                   <option value="2027">2027</option>
@@ -76,15 +76,14 @@ export default function ProgramAdd({ onClose, onSave }: ProgramAddProps) {
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Học kỳ</label>
-                <select name="semester" className="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none text-sm font-bold text-black focus:border-[#1d92ff]">
+                <select name="semester" className="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none text-sm font-bold text-black focus:border-[#1d92ff] cursor-pointer">
                   <option value="HK1">Học kỳ 1</option>
                   <option value="HK2">Học kỳ 2</option>
-                  <option value="HK3">Học kỳ 3</option>
                 </select>
               </div>
               <div className="space-y-2">
                 <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Năm học</label>
-                <select name="academicYear" className="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none text-sm font-bold text-black focus:border-[#1d92ff]">
+                <select name="academicYear" className="w-full p-3 bg-white rounded-xl border border-slate-200 outline-none text-sm font-bold text-black focus:border-[#1d92ff] cursor-pointer">
                   <option value="2024-2025">2024-2025</option>
                   <option value="2025-2026">2025-2026</option>
                   <option value="2026-2027">2026-2027</option>
@@ -112,9 +111,9 @@ export default function ProgramAdd({ onClose, onSave }: ProgramAddProps) {
             </div>
           </div>
 
-          <div className="pt-6 flex justify-end gap-3">
-            <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase">Hủy bỏ</button>
-            <button type="submit" className="px-10 py-3 bg-[#1d92ff] text-white rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-[#0054a5] transition-all text-xs tracking-widest uppercase">Lưu</button>
+          <div className="pt-6 flex justify-end gap-3 text-black">
+            <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none bg-transparent outline-none">Hủy bỏ</button>
+            <button type="submit" className="px-10 py-3 bg-[#1d92ff] text-white rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-[#0054a5] transition-all text-xs tracking-widest uppercase border-none outline-none">Lưu</button>
           </div>
         </form>
       </div>

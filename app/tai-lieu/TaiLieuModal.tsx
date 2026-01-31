@@ -82,7 +82,7 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
               <select disabled={isView} value={formData.semester} onChange={(e) => setFormData({...formData, semester: e.target.value})} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} appearance-none cursor-pointer disabled:opacity-70`}>
                 <option value="Học kỳ 1">Học kỳ 1</option>
                 <option value="Học kỳ 2">Học kỳ 2</option>
-                <option value="Học kỳ hè">Học kỳ hè</option>
+                <option value="Học kỳ hè">Trong năm</option>
               </select>
             </div>
             <div className="space-y-2">

@@ -1,45 +1,72 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShieldCheck, Star, Search, Filter, RotateCcw } from "lucide-react";
 import MemberList from "./MemberList";
 import MemberForm from "./MemberForm";
 import ConfirmPartyDelete from "./ConfirmPartyDelete";
 
 export default function PartyDevelopment() {
-  const [dangVien, setDangVien] = useState([
-    { id: 1, name: "Nguyễn Văn An", mssv: "23520001", chiDoan: "PMCL2023.1" },
-    { id: 2, name: "Lê Thị Bình", mssv: "23520002", chiDoan: "SE114.O11" }
-  ]);
-  const [dvut, setDvut] = useState([
-    { id: 3, name: "Phạm Minh Đức", mssv: "23520003", chiDoan: "PMCL2022.2" }
-  ]);
-
+  const [members, setMembers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterChiDoan, setFilterChiDoan] = useState("");
-
   const [modal, setModal] = useState<{ open: boolean, type: 'DV' | 'UT' | null, data: any }>({ open: false, type: null, data: null });
   const [deleteItem, setDeleteItem] = useState<{ type: 'DV' | 'UT', item: any } | null>(null);
 
-  const chiDoanList = Array.from(new Set([...dangVien, ...dvut].map(i => i.chiDoan)));
-
-  const handleSave = (formData: any) => {
-    const list = modal.type === 'DV' ? dangVien : dvut;
-    const setList = modal.type === 'DV' ? setDangVien : setDvut;
-
-    if (formData.id) {
-      setList(list.map(i => i.id === formData.id ? formData : i));
-    } else {
-      setList([...list, { ...formData, id: Date.now() }]);
+  const fetchMembers = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/party-members`);
+      const data = await res.json();
+      setMembers(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error(error);
     }
-    setModal({ open: false, type: null, data: null });
   };
 
-  const handleDelete = () => {
+  useEffect(() => {
+    fetchMembers();
+  }, []);
+
+  const dangVien = members.filter(m => m.type === 'DV');
+  const dvut = members.filter(m => m.type === 'UT');
+
+  const chiDoanList = Array.from(new Set(members.map(i => i.class)));
+
+  const handleSave = async (formData: any) => {
+    try {
+      const isEdit = !!formData._id;
+      const url = isEdit 
+        ? `${process.env.NEXT_PUBLIC_API_URL}/party-members/${formData._id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/party-members`;
+      
+      const res = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...formData, type: modal.type }),
+      });
+
+      if (res.ok) {
+        await fetchMembers();
+        setModal({ open: false, type: null, data: null });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleDelete = async () => {
     if (!deleteItem) return;
-    if (deleteItem.type === 'DV') setDangVien(dangVien.filter(i => i.id !== deleteItem.item.id));
-    else setDvut(dvut.filter(i => i.id !== deleteItem.item.id));
-    setDeleteItem(null);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/party-members/${deleteItem.item._id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchMembers();
+        setDeleteItem(null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const resetFilters = () => {
@@ -51,8 +78,10 @@ export default function PartyDevelopment() {
 
   const filterData = (data: any[]) => {
     return data.filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) || item.mssv.includes(searchTerm);
-      const matchesChiDoan = filterChiDoan === "" || item.chiDoan === filterChiDoan;
+      const name = item.name || "";
+      const mssv = item.student_id || "";
+      const matchesSearch = name.toLowerCase().includes(searchTerm.toLowerCase()) || mssv.includes(searchTerm);
+      const matchesChiDoan = filterChiDoan === "" || item.class === filterChiDoan;
       return matchesSearch && matchesChiDoan;
     });
   };
@@ -64,9 +93,7 @@ export default function PartyDevelopment() {
           <div className="p-2 bg-red-600 rounded-xl text-white shadow-lg shadow-red-100">
             <ShieldCheck size={24} />
           </div>
-          <h2 className="text-2xl font-black uppercase text-red-600 tracking-tight">
-            Công tác Đoàn - Đảng
-          </h2>
+          <h2 className="text-2xl font-black uppercase text-red-600 tracking-tight">Công tác Đoàn - Đảng</h2>
         </div>
       </div>
 
@@ -98,13 +125,7 @@ export default function PartyDevelopment() {
               </div>
             </div>
             {isFiltering && (
-              <button 
-                onClick={resetFilters}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500 border-none bg-transparent outline-none"
-                title="Xóa lọc"
-              >
-                <RotateCcw size={18} />
-              </button>
+              <button onClick={resetFilters} className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all border-none bg-transparent outline-none"><RotateCcw size={18} /></button>
             )}
           </div>
         </div>

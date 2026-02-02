@@ -1,13 +1,18 @@
 'use client';
 
-import { X, Save, UserPlus } from "lucide-react";
+import { X, UserPlus } from "lucide-react";
 import { useState, useEffect } from "react";
 
 export default function MemberForm({ data, onClose, onSave, title, color }: any) {
-  const [formData, setFormData] = useState({ name: "", mssv: "", chiDoan: "" });
+  const [formData, setFormData] = useState({ name: "", student_id: "", class: "" });
 
   useEffect(() => {
-    if (data) setFormData(data);
+    if (data) setFormData({
+        ...data,
+        name: data.name || "",
+        student_id: data.student_id || "",
+        class: data.class || ""
+    });
   }, [data]);
 
   return (
@@ -18,7 +23,7 @@ export default function MemberForm({ data, onClose, onSave, title, color }: any)
             <UserPlus size={20} />
             <h3 className="font-bold uppercase tracking-widest text-xs">{data ? `Sửa thông tin ${title}` : `Thêm ${title}`}</h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white outline-none"><X size={20} /></button>
         </div>
 
         <form onSubmit={(e) => { e.preventDefault(); onSave(formData); }} className="p-8 space-y-5">
@@ -28,16 +33,16 @@ export default function MemberForm({ data, onClose, onSave, title, color }: any)
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Mã số sinh viên</label>
-            <input required value={formData.mssv} onChange={(e) => setFormData({...formData, mssv: e.target.value})} className="w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-blue-400 outline-none text-sm font-bold text-black" placeholder="2352xxxx" />
+            <input required value={formData.student_id} onChange={(e) => setFormData({...formData, student_id: e.target.value})} className="w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-blue-400 outline-none text-sm font-bold text-black" placeholder="2352xxxx" />
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Chi đoàn</label>
-            <input required value={formData.chiDoan} onChange={(e) => setFormData({...formData, chiDoan: e.target.value})} className="w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-blue-400 outline-none text-sm font-bold text-black" placeholder="PMCL2023.1" />
+            <input required value={formData.class} onChange={(e) => setFormData({...formData, class: e.target.value})} className="w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white focus:border-blue-400 outline-none text-sm font-bold text-black" placeholder="PMCL2023.1" />
           </div>
 
           <div className="pt-4 flex gap-3">
-            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-[10px] uppercase tracking-widest">Hủy</button>
-            <button type="submit" className={`flex-1 py-3 ${color} text-white rounded-2xl font-bold shadow-lg transition-all text-[10px] uppercase tracking-widest`}>Cập nhật</button>
+            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-[10px] uppercase tracking-widest border-none outline-none">Hủy</button>
+            <button type="submit" className={`flex-1 py-3 ${color} text-white rounded-2xl font-bold shadow-lg transition-all text-[10px] uppercase tracking-widest border-none outline-none`}>{data ? 'Cập nhật' : 'Thêm mới'}</button>
           </div>
         </form>
       </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import { Trash2, X, AlertTriangle } from "lucide-react";
+import { Trash2, AlertTriangle } from "lucide-react";
 
 interface Props {
   onClose: () => void;
@@ -36,13 +36,10 @@ export default function ConfirmPartyDelete({ onClose, onConfirm, title, subtitle
             Hủy bỏ
           </button>
           <button 
-            onClick={() => {
-              onConfirm();
-              onClose();
-            }}
+            onClick={onConfirm}
             className="flex-1 py-4 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-200 hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none"
           >
-            Xoá
+            Gỡ tên
           </button>
         </div>
       </div>

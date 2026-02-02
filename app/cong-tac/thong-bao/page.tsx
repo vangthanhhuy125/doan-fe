@@ -1,39 +1,12 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Bell, Eye, Edit, Trash2, Plus, Calendar, X, Search, RotateCcw } from "lucide-react";
 import NoticeForm from "./NoticeForm";
 import ConfirmNoticeDelete from "./ConfirmNoticeDelete";
 
-const initialNotices = [
-  { 
-    id: 1, 
-    title: "Thông báo về việc đóng Đoàn phí học kỳ 2 năm 2025-2026", 
-    date: "20/01/2026", 
-    content: "Yêu cầu các Chi đoàn thực hiện thu Đoàn phí học kỳ 2. Mức thu: 20.000đ/Đoàn viên. Thời hạn nộp về văn phòng Đoàn khoa: Trước ngày 15/02/2026. Các đồng chí Bí thư Chi đoàn lưu ý nộp kèm danh sách trích ngang có ký xác nhận." 
-  },
-  { 
-    id: 2, 
-    title: "Kế hoạch tổ chức Hội trại Tòng quân năm 2026", 
-    date: "15/01/2026", 
-    content: "Triển khai kế hoạch tham gia Hội trại tòng quân. Nội dung bao gồm: Trang trí lều trại, tổ chức trò chơi vận động và đêm lửa trại giao lưu. Thành phần: Đoàn viên thanh niên các khối lớp cuối. Thời gian tập trung: 07h00 ngày 05/02/2026." 
-  },
-  { 
-    id: 3, 
-    title: "Triệu tập tham gia Chiến dịch Xuân Tình nguyện 2026", 
-    date: "10/01/2026", 
-    content: "Đoàn khoa triệu tập các chiến sĩ đã đăng ký tham gia Chiến dịch Xuân Tình nguyện tham gia buổi tập huấn kỹ năng tổ chức trò chơi trẻ em và kỹ năng sơ cấp cứu. Địa điểm: Hội trường B. Thời gian: 08h30 Chủ nhật tuần này." 
-  },
-  { 
-    id: 4, 
-    title: "Danh sách Đoàn viên ưu tú tham gia lớp bồi dưỡng nhận thức về Đảng", 
-    date: "05/01/2026", 
-    content: "Căn cứ vào kết quả rèn luyện năm học qua, Đoàn khoa gửi danh sách 10 đồng chí Đoàn viên ưu tú đủ điều kiện tham gia lớp bồi dưỡng nhận thức về Đảng khóa I/2026. Các đồng chí có tên trong danh sách chuẩn bị hồ sơ và ảnh thẻ 3x4 để làm thẻ học viên." 
-  }
-];
-
 export default function NotificationPage() {
-  const [notices, setNotices] = useState(initialNotices);
+  const [notices, setNotices] = useState<any[]>([]);
   const [selectedNotice, setSelectedNotice] = useState<any>(null);
   const [formMode, setFormMode] = useState<{ open: boolean, data: any }>({ open: false, data: null });
   const [deleteItem, setDeleteItem] = useState<any>(null);
@@ -42,17 +15,54 @@ export default function NotificationPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const handleSave = (item: any) => {
-    if (item.id) {
-      setNotices(notices.map(n => n.id === item.id ? item : n));
-    } else {
-      setNotices([{ ...item, id: Date.now(), date: new Date().toLocaleDateString('vi-VN') }, ...notices]);
+  const fetchNotices = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/announcements`);
+      const data = await res.json();
+      setNotices(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error(error);
     }
   };
 
-  const confirmDelete = () => {
-    setNotices(notices.filter(n => n.id !== deleteItem.id));
-    setDeleteItem(null);
+  useEffect(() => {
+    fetchNotices();
+  }, []);
+
+  const handleSave = async (item: any) => {
+    try {
+      const isEdit = !!item._id;
+      const url = isEdit 
+        ? `${process.env.NEXT_PUBLIC_API_URL}/announcements/${item._id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/announcements`;
+      
+      const res = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item),
+      });
+
+      if (res.ok) {
+        await fetchNotices();
+        setFormMode({ open: false, data: null });
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const confirmDelete = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/announcements/${deleteItem._id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        await fetchNotices();
+        setDeleteItem(null);
+      }
+    } catch (error) {
+      console.error(error);
+    }
   };
 
   const resetFilters = () => {
@@ -64,16 +74,12 @@ export default function NotificationPage() {
   const isFiltering = searchTerm !== "" || startDate !== "" || endDate !== "";
 
   const filteredNotices = notices.filter(item => {
-    const matchesSearch = item.title.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const [day, month, year] = item.date.split('/').map(Number);
-    const itemDate = new Date(year, month - 1, day);
-    
+    const matchesSearch = (item.title || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const itemDate = new Date(item.posted_at);
     const start = startDate ? new Date(startDate) : null;
     const end = endDate ? new Date(endDate) : null;
-    
+    if (end) end.setHours(23, 59, 59, 999);
     const matchesDate = (!start || itemDate >= start) && (!end || itemDate <= end);
-    
     return matchesSearch && matchesDate;
   });
 
@@ -129,7 +135,6 @@ export default function NotificationPage() {
               <button 
                 onClick={resetFilters}
                 className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500 border-none bg-transparent outline-none"
-                title="Xóa lọc"
               >
                 <RotateCcw size={20} />
               </button>
@@ -151,15 +156,15 @@ export default function NotificationPage() {
           <tbody className="divide-y divide-gray-100">
             {filteredNotices.length > 0 ? (
               filteredNotices.map((item, index) => (
-                <tr key={item.id} className="hover:bg-blue-50/50 transition-colors group">
+                <tr key={item._id} className="hover:bg-blue-50/50 transition-colors group">
                   <td className="px-6 py-5 text-center font-bold text-gray-400 group-hover:text-[#0054a5] transition-colors">{index + 1}</td>
-                  <td className="px-6 py-5 font-bold text-slate-700 group-hover:text-[#0054a5] transition-colors line-clamp-1">{item.title}</td>
-                  <td className="px-6 py-5 text-center text-gray-500 text-xs font-medium italic">{item.date}</td>
+                  <td className="px-6 py-5 font-bold text-slate-700 group-hover:text-[#0054a5] transition-colors truncate max-w-md">{item.title}</td>
+                  <td className="px-6 py-5 text-center text-gray-500 text-xs font-medium italic">{new Date(item.posted_at).toLocaleDateString('vi-VN')}</td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => setSelectedNotice(item)} className="p-2 text-[#0054a5] hover:bg-blue-100 rounded-xl transition-all border-none outline-none" title="Xem chi tiết"><Eye size={18} /></button>
-                      <button onClick={() => setFormMode({ open: true, data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all border-none outline-none" title="Chỉnh sửa"><Edit size={18} /></button>
-                      <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all border-none outline-none" title="Xóa"><Trash2 size={18} /></button>
+                      <button onClick={() => setSelectedNotice(item)} className="p-2 text-[#0054a5] hover:bg-blue-100 rounded-xl transition-all border-none outline-none"><Eye size={18} /></button>
+                      <button onClick={() => setFormMode({ open: true, data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all border-none outline-none"><Edit size={18} /></button>
+                      <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all border-none outline-none"><Trash2 size={18} /></button>
                     </div>
                   </td>
                 </tr>
@@ -175,17 +180,17 @@ export default function NotificationPage() {
 
       {selectedNotice && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20">
-            <div className="bg-[#0054a5] p-6 flex items-center justify-between text-white">
+          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20 max-h-[85vh] flex flex-col">
+            <div className="bg-[#0054a5] p-6 flex items-center justify-between text-white shrink-0">
               <h3 className="font-bold uppercase tracking-widest text-sm">Nội dung chi tiết</h3>
-              <button onClick={() => setSelectedNotice(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20}/></button>
+              <button onClick={() => setSelectedNotice(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white outline-none"><X size={20}/></button>
             </div>
-            <div className="p-10 space-y-6 text-black">
+            <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-6 text-black custom-scrollbar">
               <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase">
-                <Calendar size={12}/> Ngày đăng: {selectedNotice.date}
+                <Calendar size={12}/> Ngày đăng: {new Date(selectedNotice.posted_at).toLocaleDateString('vi-VN')}
               </div>
               <h2 className="text-2xl font-black text-[#0054a5] leading-tight">{selectedNotice.title}</h2>
-              <div className="p-8 bg-slate-50 rounded-[2rem] border border-slate-100 text-slate-700 leading-relaxed whitespace-pre-wrap italic shadow-inner">
+              <div className="p-6 sm:p-8 bg-slate-50 rounded-[2rem] border border-slate-100 text-slate-700 leading-relaxed whitespace-pre-wrap italic shadow-inner">
                 {selectedNotice.content}
               </div>
             </div>

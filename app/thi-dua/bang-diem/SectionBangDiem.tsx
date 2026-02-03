@@ -12,12 +12,12 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterYear, setFilterYear] = useState("");
 
-  const years = Array.from(new Set(activities.map(item => item.namHoc))).sort().reverse();
+  const years = Array.from(new Set(activities.map(item => item.academic_year))).sort().reverse();
 
   const filteredActivities = activities.filter(item => {
-    const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          item.plan.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesYear = filterYear === "" || item.namHoc === filterYear;
+    const matchesSearch = (item.activity_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          (item.plan_url || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesYear = filterYear === "" || item.academic_year === filterYear;
     return matchesSearch && matchesYear;
   });
 
@@ -37,7 +37,7 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
         </div>
         <button 
           onClick={() => onOpenModal('add')}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-emerald-700 transition-all active:scale-95 text-xs uppercase tracking-wider"
+          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-emerald-700 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none"
         >
           <Plus size={16} /> Thêm minh chứng
         </button>
@@ -97,25 +97,25 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
           <tbody className="divide-y divide-slate-100">
             {filteredActivities.length > 0 ? (
               filteredActivities.map((item, index) => (
-                <tr key={item.id} className="hover:bg-emerald-50/30 transition-colors group text-black">
+                <tr key={item._id} className="hover:bg-emerald-50/30 transition-colors group text-black">
                   <td className="px-4 py-4 text-center font-bold text-slate-400 group-hover:text-emerald-600">{index + 1}</td>
-                  <td className="px-6 py-4 font-bold text-slate-700 leading-relaxed">{item.name}</td>
+                  <td className="px-6 py-4 font-bold text-slate-700 leading-relaxed">{item.activity_name}</td>
                   <td className="px-6 py-4 text-center">
-                    <a href={item.plan} target="_blank" className="inline-flex items-center gap-1 text-emerald-600 hover:underline font-bold text-xs bg-emerald-50 px-3 py-1 rounded-full">
+                    <a href={item.plan_url} target="_blank" className="inline-flex items-center gap-1 text-emerald-600 hover:underline font-bold text-xs bg-emerald-50 px-3 py-1 rounded-full no-underline">
                       <FileText size={12} /> Kế hoạch
                     </a>
                   </td>
-                  <td className="px-6 py-4 text-center font-bold text-slate-400 group-hover:text-emerald-600">{item.namHoc}</td>
+                  <td className="px-6 py-4 text-center font-bold text-slate-400 group-hover:text-emerald-600">{item.academic_year}</td>
                   <td className="px-6 py-4 text-center">
-                    <a href={item.evidence} target="_blank" className="inline-flex items-center gap-1 text-blue-600 hover:underline font-bold text-xs bg-blue-50 px-3 py-1 rounded-full">
+                    <a href={item.evidence_url} target="_blank" className="inline-flex items-center gap-1 text-blue-600 hover:underline font-bold text-xs bg-blue-50 px-3 py-1 rounded-full no-underline">
                       <LinkIcon size={12} /> Bài đăng
                     </a>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => onOpenModal('view', item)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-emerald-200"><Eye size={18} /></button>
-                      <button onClick={() => onOpenModal('edit', item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-amber-200"><Edit size={18} /></button>
-                      <button onClick={() => onOpenModal('delete', item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-red-200"><Trash2 size={18} /></button>
+                      <button onClick={() => onOpenModal('view', item)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-emerald-200 bg-transparent outline-none"><Eye size={18} /></button>
+                      <button onClick={() => onOpenModal('edit', item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-amber-200 bg-transparent outline-none"><Edit size={18} /></button>
+                      <button onClick={() => onOpenModal('delete', item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-red-200 bg-transparent outline-none"><Trash2 size={18} /></button>
                     </div>
                   </td>
                 </tr>

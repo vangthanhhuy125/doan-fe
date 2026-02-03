@@ -100,7 +100,7 @@ export default function CaiDatPage() {
               <th className="px-6 py-5 text-center w-20">STT</th>
               <th className="px-6 py-5 text-center">Người sở hữu</th>
               <th className="px-6 py-5 text-center">Tên đăng nhập</th>
-              <th className="px-6 py-5 text-center font-black">Mật khẩu</th>
+              <th className="px-6 py-5 text-center">Mật khẩu</th>
               <th className="px-6 py-5 text-center w-40"></th>
             </tr>
           </thead>

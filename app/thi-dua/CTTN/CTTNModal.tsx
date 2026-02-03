@@ -1,10 +1,19 @@
 'use client';
 
 import { X, Save, Flag, Link as LinkIcon, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, Calendar } from "lucide-react";
+import { useState } from "react";
 
-export default function CTTNModal({ mode, data, onClose, onConfirmDelete }: any) {
+export default function CTTNModal({ mode, data, onClose, onConfirmDelete, onSave }: any) {
   const isView = mode === 'view';
   const isAdd = mode === 'add';
+
+  const [formData, setFormData] = useState({
+    youth_project_name: data?.youth_project_name || "",
+    academic_year: data?.academic_year || "",
+    unit_name: data?.unit_name || "",
+    content: data?.content || "",
+    report_url: data?.report_url || ""
+  });
 
   if (mode === 'delete') {
     return (
@@ -18,22 +27,14 @@ export default function CTTNModal({ mode, data, onClose, onConfirmDelete }: any)
               <h3 className="text-xl font-black text-slate-800 tracking-tight">Xác nhận xóa?</h3>
               <p className="text-sm text-slate-500 leading-relaxed px-4">
                 Bạn chắc chắn muốn xóa công trình <br/>
-                <span className="font-bold text-red-600">"{data?.name}"</span>?
+                <span className="font-bold text-red-600">"{data?.youth_project_name}"</span>?
               </p>
             </div>
           </div>
           <div className="flex p-4 gap-3 bg-slate-50">
-            <button 
-              onClick={onClose} 
-              className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[11px] tracking-widest border-none outline-none"
-            >
-              Hủy bỏ
-            </button>
-            <button 
-              onClick={() => { onConfirmDelete(data.id); onClose(); }} 
-              className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none"
-            >
-              <Trash2 size={14} /> Xác nhận xóa
+            <button onClick={onClose} className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[11px] tracking-widest border-none outline-none">Hủy bỏ</button>
+            <button onClick={() => { onConfirmDelete(data._id); }} className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none">
+              Xóa
             </button>
           </div>
         </div>
@@ -58,38 +59,44 @@ export default function CTTNModal({ mode, data, onClose, onConfirmDelete }: any)
               {isView ? 'Chi tiết công trình' : isAdd ? 'Đăng ký công trình mới' : 'Cập nhật công trình'}
             </h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white outline-none"><X size={20} /></button>
         </div>
         
-        <form className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={(e) => e.preventDefault()}>
+        <form className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={(e) => { e.preventDefault(); onSave(formData); }}>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="md:col-span-2 space-y-2">
               <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Tên công trình thanh niên</label>
-              <input disabled={isView} defaultValue={data?.name} required className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập tên công trình..." />
+              <input disabled={isView} value={formData.youth_project_name} onChange={(e) => setFormData({...formData, youth_project_name: e.target.value})} required className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Nhập tên công trình..." />
             </div>
             <div className="md:col-span-1 space-y-2">
               <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Năm học</label>
-              <div className="relative">
-                <input disabled={isView} defaultValue={data?.year} placeholder="2025-2026" className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} />
-              </div>
+              <input disabled={isView} value={formData.academic_year} onChange={(e) => setFormData({...formData, academic_year: e.target.value})} placeholder="2025-2026" className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} />
             </div>
           </div>
 
           <div className="space-y-2">
             <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Đơn vị thực hiện</label>
-            <input disabled={isView} defaultValue={data?.unit} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Đoàn khoa/Chi đoàn..." />
+            <input disabled={isView} value={formData.unit_name} onChange={(e) => setFormData({...formData, unit_name: e.target.value})} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} disabled:opacity-70`} placeholder="Đoàn khoa/Chi đoàn..." />
           </div>
 
           <div className="space-y-2">
-            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Nội dung & Chỉ tiêu thực hiện</label>
-            <textarea disabled={isView} rows={4} defaultValue={data?.content} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-medium ${ringColor} disabled:opacity-70`} placeholder="Nhập nội dung chi tiết..." />
+            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Nội dung thực hiện</label>
+            <textarea disabled={isView} value={formData.content} onChange={(e) => setFormData({...formData, content: e.target.value})} rows={4} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-medium ${ringColor} disabled:opacity-70 resize-none`} placeholder="Nhập nội dung chi tiết..." />
+          </div>
+
+          <div className="space-y-2">
+            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Link báo cáo (Drive/Bài đăng)</label>
+            <div className="relative">
+              <input disabled={isView} value={formData.report_url} onChange={(e) => setFormData({...formData, report_url: e.target.value})} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm font-bold ${ringColor} text-blue-600 disabled:opacity-70`} placeholder="https://..." />
+              <LinkIcon size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+            </div>
           </div>
 
           {!isView && (
             <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
-              <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none">Hủy bỏ</button>
+              <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none bg-transparent">Hủy bỏ</button>
               <button type="submit" className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none`}>
-                {isAdd ? 'Đăng ký' : 'Cập nhật'}
+                {isAdd ? 'Lưu' : 'Cập nhật'}
               </button>
             </div>
           )}

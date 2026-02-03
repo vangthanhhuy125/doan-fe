@@ -12,11 +12,11 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterYear, setFilterYear] = useState("");
 
-  const years = Array.from(new Set(mhgpList.map(item => item.year))).sort().reverse();
+  const years = Array.from(new Set(mhgpList.map(item => item.academic_year))).sort().reverse();
 
   const filteredList = mhgpList.filter(item => {
-    const matchesName = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesYear = filterYear === "" || item.year === filterYear;
+    const matchesName = (item.solution_model_name || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesYear = filterYear === "" || item.academic_year === filterYear;
     return matchesName && matchesYear;
   });
 
@@ -94,21 +94,21 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
           <tbody className="divide-y divide-slate-100">
             {filteredList.length > 0 ? (
               filteredList.map((item, index) => (
-                <tr key={item.id} className="hover:bg-blue-50/30 transition-colors group">
+                <tr key={item._id} className="hover:bg-blue-50/30 transition-colors group">
                   <td className="px-4 py-5 text-center font-bold text-slate-400 group-hover:text-blue-600">
                     {index + 1}
                   </td>
-                  <td className="px-6 py-5 font-bold text-slate-700 leading-relaxed">{item.name}</td>
-                  <td className="px-6 py-5 text-center font-bold text-slate-400 group-hover:text-blue-600">{item.year}</td>
+                  <td className="px-6 py-5 font-bold text-slate-700 leading-relaxed">{item.solution_model_name}</td>
+                  <td className="px-6 py-5 text-center font-bold text-slate-400 group-hover:text-blue-600">{item.academic_year}</td>
                   <td className="px-6 py-5 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => onOpenModal('view', item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-blue-200">
+                      <button onClick={() => onOpenModal('view', item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-blue-200 bg-transparent outline-none">
                         <Eye size={18} />
                       </button>
-                      <button onClick={() => onOpenModal('edit', item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-amber-200">
+                      <button onClick={() => onOpenModal('edit', item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-amber-200 bg-transparent outline-none">
                         <Edit size={18} />
                       </button>
-                      <button onClick={() => onOpenModal('delete', item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-red-200">
+                      <button onClick={() => onOpenModal('delete', item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-red-200 bg-transparent outline-none">
                         <Trash2 size={18} />
                       </button>
                     </div>

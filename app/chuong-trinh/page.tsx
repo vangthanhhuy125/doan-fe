@@ -87,10 +87,10 @@ export default function ToChucPage() {
 
   const resetFilters = () => {
     setSearchTerm("");
-    setFilterSemester("");
-    setFilterAcademicYear("");
     setFilterMonth("");
     setFilterYear("");
+    setFilterSemester("");
+    setFilterAcademicYear("");
   };
 
   const isFiltering = searchTerm !== "" || filterSemester !== "" || filterAcademicYear !== "" || filterMonth !== "" || filterYear !== "";
@@ -144,33 +144,6 @@ export default function ToChucPage() {
           </div>
           
           <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold text-gray-400">Học kỳ</label>
-            <select 
-              value={filterSemester}
-              onChange={(e) => setFilterSemester(e.target.value)}
-              className="block w-32 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
-            >
-              <option value="">Tất cả</option>
-              <option value="HK1">Học kỳ 1</option>
-              <option value="HK2">Học kỳ 2</option>
-            </select>
-          </div>
-
-          <div className="space-y-1">
-            <label className="text-[10px] uppercase font-bold text-gray-400">Năm học</label>
-            <select 
-              value={filterAcademicYear}
-              onChange={(e) => setFilterAcademicYear(e.target.value)}
-              className="block w-40 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
-            >
-              <option value="">Tất cả</option>
-              <option value="2024-2025">2024-2025</option>
-              <option value="2025-2026">2025-2026</option>
-              <option value="2026-2027">2026-2027</option>
-            </select>
-          </div>
-
-          <div className="space-y-1">
             <label className="text-[10px] uppercase font-bold text-gray-400">Tháng</label>
             <select 
               value={filterMonth}
@@ -196,6 +169,33 @@ export default function ToChucPage() {
               <option value="2025">2025</option>
               <option value="2026">2026</option>
               <option value="2027">2027</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase font-bold text-gray-400">Học kỳ</label>
+            <select 
+              value={filterSemester}
+              onChange={(e) => setFilterSemester(e.target.value)}
+              className="block w-32 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="">Tất cả</option>
+              <option value="HK1">Học kỳ 1</option>
+              <option value="HK2">Học kỳ 2</option>
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className="text-[10px] uppercase font-bold text-gray-400">Năm học</label>
+            <select 
+              value={filterAcademicYear}
+              onChange={(e) => setFilterAcademicYear(e.target.value)}
+              className="block w-40 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
+            >
+              <option value="">Tất cả</option>
+              <option value="2024-2025">2024-2025</option>
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
             </select>
           </div>
 

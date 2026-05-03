@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { 
-  Info, Flag, Trophy, UserSquare2, Settings, Network, CalendarDays, FileText, Menu, X
+  Info, Flag, Trophy, UserSquare2, Settings, Network, CalendarDays, FileText, Menu, X, LayoutGrid
 } from "lucide-react"; 
 
 const menuItems = [
@@ -14,11 +15,13 @@ const menuItems = [
   { name: "Thi đua", href: "/thi-dua", icon: Trophy },
   { name: "Tổ chức Đoàn khoa", href: "/to-chuc", icon: Network },
   { name: "Nhân sự", href: "/nhan-su", icon: UserSquare2 },
+  { name: "Mô hình CLPI", href: "/mo-hinh-clpi", icon: LayoutGrid },
   { name: "Cài đặt", href: "/cai-dat", icon: Settings },
 ];
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <>
@@ -54,18 +57,34 @@ export default function Sidebar() {
             </p>
           </div>
         </div>      
-        <nav className="flex-1 mt-4 overflow-y-auto">
-          {menuItems.map((item) => (
-            <Link 
-              key={item.href} 
-              href={item.href}
-              onClick={() => setIsOpen(false)}
-              className="flex items-center gap-3 px-6 py-4 hover:bg-[#1d92ff] transition-colors"
-            >
-              <item.icon size={20} />
-              <span>{item.name}</span>
-            </Link>
-          ))}
+        <nav className="flex-1 mt-6 overflow-y-auto px-3">
+          {menuItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <Link 
+                key={item.href} 
+                href={item.href}
+                onClick={() => setIsOpen(false)}
+                className={`
+                  flex items-center gap-3 px-4 py-3 mb-1 rounded-xl transition-all duration-300 group
+                  ${isActive 
+                    ? "bg-white/15 border border-white/30 shadow-lg translate-x-1" 
+                    : "hover:bg-white/10 border border-transparent"}
+                `}
+              >
+                <item.icon 
+                  size={20} 
+                  className={`transition-colors ${isActive ? "text-white" : "text-white/60 group-hover:text-white"}`} 
+                />
+                <span className={`text-sm transition-all ${isActive ? "font-bold text-white" : "text-white/80 group-hover:text-white"}`}>
+                  {item.name}
+                </span>
+                {isActive && (
+                   <div className="ml-auto w-1.5 h-5 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
+                )}
+              </Link>
+            );
+          })}
         </nav>
       </aside>
     </>

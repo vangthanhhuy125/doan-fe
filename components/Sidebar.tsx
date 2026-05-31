@@ -8,15 +8,15 @@ import {
 } from "lucide-react"; 
 
 const menuItems = [
-  { name: "Giới thiệu", href: "/gioi-thieu", icon: Info },
-  { name: "Tài liệu", href: "/tai-lieu", icon: FileText },
-  { name: "Chương trình năm", href: "/chuong-trinh", icon: CalendarDays },
-  { name: "Công tác Đoàn - Đảng", href: "/cong-tac", icon: Flag },
-  { name: "Thi đua", href: "/thi-dua", icon: Trophy },
-  { name: "Tổ chức Đoàn khoa", href: "/to-chuc", icon: Network },
-  { name: "Nhân sự", href: "/nhan-su", icon: UserSquare2 },
-  { name: "Mô hình CLPI", href: "/mo-hinh-clpi", icon: LayoutGrid },
-  { name: "Cài đặt", href: "/cai-dat", icon: Settings },
+  { name: "Giới thiệu", href: "/about", icon: Info },
+  { name: "Tài liệu", href: "/documents", icon: FileText },
+  { name: "Chương trình năm", href: "/annual-programs", icon: CalendarDays },
+  { name: "Công tác Đoàn - Đảng", href: "/union-party-affairs", icon: Flag },
+  { name: "Thi đua", href: "/emulation-awards", icon: Trophy },
+  { name: "Tổ chức Đoàn khoa", href: "/faculty-union-structure", icon: Network },
+  { name: "Nhân sự", href: "/personnel", icon: UserSquare2 },
+  { name: "Mô hình CLPI", href: "/clpi-models", icon: LayoutGrid },
+  { name: "Cài đặt", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {

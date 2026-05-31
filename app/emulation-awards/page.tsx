@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import SectionBangDiem from "./bang-diem/SectionBangDiem";
-import SectionMHGP from "./MHGP/SectionMHGP";
-import SectionCTTN from "./CTTN/SectionCTTN";
-import MHGPModal from "./MHGP/MHGPModal";
-import BangDiemModal from "./bang-diem/BangDiemModal";
-import CTTNModal from "./CTTN/CTTNModal";
+import SectionBangDiem from "./scorecards/SectionBangDiem";
+import SectionMHGP from "./models-solutions/SectionModelSolution";
+import SectionCTTN from "./youth-projects/SectionCTTN";
+import MHGPModal from "./models-solutions/ModelSolutionModal";
+import BangDiemModal from "./scorecards/BangDiemModal";
+import CTTNModal from "./youth-projects/CTTNModal";
 
 export default function ThiDuaPage() {
   const [activities, setActivities] = useState<any[]>([]);

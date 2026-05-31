@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import SectionTaiLieu from "./SectionTaiLieu";
-import TaiLieuModal from "./TaiLieuModal";
+import SectionTaiLieu from "./SectionDocument";
+import TaiLieuModal from "./DocumentModal";
 
 export default function TaiLieuPage() {
   const [taiLieuList, setTaiLieuList] = useState<any[]>([]);

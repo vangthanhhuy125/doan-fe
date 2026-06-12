@@ -1,7 +1,7 @@
 'use client';
 
-import SectionBanChapHanh from "./BCH/SectionBanChapHanh";
-import SectionChiDoan from "./ChiDoan/SectionChiDoan";
+import SectionBanChapHanh from "./FacultyYEC/SectionFacultyYEC";
+import SectionChiDoan from "./BranchYEC/SectionBranchYEC";
 
 export default function NhanSuPage() {
   const getRoleStyles = (index: number) => {

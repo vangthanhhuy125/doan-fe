@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Shield, Plus, Eye, Edit, Trash2, Search, RotateCcw } from "lucide-react";
-import CaiDatModal from "./CaiDatModal";
+import CaiDatModal from "./SettingsModal";
 
 export default function CaiDatPage() {
   const [searchTerm, setSearchTerm] = useState("");

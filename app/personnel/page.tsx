@@ -2,8 +2,8 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import SectionNhanSu from "./SectionNhanSu";
-import NhanSuModal from "./NhanSuModal";
+import SectionNhanSu from "./SectionHuman Resources";
+import NhanSuModal from "./HumanResourcesModal";
 
 export default function NhanSuPage() {
   const [nhanSuList, setNhanSuList] = useState<any[]>([]);

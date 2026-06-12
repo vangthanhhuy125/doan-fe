@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Users, UserCircle, Edit } from "lucide-react";
-import UpdateBCHModal from "./UpdateBCHModal"; 
+import UpdateBCHModal from "./UpdateFacultyYECModal"; 
 import Image from "next/image"
 
 interface Props {

@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { Briefcase, Plus } from "lucide-react";
-import NoticeForm from "./thong-bao/NoticeForm";
-import PartyDevelopment from "./dang/page";
-import NotificationPage from "./thong-bao/page"; 
+import NoticeForm from "./Notification/NoticeForm";
+import PartyDevelopment from "./PartyWork/page";
+import NotificationPage from "./Notification/page"; 
 
 export default function CongTacPage() {
   const [isFormOpen, setIsFormOpen] = useState(false);

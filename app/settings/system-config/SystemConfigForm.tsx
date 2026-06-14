@@ -330,9 +330,6 @@ export default function SystemConfigForm({ initialData, onSave }: SystemConfigFo
             </div>
           </div>
 
-          <h3 className="text-xs font-black uppercase text-purple-600 tracking-wider flex items-center gap-2 pt-4 border-t border-dashed">
-            <span className="w-1.5 h-1.5 bg-purple-600 rounded-full"></span> Thông tin liên hệ chân trang (Footer)
-          </h3>
           <div className="space-y-2">
             <label className="text-[11px] font-bold uppercase text-gray-400 ml-1">Địa chỉ văn phòng Đoàn khoa</label>
             <div className="relative">

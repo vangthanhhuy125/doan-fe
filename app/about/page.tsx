@@ -1,11 +1,19 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Info, Target, ShieldCheck, Award, LayoutDashboard } from "lucide-react";
+import { Info, Target, ShieldCheck, Award, LayoutDashboard, MapPin, Mail, Facebook, X } from "lucide-react";
 
 export default function GioiThieuPage() {
   const [banners, setBanners] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
+  
+  const [config, setConfig] = useState<any>({
+    years: [], academicYears: [], semesters: [], classBranches: [], achievements: [],
+    contact: { address: "", email: "", fanpage: "", introduction: "", mission: "", vocation: "", structure: "", softwareIntro: "" }
+  });
+
+  // State quản lý phần tử thành tích đang chọn để hiển thị PopUp Modal công trình vinh danh
+  const [selectedAchievement, setSelectedAchievement] = useState<any>(null);
 
   useEffect(() => {
     const fetchBanners = async () => {
@@ -13,15 +21,24 @@ export default function GioiThieuPage() {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/banner-config`);
         if (res.ok) {
           const data = await res.json();
-          if (data && Array.isArray(data.images) && data.images.length > 0) {
-            setBanners(data.images);
-          }
+          if (data && Array.isArray(data.images) && data.images.length > 0) setBanners(data.images);
         }
-      } catch (error) {
-        console.error("Lỗi lấy banner:", error);
-      }
+      } catch (error) { console.error("Lỗi lấy banner:", error); }
     };
     fetchBanners();
+  }, []);
+
+  useEffect(() => {
+    const fetchSystemConfig = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/system-config`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data) setConfig(data);
+        }
+      } catch (error) { console.error("Lỗi lấy cấu hình hệ thống:", error); }
+    };
+    fetchSystemConfig();
   }, []);
 
   useEffect(() => {
@@ -32,148 +49,140 @@ export default function GioiThieuPage() {
     return () => clearInterval(interval);
   }, [banners]);
 
+  const info = config.contact || {};
+  const activeAchievements = config.achievements || [];
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-left relative">
       {/* 1. Header Trang */}
       <div className="border-b pb-4">
         <div className="flex items-center gap-3 pb-3">
           <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
             <LayoutDashboard size={24} />
           </div>
-          <h1 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">
-            Giới thiệu
-          </h1>
+          <h1 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">Giới thiệu</h1>
         </div>
-        <p className="text-gray-500 text-sm">Thông tin tổng quan về Hệ thống nghiệp vụ công tác Đoàn của Đoàn khoa Công nghệ Phần mềm trực thuộc Đoàn trường Đại học Công nghệ Thông tin - Đại học Quốc gia thành phố Hồ Chí Minh</p>
+        <p className="text-gray-500 text-sm">
+          Thông tin tổng quan về Hệ thống nghiệp vụ công tác Đoàn của Đoàn khoa Công nghệ Phần mềm,
+          trực thuộc Đoàn trường Đại học Công nghệ Thông tin, Đại học Quốc gia thành phố Hồ Chí Minh.
+        </p>
       </div>
 
       {/* 2. Banner chính */}
       <div className="relative h-64 w-full rounded-xl overflow-hidden shadow-lg bg-gray-100 block">
-        <img 
-          src={banners.length > 0 ? banners[currentIndex] : "/banner-doan.jpg"} 
-          alt="Banner Đoàn" 
-          className="absolute inset-0 w-full h-full object-cover transition-all duration-500 z-0"
-        />
-        {/* Thêm z-10 cho phần text để đảm bảo nội dung chữ luôn nổi lên trên tấm ảnh banner */}
+        <img src={banners.length > 0 ? banners[currentIndex] : "/banner-doan.jpg"} alt="Banner Đoàn" className="absolute inset-0 w-full h-full object-cover transition-all duration-500 z-0" />
         <div className="absolute inset-0 bg-blue-900/40 flex items-center px-8 z-10">
           <div className="text-white max-w-lg">
-            <h2 className="text-3xl font-bold mb-2">Đoàn TNCS Hồ Chí Minh khoa Công nghệ Phần mềm</h2>
-              <p className="text-blue-50 font-medium">
-                Đội dự bị tin cậy của Đảng Cộng sản Việt Nam, là lực lượng nòng cốt chính trị,
-                đóng vai trò quan trọng trong việc tập hợp, định hướng và phát huy sức mạnh
-                của thanh niên. Tổ chức Đoàn không ngừng giáo dục lý tưởng cách mạng, bồi dưỡng
-                bản lĩnh chính trị, đạo đức, lối sống và tinh thần cống hiến, góp phần xây dựng
-                thế hệ trẻ giàu tri thức, trách nhiệm và khát vọng phát triển đất nước.
-              </p>
+            <h2 className="text-3xl font-bold mb-2">{config.classBranches && config.classBranches.length > 0 ? config.classBranches[config.classBranches.length - 1] : "Đoàn TNCS Hồ Chí Minh khoa Công nghệ Phần mềm"}</h2>
+            <p className="text-blue-50 font-medium text-sm leading-relaxed">{info.introduction}</p>
           </div>
         </div>
       </div>
 
-      {/* 3. Lưới thông tin (Grid) - Chỉnh lại thành grid 3 cột để đẩy Thành tích xuống */}
+      {/* 3. Lưới thông tin (Grid Sứ mệnh, Nhiệm vụ, Cơ cấu) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <div className="p-6 bg-blue-50 rounded-xl border border-blue-100 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white mb-4">
-            <Target size={24} />
-          </div>
+        <div className="p-6 bg-blue-50 rounded-xl border border-blue-100 hover:shadow-md transition-all">
+          <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white mb-4 shadow-md"><Target size={24} /></div>
           <h3 className="font-bold text-gray-800 mb-2">Sứ mệnh</h3>
-          <p className="text-sm text-gray-600">Đoàn kết, tập hợp thanh niên, giáo dục lý tưởng cách mạng và đạo đức lối sống.</p>
+          <p className="text-sm text-gray-600 leading-relaxed">{info.mission}</p>
         </div>
-
-        <div className="p-6 bg-green-50 rounded-xl border border-green-100 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center text-white mb-4">
-            <ShieldCheck size={24} />
-          </div>
+        <div className="p-6 bg-green-50 rounded-xl border border-green-100 hover:shadow-md transition-all">
+          <div className="w-12 h-12 bg-green-500 rounded-lg flex items-center justify-center text-white mb-4 shadow-md"><ShieldCheck size={24} /></div>
           <h3 className="font-bold text-gray-800 mb-2">Nhiệm vụ</h3>
-          <p className="text-sm text-gray-600 leading-relaxed">
-            Đoàn Khoa Công nghệ Phần mềm có nhiệm vụ tập hợp, giáo dục đoàn viên, sinh viên; tổ chức các phong trào học tập, nghiên cứu, tình nguyện và rèn luyện kỹ năng; góp phần xây dựng lực lượng sinh viên trẻ năng động, sáng tạo.
-          </p>
+          <p className="text-sm text-gray-600 leading-relaxed">{info.vocation}</p>
         </div>
-
-        <div className="p-6 bg-purple-50 rounded-xl border border-purple-100 hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center text-white mb-4">
-            <Info size={24} />
-          </div>
+        <div className="p-6 bg-purple-50 rounded-xl border border-purple-100 hover:shadow-md transition-all">
+          <div className="w-12 h-12 bg-purple-500 rounded-lg flex items-center justify-center text-white mb-4 shadow-md"><Info size={24} /></div>
           <h3 className="font-bold text-gray-800 mb-2">Cơ cấu</h3>
-          <p className="text-sm text-gray-600">
-            Cơ cấu trẻ gồm 1 Bí thư, 1 Phó Bí thư, 3 Ủy viên Ban Thường vụ (trong đó 1 UV BTV phụ trách công tác Hội - Liên chi Hội trưởng) và 10 Ủy viên Ban Chấp hành, có nhiều kinh nghiệm trong công tác tổ chức chương trình, công tác Đoàn và phong trào thanh niên.
-          </p>
-        </div>
-
-      </div>
-
-      {/* Ô Thành tích nằm riêng một mình phía dưới để có không gian rộng hơn */}
-      <div className="p-6 bg-yellow-50 rounded-xl border border-yellow-100 hover:shadow-md transition-shadow">
-        <div className="flex items-start gap-6">
-          <div className="w-14 h-14 bg-yellow-500 rounded-lg flex items-center justify-center text-white shrink-0 shadow-lg shadow-yellow-200">
-            <Award size={30} />
-          </div>
-          <div>
-            <h3 className="font-bold text-xl text-gray-800 mb-2">Thành tích nổi bật</h3>
-            <p className="text-gray-700 leading-relaxed">
-              Năm học <span className="font-semibold">2024–2025</span> đánh dấu chặng đường hoạt động sôi nổi, toàn diện và nhiều dấu ấn của 
-              <span className="font-semibold"> Đoàn – Hội Khoa Công nghệ Phần mềm</span>. 
-              Với tinh thần xung kích, sáng tạo and trách nhiệm, Đoàn – Hội Khoa đã triển khai đồng bộ các mặt công tác: 
-              giáo dục chính trị tư tưởng; phong trào thi đua, văn hóa – thể thao; học thuật, nghiên cứu khoa học, đổi mới sáng tạo; 
-              tình nguyện vì cộng đồng; phát triển kỹ năng nghề nghiệp, năng lực số và hội nhập quốc tế; đồng thời chú trọng công tác 
-              xây dựng tổ chức Đoàn – Hội vững mạnh.
-              <br />
-              Trong năm học, many hoạt động chào mừng các ngày lễ lớn như  
-              <span className="font-semibold"> 20/11, 26/3 </span>
-              được tổ chức với quy mô ngày càng chuyên nghiệp, thu hút đông đảo sinh viên tham gia. 
-              Các chương trình Tháng Thanh niên, Xuân Sum Vầy, về nguồn – giáo dục truyền thống, tuyên truyền pháp luật, 
-              chuyển dịch xanh, an toàn không gian mạng, phát triển văn hóa đọc, triển lãm AR văn hóa, seminar định hướng nghề nghiệp 
-              và rèn luyện kỹ năng mềm đã góp phần nâng cao nhận thức, bản lĩnh và tinh thần trách nhiệm của sinh viên nhà Mềm.
-              <br />
-              Song song đó, các chiến dịch tình nguyện như 
-              <span className="font-semibold"> Xuân Tình Nguyện, Mùa Hè Xanh, Mảnh Ghép Mới, </span>
-              được triển khai hiệu quả với nhiều phần việc thiết thực hướng đến thiếu nhi, học sinh, gia đình khó khăn và cộng đồng địa phương, 
-              lan tỏa mạnh mẽ giá trị nhân văn và tinh thần cống hiến của tuổi trẻ Công nghệ Phần mềm. 
-              Hoạt động thể thao, tiêu biểu là các giải bóng đá truyền thống, tạo sân chơi lành mạnh, tăng cường sự gắn kết giữa các chi đoàn.
-              <br />
-              Đặc biệt, <span className="font-bold">công trình thanh niên tiêu biểu  
-              “Website học tiếng Anh thông qua minigame dành cho học sinh tiểu học trên địa bàn TP. Thủ Đức” </span> đã khẳng định năng lực chuyên môn, 
-              tư duy đổi mới sáng tạo và khả năng ứng dụng công nghệ vào phục vụ cộng đồng của sinh viên Khoa Công nghệ Phần mềm, 
-              được tuyên dương ở cấp cơ sở Đoàn trực thuộc Đoàn Trường.
-              <br />
-              Công tác xây dựng tổ chức Đoàn – Hội tiếp tục được củng cố thông qua công tác đào tạo, 
-              bồi dưỡng đội ngũ cán bộ, đảm bảo tính kế thừa, hoàn thành chỉ tiêu giới thiệu Đoàn viên ưu tú cho Đảng và phối hợp chặt chẽ 
-              với Liên Chi hội, Ban Chủ nhiệm Khoa trong tổ chức các hoạt động học thuật, phong trào và định hướng cho sinh viên.
-              <br />
-              Với những kết quả nổi bật đó, <span className="font-semibold">Đoàn – Hội Khoa Công nghệ Phần mềm</span> vinh dự đạt danh hiệu 
-              <span className="font-bold">“Đơn vị hoàn thành xuất sắc nhiệm vụ”</span>, khẳng định vai trò nòng cốt trong công tác Đoàn – Hội 
-              và phong trào thanh niên, đồng thời tạo nền tảng vững chắc để tiếp tục đổi mới, phát triển và đồng hành cùng sinh viên trong 
-              các năm học tiếp theo.
-            </p>
-
-          </div>
+          <p className="text-sm text-gray-600 leading-relaxed">{info.structure}</p>
         </div>
       </div>
 
-      {/* 4. Nội dung chi tiết */}
+      {/* ĐÃ SỬA: BIẾN KHỐI THÀNH TÍCH THÀNH LƯỚI GRID HÌNH ẢNH LỊCH SỬ KÈM NĂM HỌC */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+          <Award size={22} className="text-yellow-500" />
+          Thành tích nổi bật qua các năm học
+        </h3>
+        
+        {activeAchievements.length > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {activeAchievements.map((ach: any, idx: number) => (
+              <div 
+                key={idx} 
+                onClick={() => setSelectedAchievement(ach)}
+                className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 cursor-pointer transition-all duration-300 flex flex-col group"
+              >
+                <div className="relative h-44 w-full bg-gray-50 overflow-hidden shadow-inner flex items-center justify-center text-slate-300">
+                  {ach.image ? (
+                    <img src={ach.image} alt={ach.academicYear} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : (
+                    <Award size={48} className="text-slate-200" />
+                  )}
+                  <div className="absolute top-3 right-3 bg-yellow-500 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider shadow-md">{ach.academicYear}</div>
+                </div>
+                <div className="p-4 text-center bg-slate-50 group-hover:bg-yellow-50/50 border-t transition-colors">
+                  <h4 className="font-black text-slate-700 text-sm tracking-wide">NĂM HỌC {ach.academicYear}</h4>
+                  <p className="text-[10px] text-purple-600 font-bold mt-1 tracking-wider">Xem tóm tắt thành tích ›</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="p-8 text-center bg-gray-50 rounded-xl italic text-gray-400 text-sm font-bold">Chưa có dữ liệu thành tích lịch sử...</div>
+        )}
+      </div>
+
+      {/* ĐÃ THÊM MỚI: BỘ POPUP MODAL HIỂN THỊ CHI TIẾT THÀNH TÍCH KHI NGƯỜI DÙNG NHẤP VÀO */}
+      {selectedAchievement && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-white/20 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300 text-black">
+            {/* Header popup màu vàng vinh danh */}
+            <div className="bg-gradient-to-r from-yellow-500 to-amber-600 p-6 flex items-center justify-between text-white">
+              <div className="flex items-center gap-3">
+                <Award size={22} className="animate-bounce" />
+                <h3 className="font-black tracking-widest text-sm">Thành tích năm học {selectedAchievement.academicYear}</h3>
+              </div>
+              <button onClick={() => setSelectedAchievement(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20} /></button>
+            </div>
+            {/* Nội dung popup */}
+            <div className="p-6 overflow-y-auto space-y-5">
+              {selectedAchievement.image && (
+                <div className="w-full h-64 rounded-2xl overflow-hidden shadow-md bg-gray-50">
+                  <img src={selectedAchievement.image} alt="Bìa vinh danh" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="space-y-3">
+                <h4 className="text-xs font-black text-yellow-600 uppercase tracking-widest">Nội dung chi tiết quyết định khen thưởng</h4>
+                <p className="text-gray-700 text-sm font-medium leading-loose whitespace-pre-line bg-amber-50/30 p-5 rounded-2xl border border-amber-100/50">
+                  {selectedAchievement.content}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. Về phần mềm quản lý & Liên hệ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 bg-white p-8 rounded-xl border border-gray-100 shadow-sm leading-relaxed">
-          <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
-            <span className="w-2 h-6 bg-blue-600 rounded-full"></span>
-            Về phần mềm quản lý
-          </h3>
-          <p className="text-gray-700 mb-4">
-            Phần mềm <strong>Hệ thống nghiệp vụ công tác Đoàn</strong> được xây dựng nhằm đáp ứng nhu cầu chuyển đổi số trong công tác Đoàn và phong trào thanh niên. Hệ thống cung cấp các giải pháp quản trị thông minh, giúp Đoàn khoa dễ dàng theo dõi tiến độ công việc và nhân sự.
-          </p>
-          <ul className="list-disc pl-5 space-y-2 text-gray-700">
-            <li>Quản lý thông tin hoạt động trong năm học.</li>
-            <li>Theo dõi các phong trào thi đua, khen thưởng và kỷ luật.</li>
-            <li>Hỗ trợ công tác triển khai, thông báo và báo cáo.</li>
-            <li>Quản lý nhân sự của Đoàn khoa.</li>
-          </ul>
+        <div className="lg:col-span-2 bg-white p-8 rounded-xl border border-gray-100 shadow-sm space-y-5">
+          <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2"><span className="w-2 h-6 bg-blue-600 rounded-full"></span>Về phần mềm quản lý</h3>
+          <p className="text-gray-700 text-sm leading-loose">{info.softwareIntro}</p>
         </div>
 
-        <div className="bg-[#0054a5] p-8 rounded-xl text-white">
-          <h3 className="text-xl font-bold mb-4">Thông tin liên hệ</h3>
-          <div className="space-y-8 text-sm opacity-90">
-            <p><strong>Địa chỉ:</strong> Tầng 7, toà E, trường ĐH Công nghệ Thông tin, khu phố 34, phường Linh Xuân, thành phố Hồ Chí Minh</p>
-            <p><strong>Email:</strong> doankhoa.cnpm.uit@gmail.com</p>
-            <p><strong>Fanpage:</strong> https://www.facebook.com/CNPM.Fanpage</p>
+        <div className="bg-[#0054a5] p-8 rounded-xl text-white shadow-md flex flex-col justify-between">
+          <div>
+            <h3 className="text-xl font-bold mb-6 border-b border-white/20 pb-2">Thông tin liên hệ</h3>
+            <div className="space-y-4 text-[13px] font-medium opacity-95">
+              <div className="flex items-start gap-3"><MapPin size={16} className="shrink-0 mt-0.5" /><p><strong>Địa chỉ:</strong> {info.address}</p></div>
+              <div className="flex items-center gap-3"><Mail size={16} className="shrink-0" /><p><strong>Email:</strong> {info.email}</p></div>
+            </div>
           </div>
+          {info.fanpage && (
+            <div className="pt-6 border-t border-white/10 mt-6">
+              <a href={info.fanpage} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 px-4 py-2 rounded-xl text-xs font-bold transition-all"><Facebook size={36} /><span>Fanpage Đoàn - Hội khoa Công nghệ Phần mềm, trường ĐH Công nghệ Thông tin, ĐHQG-HCM</span></a>
+            </div>
+          )}
         </div>
       </div>
     </div>

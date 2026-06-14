@@ -34,7 +34,7 @@ export default function SettingsMenuPage() {
     },
     {
       title: "Cấu hình Hệ thống",
-      description: "Thiết lập các tham số, học kỳ và năm học mặc định",
+      description: "Thiết lập các tham số mặc định: năm học, học kỳ, ...",
       path: "/settings/system-config",
       icon: Settings2,
       iconColor: "text-purple-500",

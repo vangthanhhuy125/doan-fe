@@ -1,144 +1,80 @@
 'use client';
 
-import { useState, useEffect } from "react";
-import { Shield, Plus, Eye, Edit, Trash2, Search, RotateCcw } from "lucide-react";
-import CaiDatModal from "./SettingsModal";
+// ĐÃ SỬA: Sửa lại cú pháp import { useRouter } chuẩn của Next.js App Router
+import { useRouter } from "next/navigation"; 
+import { Shield, Image as ImageIcon, History, Settings2 } from "lucide-react";
 
-export default function CaiDatPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [accounts, setAccounts] = useState<any[]>([]);
-  const [nhanSuList, setNhanSuList] = useState<any[]>([]);
-  const [modal, setModal] = useState<any>({ open: false, mode: 'view', data: null });
+export default function SettingsMenuPage() {
+  const router = useRouter();
 
-  const fetchData = async () => {
-    try {
-      const [accRes, nsRes] = await Promise.all([
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts`),
-        fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`)
-      ]);
-      const accData = await accRes.json();
-      const nsData = await nsRes.json();
-      setAccounts(Array.isArray(accData) ? accData : []);
-      setNhanSuList(Array.isArray(nsData) ? nsData : []);
-    } catch (error) {
-      setAccounts([]);
-      setNhanSuList([]);
+  const settingMenus = [
+    {
+      title: "Quản lý Quyền truy cập",
+      description: "Cấp phát, phân quyền và quản lý tài khoản hệ thống",
+      path: "/settings/accounts",
+      icon: Shield,
+      iconColor: "text-blue-500",
+      bgColor: "bg-blue-50"
+    },
+    {
+      title: "Thiết lập Banner",
+      description: "Quản lý dữ liệu chuỗi ảnh nền động cho trang Giới thiệu",
+      path: "/settings/banner-config", 
+      icon: ImageIcon,
+      iconColor: "text-amber-500",
+      bgColor: "bg-amber-50"
+    },
+    {
+      title: "Lịch sử truy cập",
+      description: "Xem nhật ký hoạt động và lịch sử thao tác của các tài khoản",
+      path: "/settings/logs",
+      icon: History,
+      iconColor: "text-emerald-500",
+      bgColor: "bg-emerald-50"
+    },
+    {
+      title: "Cấu hình Hệ thống",
+      description: "Thiết lập các tham số, học kỳ và năm học mặc định",
+      path: "/settings/system-config",
+      icon: Settings2,
+      iconColor: "text-purple-500",
+      bgColor: "bg-purple-50"
     }
-  };
-
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const filteredAccounts = accounts.filter(acc => 
-    (acc.displayName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (acc.username || "").toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleDelete = async (id: string) => {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts/${id}`, {
-      method: 'DELETE',
-    });
-    fetchData();
-  };
-
-  const handleSave = async (payload: any) => {
-    const isAdd = modal.mode === 'add';
-    const url = isAdd 
-      ? `${process.env.NEXT_PUBLIC_API_URL}/accounts` 
-      : `${process.env.NEXT_PUBLIC_API_URL}/accounts/${payload._id}`;
-    
-    await fetch(url, {
-      method: isAdd ? 'POST' : 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    setModal({ open: false, mode: 'view', data: null });
-    fetchData();
-  };
+  ];
 
   return (
     <div className="space-y-6 text-black">
-      <div className="flex items-center justify-between border-b-2 border-[#0054a5] pb-3">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
-            <Shield size={24} />
-          </div>
-          <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">Quản lý Quyền truy cập</h2>
-        </div>
-        <button 
-          onClick={() => setModal({ open: true, mode: 'add', data: null })}
-          className="bg-[#0054a5] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-[10px] uppercase tracking-widest border-none outline-none flex items-center gap-2"
-        >
-          <Plus size={16} /> Cấp tài khoản
-        </button>
+      <div className="border-b-2 border-[#0054a5] pb-3">
+        <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">
+          Cài đặt Nghiệp vụ
+        </h2>
       </div>
 
-      <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-sm flex items-center gap-4">
-        <div className="relative flex-1 group">
-          <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0054a5] transition-colors" />
-          <input 
-            type="text" 
-            placeholder="Tìm kiếm theo tên người dùng..." 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full pl-12 pr-4 py-3 bg-gray-50 rounded-2xl text-sm border-none outline-none focus:bg-white focus:ring-2 ring-blue-100 transition-all font-bold" 
-          />
-        </div>
-        {searchTerm && (
-          <button onClick={() => setSearchTerm("")} className="p-3 text-red-500 hover:bg-red-50 rounded-2xl transition-all border-none outline-none">
-            <RotateCcw size={18} />
-          </button>
-        )}
-      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-2">
+        {settingMenus.map((menu, index) => {
+          const IconComponent = menu.icon;
+          return (
+            <div
+              key={index}
+              onClick={() => router.push(menu.path)}
+              className="bg-white border border-slate-100 rounded-3xl p-6 flex flex-col items-center text-center justify-center min-h-[180px] sm:min-h-[220px] shadow-sm hover:shadow-xl hover:border-blue-200 transition-all cursor-pointer group active:scale-95"
+            >
+              <div className={`p-4 ${menu.bgColor} rounded-2xl group-hover:scale-110 transition-transform shadow-inner mb-4 flex items-center justify-center`}>
+                <IconComponent size={32} className={`${menu.iconColor}`} />
+              </div>
 
-      <div className="overflow-hidden rounded-3xl border border-gray-100 shadow-xl bg-white">
-        <table className="w-full text-sm text-left border-collapse">
-          <thead className="bg-[#0054a5] text-white font-bold text-[13px] tracking-widest">
-            <tr>
-              <th className="px-6 py-5 text-center w-20">STT</th>
-              <th className="px-6 py-5 text-center">Người sở hữu</th>
-              <th className="px-6 py-5 text-center">Tên đăng nhập</th>
-              <th className="px-6 py-5 text-center">Mật khẩu</th>
-              <th className="px-6 py-5 text-center w-40"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50">
-            {filteredAccounts.map((item, index) => (
-              <tr key={item._id} className="hover:bg-blue-50/50 transition-colors group">
-                <td className="px-6 py-5 text-center font-bold text-slate-400 group-hover:text-[#0054a5] transition-colors text-xm">{index + 1}</td>
-                <td className="px-6 py-5 font-black text-slate-700 text-xm">{item.displayName}</td>
-                <td className="px-6 py-5 font-bold text-[#0054a5] text-xm">{item.username}</td>
-                <td className="px-6 py-5 font-bold text-xm text-slate-500 bg-gray-50/30 text-center select-all">{item.password}</td>
-                <td className="px-6 py-5">
-                  <div className="flex items-center justify-center gap-2">
-                    {/* <button onClick={() => setModal({ open: true, mode: 'view', data: item })} className="p-2 text-[#0054a5] hover:bg-blue-100 rounded-xl transition-all border-none outline-none"><Eye size={18} /></button> */}
-                    <button onClick={() => setModal({ open: true, mode: 'edit', data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all border-none outline-none"><Edit size={18} /></button>
-                    <button onClick={() => setModal({ open: true, mode: 'delete', data: item })} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all border-none outline-none"><Trash2 size={18} /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filteredAccounts.length === 0 && (
-              <tr>
-                <td colSpan={5} className="px-6 py-16 text-center italic text-slate-400 font-bold">Không có tài khoản nào...</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              <div className="space-y-1">
+                <h3 className="font-black text-slate-800 text-sm sm:text-base group-hover:text-[#0054a5] transition-colors">
+                  {menu.title}
+                </h3>
+                <p className="text-slate-400 text-[11px] sm:text-xs font-medium leading-relaxed max-w-[180px] mx-auto">
+                  {menu.description}
+                </p>
+              </div>
+            </div>
+          );
+        })}
       </div>
-
-      {modal.open && (
-        <CaiDatModal 
-          mode={modal.mode} 
-          data={modal.data} 
-          onClose={() => setModal({ ...modal, open: false })}
-          onConfirmDelete={handleDelete}
-          onSave={handleSave}
-          nhanSuList={nhanSuList} 
-        />
-      )}
     </div>
   );
 }

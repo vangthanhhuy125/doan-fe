@@ -1,7 +1,37 @@
-import Image from "next/image";
+'use client';
+
+import { useState, useEffect } from "react";
 import { Info, Target, ShieldCheck, Award, LayoutDashboard } from "lucide-react";
 
 export default function GioiThieuPage() {
+  const [banners, setBanners] = useState<string[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/banner-config`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && Array.isArray(data.images) && data.images.length > 0) {
+            setBanners(data.images);
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi lấy banner:", error);
+      }
+    };
+    fetchBanners();
+  }, []);
+
+  useEffect(() => {
+    if (banners.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prevIndex) => (prevIndex + 1) % banners.length);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [banners]);
+
   return (
     <div className="space-y-8">
       {/* 1. Header Trang */}
@@ -18,14 +48,14 @@ export default function GioiThieuPage() {
       </div>
 
       {/* 2. Banner chính */}
-      <div className="relative h-64 w-full rounded-xl overflow-hidden shadow-lg">
-        <Image 
-          src="/banner-doan.jpg" 
+      <div className="relative h-64 w-full rounded-xl overflow-hidden shadow-lg bg-gray-100 block">
+        <img 
+          src={banners.length > 0 ? banners[currentIndex] : "/banner-doan.jpg"} 
           alt="Banner Đoàn" 
-          fill 
-          className="object-cover"
+          className="absolute inset-0 w-full h-full object-cover transition-all duration-500 z-0"
         />
-        <div className="absolute inset-0 bg-blue-900/40 flex items-center px-8">
+        {/* Thêm z-10 cho phần text để đảm bảo nội dung chữ luôn nổi lên trên tấm ảnh banner */}
+        <div className="absolute inset-0 bg-blue-900/40 flex items-center px-8 z-10">
           <div className="text-white max-w-lg">
             <h2 className="text-3xl font-bold mb-2">Đoàn TNCS Hồ Chí Minh khoa Công nghệ Phần mềm</h2>
               <p className="text-blue-50 font-medium">
@@ -82,12 +112,12 @@ export default function GioiThieuPage() {
             <p className="text-gray-700 leading-relaxed">
               Năm học <span className="font-semibold">2024–2025</span> đánh dấu chặng đường hoạt động sôi nổi, toàn diện và nhiều dấu ấn của 
               <span className="font-semibold"> Đoàn – Hội Khoa Công nghệ Phần mềm</span>. 
-              Với tinh thần xung kích, sáng tạo và trách nhiệm, Đoàn – Hội Khoa đã triển khai đồng bộ các mặt công tác: 
+              Với tinh thần xung kích, sáng tạo and trách nhiệm, Đoàn – Hội Khoa đã triển khai đồng bộ các mặt công tác: 
               giáo dục chính trị tư tưởng; phong trào thi đua, văn hóa – thể thao; học thuật, nghiên cứu khoa học, đổi mới sáng tạo; 
               tình nguyện vì cộng đồng; phát triển kỹ năng nghề nghiệp, năng lực số và hội nhập quốc tế; đồng thời chú trọng công tác 
               xây dựng tổ chức Đoàn – Hội vững mạnh.
               <br />
-              Trong năm học, nhiều hoạt động chào mừng các ngày lễ lớn như  
+              Trong năm học, many hoạt động chào mừng các ngày lễ lớn như  
               <span className="font-semibold"> 20/11, 26/3 </span>
               được tổ chức với quy mô ngày càng chuyên nghiệp, thu hút đông đảo sinh viên tham gia. 
               Các chương trình Tháng Thanh niên, Xuân Sum Vầy, về nguồn – giáo dục truyền thống, tuyên truyền pháp luật, 

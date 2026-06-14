@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Save, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, Key, UserCheck, ChevronDown, Search } from "lucide-react";
 
-export default function CaiDatModal({ mode, data, onClose, onConfirmDelete, onSave, nhanSuList = [] }: any) {
+export default function AccountsModal({ mode, data, onClose, onConfirmDelete, onSave, nhanSuList = [] }: any) {
   const isView = mode === 'view';
   const isAdd = mode === 'add';
   const formRef = useRef<HTMLFormElement>(null);

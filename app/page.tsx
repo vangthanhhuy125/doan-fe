@@ -28,7 +28,7 @@ export default function Home() {
 
       if (res.ok) {
         localStorage.setItem("user", JSON.stringify(data));
-        router.push("/gioi-thieu"); 
+        router.push("/about"); 
       } else {
         setError(data.message || "Tài khoản hoặc mật khẩu không chính xác!");
       }

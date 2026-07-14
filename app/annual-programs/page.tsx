@@ -1,21 +1,24 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { 
-  Plus, Edit, Trash2, Eye, Filter, Search,
-  CalendarDays, RotateCcw
-} from "lucide-react";
-import ProgramView from "./ProgramView";
-import ProgramAdd from "./ProgramAdd";
-import ProgramEdit from "./ProgramEdit";
+import { Plus, Edit, Trash2, Eye, Filter, Search, CalendarDays, RotateCcw } from "lucide-react";
+import ProgramForm from "./ProgramForm";
 import ConfirmDelete from "./ConfirmDelete";
 
 export default function ToChucPage() {
   const [data, setData] = useState<any[]>([]);
-  const [isAddOpen, setIsAddOpen] = useState(false);
-  const [viewItem, setViewItem] = useState<any>(null);
-  const [editItem, setEditItem] = useState<any>(null);
+  const [formModal, setFormModal] = useState<{ open: boolean; mode: 'add' | 'edit' | 'view'; item: any }>({
+    open: false,
+    mode: 'view',
+    item: null
+  });
   const [deleteItem, setDeleteItem] = useState<any>(null);
+  
+  const [systemConfig, setSystemConfig] = useState<any>({
+    years: [],
+    academicYears: [],
+    semesters: []
+  });
 
   const [searchTerm, setSearchTerm] = useState("");
   const [filterSemester, setFilterSemester] = useState("");
@@ -33,36 +36,43 @@ export default function ToChucPage() {
     }
   };
 
-  useEffect(() => {
-    fetchPrograms();
-  }, []);
-
-  const handleAddProgram = async (newItem: any) => {
+  const fetchSystemConfig = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programs`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newItem),
-      });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/system-config`);
       if (res.ok) {
-        await fetchPrograms();
-        setIsAddOpen(false);
+        const result = await res.json();
+        setSystemConfig({
+          years: result?.years || [],
+          academicYears: result?.academicYears || [],
+          semesters: result?.semesters || []
+        });
       }
     } catch (error) {
       console.error(error);
     }
   };
 
-  const handleUpdateProgram = async (updatedItem: any) => {
+  useEffect(() => {
+    fetchPrograms();
+    fetchSystemConfig();
+  }, []);
+
+  const handleSaveProgram = async (formData: any) => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programs/${updatedItem._id}`, {
-        method: 'PUT',
+      const isEdit = formModal.mode === 'edit';
+      const url = isEdit 
+        ? `${process.env.NEXT_PUBLIC_API_URL}/programs/${formData._id}` 
+        : `${process.env.NEXT_PUBLIC_API_URL}/programs`;
+        
+      const res = await fetch(url, {
+        method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(updatedItem),
+        body: JSON.stringify(formData),
       });
+
       if (res.ok) {
         await fetchPrograms();
-        setEditItem(null);
+        setFormModal({ open: false, mode: 'view', item: null });
       }
     } catch (error) {
       console.error(error);
@@ -94,14 +104,13 @@ export default function ToChucPage() {
   };
 
   const isFiltering = searchTerm !== "" || filterSemester !== "" || filterAcademicYear !== "" || filterMonth !== "" || filterYear !== "";
-
+  
   const filteredData = data.filter(item => {
     const matchesSearch = (item.program_name || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesSemester = filterSemester === "" || item.semester === filterSemester;
     const matchesAcademicYear = filterAcademicYear === "" || item.academic_year === filterAcademicYear;
     const matchesMonth = filterMonth === "" || item.month === filterMonth;
     const matchesYear = filterYear === "" || item.year === filterYear;
-
     return matchesSearch && matchesSemester && matchesAcademicYear && matchesMonth && matchesYear;
   });
 
@@ -113,11 +122,11 @@ export default function ToChucPage() {
             <CalendarDays size={24} /> 
           </div>
           <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">
-            Chương trình năm
+            Chương trình khoa
           </h2>
         </div>
         <button 
-          onClick={() => setIsAddOpen(true)}
+          onClick={() => setFormModal({ open: true, mode: 'add', item: null })}
           className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none"
         >
           <Plus size={20} /> Thêm chương trình
@@ -138,7 +147,7 @@ export default function ToChucPage() {
           />
         </div>
 
-        <div className="flex flex-wrap gap-4 items-end pt-2 border-t border-gray-100">
+        <div className="flex flex-wrap gap-4 items-end pt-2 border-t border-gray-100 text-left">
           <div className="flex items-center gap-2 text-[#0054a5] font-bold mb-1 mr-2 text-sm">
             <Filter size={16} /> <span>Lọc theo:</span>
           </div>
@@ -148,7 +157,7 @@ export default function ToChucPage() {
             <select 
               value={filterMonth}
               onChange={(e) => setFilterMonth(e.target.value)}
-              className="block w-28 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
+              className="block w-28 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer text-black font-bold"
             >
               <option value="">Tất cả</option>
               {Array.from({ length: 12 }, (_, i) => {
@@ -163,12 +172,12 @@ export default function ToChucPage() {
             <select 
               value={filterYear}
               onChange={(e) => setFilterYear(e.target.value)}
-              className="block w-28 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
+              className="block w-28 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer text-black font-bold"
             >
               <option value="">Tất cả</option>
-              <option value="2025">2025</option>
-              <option value="2026">2026</option>
-              <option value="2027">2027</option>
+              {systemConfig.years.map((y: string, idx: number) => (
+                <option key={idx} value={y}>{y}</option>
+              ))}
             </select>
           </div>
 
@@ -177,11 +186,12 @@ export default function ToChucPage() {
             <select 
               value={filterSemester}
               onChange={(e) => setFilterSemester(e.target.value)}
-              className="block w-32 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
+              className="block w-32 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer text-black font-bold"
             >
               <option value="">Tất cả</option>
-              <option value="HK1">Học kỳ 1</option>
-              <option value="HK2">Học kỳ 2</option>
+              {systemConfig.semesters.map((s: string, idx: number) => (
+                <option key={idx} value={s}>{s}</option>
+              ))}
             </select>
           </div>
 
@@ -190,12 +200,12 @@ export default function ToChucPage() {
             <select 
               value={filterAcademicYear}
               onChange={(e) => setFilterAcademicYear(e.target.value)}
-              className="block w-40 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer"
+              className="block w-40 p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:border-blue-500 cursor-pointer text-black font-bold"
             >
               <option value="">Tất cả</option>
-              <option value="2024-2025">2024-2025</option>
-              <option value="2025-2026">2025-2026</option>
-              <option value="2026-2027">2026-2027</option>
+              {systemConfig.academicYears.map((ay: string, idx: number) => (
+                <option key={idx} value={ay}>{ay}</option>
+              ))}
             </select>
           </div>
 
@@ -216,7 +226,7 @@ export default function ToChucPage() {
             <tr>
               <th className="px-4 py-4 text-center uppercase w-12">STT</th>
               <th className="px-4 py-4 text-center">Tên chương trình</th>
-              <th className="px-4 py-4 text-center">Tháng - Năm - Học kì - Năm học</th>
+              <th className="px-4 py-4 text-center">Tháng - Năm - HK - Niên khóa</th>
               <th className="px-4 py-4 text-center w-32"></th>
             </tr>
           </thead>
@@ -231,8 +241,8 @@ export default function ToChucPage() {
                   </td>
                   <td className="px-4 py-4 text-center">
                     <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => setViewItem(item)} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border-none bg-transparent"><Eye size={18} /></button>
-                      <button onClick={() => setEditItem(item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors border-none bg-transparent"><Edit size={18} /></button>
+                      <button onClick={() => setFormModal({ open: true, mode: 'view', item })} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border-none bg-transparent"><Eye size={18} /></button>
+                      <button onClick={() => setFormModal({ open: true, mode: 'edit', item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors border-none bg-transparent"><Edit size={18} /></button>
                       <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors border-none bg-transparent"><Trash2 size={18} /></button>
                     </div>
                   </td>
@@ -241,7 +251,7 @@ export default function ToChucPage() {
             ) : (
               <tr>
                 <td colSpan={4} className="p-10 text-center text-gray-400 italic">
-                  Không tìm thấy hoạt động nào phù hợp với từ khóa hoặc bộ lọc của má.
+                  Không tìm thấy hoạt động nào phù hợp
                 </td>
               </tr>
             )}
@@ -249,9 +259,16 @@ export default function ToChucPage() {
         </table>
       </div>
 
-      {viewItem && <ProgramView data={viewItem} onClose={() => setViewItem(null)} />}
-      {isAddOpen && <ProgramAdd onClose={() => setIsAddOpen(false)} onSave={handleAddProgram} />}
-      {editItem && <ProgramEdit data={editItem} onClose={() => setEditItem(null)} onSave={handleUpdateProgram} />}
+      {formModal.open && (
+        <ProgramForm
+          mode={formModal.mode}
+          data={formModal.item}
+          systemConfig={systemConfig}
+          onClose={() => setFormModal({ open: false, mode: 'view', item: null })}
+          onSave={handleSaveProgram}
+        />
+      )}
+
       {deleteItem && (
         <ConfirmDelete 
           title={deleteItem.program_name}

@@ -13,17 +13,17 @@ export default function SystemConfigForm({ initialData, onSave }: SystemConfigFo
   const [academicYears, setAcademicYears] = useState<string[]>([]);
   const [semesters, setSemesters] = useState<string[]>([]);
   const [classBranches, setClassBranches] = useState<string[]>([]);
-  const [achievements, setAchievements] = useState<any[]>([]); // Khai báo State thành tích
-  
+  const [achievements, setAchievements] = useState<any[]>([]); 
+  const [documents, setDocuments] = useState<string[]>([]);
   const [contact, setContact] = useState<any>({ address: "", email: "", fanpage: "", introduction: "", mission: "", vocation: "", structure: "", softwareIntro: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Phân trang
   const [pageYears, setPageYears] = useState(1);
   const [pageAcademicYears, setPageAcademicYears] = useState(1);
   const [pageSemesters, setPageSemesters] = useState(1);
   const [pageClassBranches, setPageClassBranches] = useState(1);
-  const [pageAchievements, setPageAchievements] = useState(1); // Trang của khối thành tích
+  const [pageAchievements, setPageAchievements] = useState(1); 
+  const [pageDocuments, setPageDocuments] = useState(1);
 
   const ITEMS_PER_PAGE = 10;
   const fileInputRefs = useRef<any>([]);
@@ -35,32 +35,36 @@ export default function SystemConfigForm({ initialData, onSave }: SystemConfigFo
       setSemesters(initialData.semesters || []);
       setClassBranches(initialData.classBranches || []);
       setAchievements(initialData.achievements || []);
+      setDocuments(initialData.documents || []);
       setContact(initialData.contact || { address: "", email: "", fanpage: "", introduction: "", mission: "", vocation: "", structure: "", softwareIntro: "" });
     }
   }, [initialData]);
 
-  const handleItemChange = (listType: 'years' | 'academicYears' | 'semesters' | 'classBranches', globalIndex: number, value: string) => {
+  const handleItemChange = (listType: 'years' | 'academicYears' | 'semesters' | 'classBranches' | 'documents', globalIndex: number, value: string) => {
     if (listType === 'years') { const u = [...years]; u[globalIndex] = value; setYears(u); }
     else if (listType === 'academicYears') { const u = [...academicYears]; u[globalIndex] = value; setAcademicYears(u); }
     else if (listType === 'semesters') { const u = [...semesters]; u[globalIndex] = value; setSemesters(u); }
     else if (listType === 'classBranches') { const u = [...classBranches]; u[globalIndex] = value; setClassBranches(u); }
+    else if (listType === 'documents') { const u = [...documents]; u[globalIndex] = value; setDocuments(u); }
   };
 
-  const handleRemoveItem = (listType: 'years' | 'academicYears' | 'semesters' | 'classBranches', globalIndex: number, currentPage: number, setCurrentPage: (p: number) => void, totalItems: number) => {
+  const handleRemoveItem = (listType: 'years' | 'academicYears' | 'semesters' | 'classBranches' | 'documents', globalIndex: number, currentPage: number, setCurrentPage: (p: number) => void, totalItems: number) => {
     let updatedLength = totalItems - 1;
     if (updatedLength > 0 && (currentPage - 1) * ITEMS_PER_PAGE >= updatedLength) setCurrentPage(currentPage - 1);
     if (listType === 'years') setYears(years.filter((_, i) => i !== globalIndex));
     else if (listType === 'academicYears') setAcademicYears(academicYears.filter((_, i) => i !== globalIndex));
     else if (listType === 'semesters') setSemesters(semesters.filter((_, i) => i !== globalIndex));
     else if (listType === 'classBranches') setClassBranches(classBranches.filter((_, i) => i !== globalIndex));
+    else if (listType === 'documents') setDocuments(documents.filter((_, i) => i !== globalIndex));
   };
 
-  const handleAddItem = (listType: 'years' | 'academicYears' | 'semesters' | 'classBranches', currentList: string[], setCurrentPage: (p: number) => void) => {
+  const handleAddItem = (listType: 'years' | 'academicYears' | 'semesters' | 'classBranches' | 'documents', currentList: string[], setCurrentPage: (p: number) => void) => {
     setCurrentPage(Math.ceil((currentList.length + 1) / ITEMS_PER_PAGE) || 1);
     if (listType === 'years') setYears([...years, ""]);
     else if (listType === 'academicYears') setAcademicYears([...academicYears, ""]);
     else if (listType === 'semesters') setSemesters([...semesters, ""]);
     else if (listType === 'classBranches') setClassBranches([...classBranches, ""]);
+    else if (listType === 'documents') setDocuments([...documents, ""]);
   };
 
   // Logic xử lý riêng cho mảng cấu trúc Thành tích nổi bật
@@ -97,7 +101,7 @@ export default function SystemConfigForm({ initialData, onSave }: SystemConfigFo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    await onSave({ years, academicYears, semesters, classBranches, achievements, contact });
+    await onSave({ years, academicYears, semesters, classBranches, achievements, documents, contact });
     setIsSubmitting(false);
   };
 
@@ -225,11 +229,34 @@ export default function SystemConfigForm({ initialData, onSave }: SystemConfigFo
           </div>
         </div>
 
-        {/* ĐÃ THÊM MỚI: KHỐI THIẾT LẬP THÀNH TÍCH ĐỘC LẬP TỪNG NĂM HỌC */}
         <div className="space-y-4 pt-6 border-t border-gray-100">
           <div className="flex items-center justify-between border-b pb-2">
             <h3 className="text-xs font-black uppercase text-purple-600 tracking-wider flex items-center gap-2">
-              5. Thành tích nổi bật qua các năm học ({achievements.length})
+              <span className="w-2 h-2 bg-purple-600 rounded-full"></span> 5. Danh mục Loại Tài liệu hệ thống ({documents.length})
+            </h3>
+            <button type="button" onClick={() => handleAddItem('documents', documents, setPageDocuments)} className="text-[10px] font-bold uppercase bg-purple-600 text-white px-3 py-1.5 rounded-xl flex items-center gap-1 border-none outline-none active:scale-95 transition-all">
+              <Plus size={12}/> Thêm tài liệu mới
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[320px] overflow-y-auto pr-1">
+            {getPaginatedItems(documents, pageDocuments).map((item, idx) => {
+              const globalIndex = (pageDocuments - 1) * ITEMS_PER_PAGE + idx;
+              return (
+                <div key={globalIndex} className="flex items-center gap-2 animate-in fade-in duration-200">
+                  <span className="w-8 h-8 flex items-center justify-center bg-gray-200/70 rounded-xl text-[11px] font-black text-slate-500 flex-shrink-0 select-none">{globalIndex + 1}</span>
+                  <input type="text" value={item} onChange={(e) => handleItemChange('documents', globalIndex, e.target.value)} required placeholder="Nhập tên danh mục tài liệu" className="flex-1 p-2 bg-white border rounded-xl text-xs font-bold outline-none focus:border-purple-500" />
+                  <button type="button" onClick={() => handleRemoveItem('documents', globalIndex, pageDocuments, setPageDocuments, documents.length)} className="p-2 text-red-500 hover:bg-red-50 rounded-xl border-none outline-none"><Trash2 size={14}/></button>
+                </div>
+              );
+            })}
+          </div>
+          {renderPaginationControls(documents.length, pageDocuments, setPageDocuments)}
+        </div>
+
+        <div className="space-y-4 pt-6 border-t border-gray-100">
+          <div className="flex items-center justify-between border-b pb-2">
+            <h3 className="text-xs font-black uppercase text-purple-600 tracking-wider flex items-center gap-2">
+              6. Thành tích nổi bật qua các năm học ({achievements.length})
             </h3>
             <button type="button" onClick={handleAddAchievement} className="text-[10px] font-bold uppercase bg-purple-600 text-white px-3 py-1.5 rounded-xl flex items-center gap-1 border-none outline-none active:scale-95 transition-all">
               <Plus size={12}/> Thêm thành tích năm học

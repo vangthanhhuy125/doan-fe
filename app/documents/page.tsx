@@ -7,6 +7,11 @@ import TaiLieuModal from "./DocumentModal";
 export default function TaiLieuPage() {
   const [taiLieuList, setTaiLieuList] = useState<any[]>([]);
   const [modal, setModal] = useState<any>({ open: false, mode: 'view', data: null });
+  const [systemConfig, setSystemConfig] = useState<any>({
+    documents: [],
+    academicYears: [],
+    semesters: []
+  });
 
   const fetchTaiLieu = async () => {
     try {
@@ -18,7 +23,26 @@ export default function TaiLieuPage() {
     }
   };
 
-  useEffect(() => { fetchTaiLieu(); }, []);
+  const fetchSystemConfig = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/system-config`);
+      if (res.ok) {
+        const data = await res.json();
+        setSystemConfig({
+          documents: data?.documents || [],
+          academicYears: data?.academicYears || [],
+          semesters: data?.semesters || []
+        });
+      }
+    } catch (error) {
+      console.error("Lỗi lấy cấu hình hệ thống:", error);
+    }
+  };
+
+  useEffect(() => { 
+    fetchTaiLieu(); 
+    fetchSystemConfig();
+  }, []);
 
   const handleOpenModal = (mode: string, data: any = null) => setModal({ open: true, mode, data });
   const handleCloseModal = () => setModal({ ...modal, open: false });
@@ -48,7 +72,11 @@ export default function TaiLieuPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <SectionTaiLieu taiLieuList={taiLieuList} onOpenModal={handleOpenModal} />
+      <SectionTaiLieu 
+        taiLieuList={taiLieuList} 
+        onOpenModal={handleOpenModal} 
+        documentCategories={systemConfig.documents} 
+      />
       {modal.open && (
         <TaiLieuModal 
           mode={modal.mode} 
@@ -56,6 +84,9 @@ export default function TaiLieuPage() {
           onClose={handleCloseModal}
           onConfirmDelete={handleDeleteTaiLieu}
           onSave={handleSave}
+          documentCategories={systemConfig.documents}
+          academicYears={systemConfig.academicYears}
+          semesters={systemConfig.semesters}
         />
       )}
     </div>

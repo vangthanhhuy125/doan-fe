@@ -10,7 +10,7 @@ const CATEGORY_INTRO: any = {
   "Thông báo - Kế hoạch Đoàn trường": "Các thông báo khẩn, kế hoạch tác chiến và văn bản hướng dẫn nghiệp vụ trực tiếp từ Đoàn trường Đại học."
 };
 
-export default function SectionTaiLieu({ taiLieuList, onOpenModal }: any) {
+export default function SectionTaiLieu({ taiLieuList, onOpenModal, documentCategories = [] }: any) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCat, setFilterCat] = useState("");
 
@@ -44,10 +44,9 @@ export default function SectionTaiLieu({ taiLieuList, onOpenModal }: any) {
             <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0054a5] transition-colors" />
             <select value={filterCat} onChange={(e) => setFilterCat(e.target.value)} className="w-full md:w-auto pl-12 pr-10 py-2.5 sm:py-3 bg-white rounded-xl text-xs sm:text-sm font-bold border-none outline-none focus:ring-2 ring-blue-400 shadow-sm appearance-none min-w-0 md:min-w-[280px] cursor-pointer transition-all">
               <option value="">Tất cả loại tài liệu</option>
-              <option value="Văn kiện đoàn khoa">Văn kiện đoàn khoa</option>
-              <option value="Hành chính">Hành chính</option>
-              <option value="Tổ chức - Hoạt động">Tổ chức - Hoạt động</option>
-              <option value="Thông báo - Kế hoạch Đoàn trường">Thông báo - Kế hoạch Đoàn trường</option>
+              {documentCategories.map((cat: string, index: number) => (
+                <option key={index} value={cat}>{cat}</option>
+              ))}
             </select>
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
               <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -61,8 +60,8 @@ export default function SectionTaiLieu({ taiLieuList, onOpenModal }: any) {
         </div>
       </div>
 
-      {filterCat && (
-        <div className="bg-blue-50 border-l-4 border-[#0054a5] p-3 sm:p-4 rounded-r-xl animate-in slide-in-from-left duration-300">
+      {filterCat && CATEGORY_INTRO[filterCat] && (
+        <div className="bg-blue-50 border-l-4 border-l-[#0054a5] p-3 sm:p-4 rounded-r-xl animate-in slide-in-from-left duration-300">
           <div className="flex items-center gap-2 text-[#0054a5] mb-1">
             <Info size={16} />
             <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-widest">Giới thiệu về {filterCat}</span>

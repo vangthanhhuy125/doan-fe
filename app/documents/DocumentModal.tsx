@@ -1,21 +1,20 @@
 'use client';
 
 import { useState } from "react";
-import { X, Save, FileText, Link as LinkIcon, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, Calendar } from "lucide-react";
+import { X, Save, FileText, Link as LinkIcon, Trash2, AlertCircle, PlusCircle, Eye, FileEdit } from "lucide-react";
 
-export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onSave }: any) {
+export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onSave, documentCategories = [], academicYears = [], semesters = [] }: any) {
   const isView = mode === 'view';
   const isAdd = mode === 'add';
 
   const [formData, setFormData] = useState({
     document_name: data?.document_name || "",
-    semester: data?.semester || "Học kỳ 1",
-    academic_year: data?.academic_year || "",
-    document_type: data?.document_type || "Văn kiện đoàn khoa",
+    semester: data?.semester || semesters[0] || "",
+    academic_year: data?.academic_year || academicYears[0] || "",
+    document_type: data?.document_type || documentCategories[0] || "",
     document_url: data?.document_url || ""
   });
 
-  // --- MODAL XÁC NHẬN XÓA (RESPONSIVE) ---
   if (mode === 'delete') {
     return (
       <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
@@ -53,18 +52,15 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
     );
   }
 
-  // --- CẤU HÌNH THEME MÀU ---
   const headerBg = isView ? "bg-[#0054a5]" : "bg-[#f59e0b]";
   const btnBg = isView ? "bg-[#0054a5] hover:bg-[#004080]" : "bg-[#f59e0b] hover:bg-[#d97706]";
   const ringColor = isView ? "focus:border-[#0054a5]" : "focus:border-[#f59e0b]";
   const labelColor = isView ? "text-gray-400" : "text-[#f59e0b]";
 
-  // --- MODAL THÊM / SỬA / XEM CHI TIẾT (RESPONSIVE) ---
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-3 sm:p-4 animate-in zoom-in duration-200">
       <div className="bg-white w-full max-w-2xl rounded-[1.5rem] sm:rounded-[2rem] shadow-2xl overflow-hidden border border-white/20 flex flex-col max-h-[90vh]">
         
-        {/* Header Modal - Responsive Padding */}
         <div className={`${headerBg} p-4 sm:p-6 flex items-center justify-between text-white transition-colors duration-300 flex-shrink-0`}>
           <div className="flex items-center gap-2 sm:gap-3">
             <div className="p-1.5 sm:p-2 bg-white/20 rounded-lg">
@@ -83,12 +79,10 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
           </button>
         </div>
         
-        {/* Form Content - Responsive Scroll & Grid */}
         <form 
           className="p-5 sm:p-8 space-y-4 sm:space-y-6 overflow-y-auto text-black flex-grow unique-scrollbar" 
           onSubmit={(e) => { e.preventDefault(); onSave(formData); }}
         >
-          {/* Tên tài liệu */}
           <div className="space-y-1.5 sm:space-y-2">
             <label className={`text-[9px] sm:text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Tên tài liệu</label>
             <input 
@@ -101,7 +95,6 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
             />
           </div>
 
-          {/* Grid Học kỳ & Năm học - Tự động xuống hàng trên Mobile */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-1.5 sm:space-y-2">
               <label className={`text-[9px] sm:text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Học kỳ</label>
@@ -112,9 +105,9 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
                   onChange={(e) => setFormData({...formData, semester: e.target.value})} 
                   className={`w-full p-3.5 sm:p-4 bg-gray-50 rounded-xl sm:rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-xs sm:text-sm font-bold ${ringColor} appearance-none cursor-pointer disabled:opacity-70 pr-10`}
                 >
-                  <option value="Học kỳ 1">Học kỳ 1</option>
-                  <option value="Học kỳ 2">Học kỳ 2</option>
-                  <option value="Trong năm">Trong năm</option>
+                  {semesters.map((sem: string, idx: number) => (
+                    <option key={idx} value={sem}>{sem}</option>
+                  ))}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
                   <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
@@ -125,19 +118,23 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
             <div className="space-y-1.5 sm:space-y-2">
               <label className={`text-[9px] sm:text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Năm học</label>
               <div className="relative">
-                <input 
+                <select 
                   disabled={isView} 
                   value={formData.academic_year} 
                   onChange={(e) => setFormData({...formData, academic_year: e.target.value})} 
-                  placeholder="2025-2026" 
-                  className={`w-full p-3.5 sm:p-4 pl-10 sm:pl-12 bg-gray-50 rounded-xl sm:rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-xs sm:text-sm font-bold ${ringColor} disabled:opacity-70`} 
-                />
-                <Calendar size={16} className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+                  className={`w-full p-3.5 sm:p-4 bg-gray-50 rounded-xl sm:rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-xs sm:text-sm font-bold ${ringColor} appearance-none cursor-pointer disabled:opacity-70 pr-10`}
+                >
+                  {academicYears.map((ay: string, idx: number) => (
+                    <option key={idx} value={ay}>{ay}</option>
+                  ))}
+                </select>
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
+                  <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Loại tài liệu */}
           <div className="space-y-1.5 sm:space-y-2">
             <label className={`text-[9px] sm:text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Loại tài liệu</label>
             <div className="relative">
@@ -147,10 +144,9 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
                 onChange={(e) => setFormData({...formData, document_type: e.target.value})} 
                 className={`w-full p-3.5 sm:p-4 bg-gray-50 rounded-xl sm:rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-xs sm:text-sm font-bold ${ringColor} appearance-none cursor-pointer disabled:opacity-70 pr-10`}
               >
-                <option value="Văn kiện đoàn khoa">Văn kiện đoàn khoa</option>
-                <option value="Hành chính">Hành chính</option>
-                <option value="Tổ chức - Hoạt động">Tổ chức - Hoạt động</option>
-                <option value="Thông báo - Kế hoạch Đoàn trường">Thông báo - Kế hoạch Đoàn trường</option>
+                {documentCategories.map((cat: string, idx: number) => (
+                  <option key={idx} value={cat}>{cat}</option>
+                ))}
               </select>
               <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
                 <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
@@ -158,7 +154,6 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
             </div>
           </div>
 
-          {/* Link Drive */}
           <div className="space-y-1.5 sm:space-y-2">
             <label className={`text-[9px] sm:text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Link văn kiện (Drive)</label>
             <div className="relative">
@@ -173,7 +168,6 @@ export default function TaiLieuModal({ mode, data, onClose, onConfirmDelete, onS
             </div>
           </div>
 
-          {/* Nút thao tác dưới Footer Form */}
           {!isView && (
             <div className="pt-4 sm:pt-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 border-t border-gray-100 flex-shrink-0">
               <button 

@@ -93,7 +93,7 @@ export default function PartyDevelopment() {
           <div className="p-2 bg-red-600 rounded-xl text-white shadow-lg shadow-red-100">
             <ShieldCheck size={24} />
           </div>
-          <h2 className="text-2xl font-black uppercase text-red-600 tracking-tight">Công tác Đoàn - Đảng</h2>
+          <h2 className="text-2xl font-black uppercase text-red-600 tracking-tight">Công tác phát triển Đảng</h2>
         </div>
       </div>
 

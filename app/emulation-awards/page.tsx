@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Award, Lightbulb, Flag, ArrowLeft } from "lucide-react";
 import SectionBangDiem from "./scorecards/SectionScoreCards";
@@ -10,7 +10,7 @@ import MHGPModal from "./models-solutions/ModelSolutionModal";
 import BangDiemModal from "./scorecards/ScoreCardsModal";
 import CTTNModal from "./youth-projects/YouthProjectsModal";
 
-export default function ThiDuaPage() {
+function ThiDuaContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'menu';
@@ -102,7 +102,7 @@ export default function ThiDuaPage() {
 
   return (
     <div className="space-y-6 pb-10 text-left text-black">
-            {activeTab === 'menu' && (
+      {activeTab === 'menu' && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 animate-in fade-in zoom-in-95 duration-200">
           {cards.map((card) => {
             const Icon = card.icon;
@@ -187,5 +187,13 @@ export default function ThiDuaPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function ThiDuaPage() {
+  return (
+    <Suspense fallback={<div className="p-5 text-center text-sm font-bold text-gray-400">Đang tải...</div>}>
+      <ThiDuaContent />
+    </Suspense>
   );
 }

@@ -94,7 +94,7 @@ export default function ThiDuaPage() {
     {
       id: 'projects',
       title: 'Công trình thanh niên',
-      desc: 'Đăng ký và theo dõi tiến độ các công trình thanh niên phục vụ cộng đồng.',
+      desc: 'Theo dõi tiến độ các công trình thanh niên phục vụ cộng đồng.',
       icon: Flag,
       iconColor: 'text-[#0054a5] bg-blue-50'
     }

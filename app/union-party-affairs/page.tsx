@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Briefcase, Bell, ShieldCheck, ArrowLeft } from "lucide-react";
 import PartyDevelopment from "./PartyWork/page";
 import NotificationPage from "./Notification/page";
 
-export default function CongTacPage() {
+function CongTacContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const activeTab = searchParams.get('tab') || 'menu';
@@ -70,5 +70,13 @@ export default function CongTacPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function CongTacPage() {
+  return (
+    <Suspense fallback={<div className="p-5 text-center text-sm font-bold text-gray-400">Đang tải...</div>}>
+      <CongTacContent />
+    </Suspense>
   );
 }

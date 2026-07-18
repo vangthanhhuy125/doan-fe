@@ -153,7 +153,7 @@ export default function GioiThieuPage() {
                 </div>
               )}
               <div className="space-y-3">
-                <h4 className="text-xs font-black text-yellow-600 uppercase tracking-widest">Nội dung chi tiết quyết định khen thưởng</h4>
+                <h4 className="text-xs font-black text-yellow-600 uppercase tracking-widest">Nội dung chi tiết thành tích đạt được</h4>
                 <p className="text-gray-700 text-sm font-medium leading-loose whitespace-pre-line bg-amber-50/30 p-5 rounded-2xl border border-amber-100/50">
                   {selectedAchievement.content}
                 </p>

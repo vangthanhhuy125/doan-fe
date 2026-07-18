@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from "react";
-import { School, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { School, X, ChevronDown } from "lucide-react";
 
 interface Props {
   unit: any;
@@ -10,6 +10,9 @@ interface Props {
 }
 
 export default function EditUnitModal({ unit, onClose, onSave }: Props) {
+  const [userList, setUserList] = useState<any[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+
   const [formData, setFormData] = useState({ 
     ...unit, 
     ten: unit.ten || unit.group_name || "",
@@ -24,7 +27,30 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
 
   const isCLB = formData.ten?.toUpperCase().includes("CLB") || formData.unitType === 'TAPTHE';
   const isBan = formData.ten?.toUpperCase().includes("BAN");
+  const isChiDoan = !isCLB && !isBan;
   const [hasThreeUV, setHasThreeUV] = useState(formData.uvbch?.length > 1 || !!unit.uvBch1);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`);
+        const data = await res.json();
+        const users = Array.isArray(data) ? data : [];
+        setUserList(users);
+        
+        const uniqueClasses = Array.from(new Set(users.map((u: any) => u.class)))
+          .filter(Boolean)
+          .sort() as string[];
+        setAvailableClasses(uniqueClasses);
+      } catch (error) {
+        setUserList([]);
+        setAvailableClasses([]);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const filteredUsers = userList.filter(u => u.class === formData.ten);
 
   const getLabels = () => {
     if (isCLB) return ["Chủ nhiệm", "Phó Chủ nhiệm 1", "Phó Chủ nhiệm 2"];
@@ -73,10 +99,27 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
         <form onSubmit={(e) => { e.preventDefault(); onSave({...formData, group_name: formData.ten}); }} className="p-8 space-y-5 overflow-y-auto">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Tên Chi đoàn / Tập thể</label>
-            <input required value={formData.ten} onChange={(e) => setFormData({...formData, ten: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-black text-slate-800" />
+            {isChiDoan ? (
+              <div className="relative">
+                <select
+                  required
+                  value={formData.ten}
+                  onChange={(e) => setFormData({...formData, ten: e.target.value, biThu: "", phoBiThu: "", uvbch: []})}
+                  className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-black text-slate-800 appearance-none cursor-pointer pr-10"
+                >
+                  <option value="" disabled>-- Chọn Chi đoàn --</option>
+                  {availableClasses.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+                <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+            ) : (
+              <input required value={formData.ten} onChange={(e) => setFormData({...formData, ten: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-black text-slate-800" />
+            )}
           </div>
 
-          {!isCLB && !isBan && (
+          {isChiDoan && (
             <div className="flex items-center gap-2 px-1">
               <input type="checkbox" id="threeUV" checked={hasThreeUV} onChange={(e) => setHasThreeUV(e.target.checked)} className="w-4 h-4 accent-purple-600" />
               <label htmlFor="threeUV" className="text-[10px] font-bold uppercase text-slate-500 cursor-pointer">Chi đoàn có 3 Ủy viên BCH</label>
@@ -107,7 +150,24 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
               return (
                 <div key={idx} className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1">{label}</label>
-                  <input required value={val} onChange={(e) => handleInputChange(field, e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-bold text-slate-800" />
+                  {isChiDoan ? (
+                    <div className="relative">
+                      <select
+                        required
+                        value={val}
+                        onChange={(e) => handleInputChange(field, e.target.value)}
+                        className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-bold text-slate-800 appearance-none cursor-pointer pr-10"
+                      >
+                        <option value="">-- Chọn nhân sự --</option>
+                        {filteredUsers.map((u: any) => (
+                          <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                    </div>
+                  ) : (
+                    <input required value={val} onChange={(e) => handleInputChange(field, e.target.value)} className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm font-bold text-slate-800" />
+                  )}
                 </div>
               );
             })}

@@ -19,17 +19,24 @@ export default function ConfirmNoticeDelete({ title, onClose, onConfirm }: Props
           <div className="space-y-2">
             <h3 className="text-xl font-black text-slate-800 tracking-tight">Xác nhận xóa?</h3>
             <p className="text-[13px] text-slate-500 leading-relaxed px-4">
-              Bạn có chắc muốn xóa thông báo <span className="font-bold text-red-600">"{title}"</span>? 
+              Bạn chắc chắn muốn xóa thông báo <span className="font-bold text-red-600">"{title}"</span>?
             </p>
           </div>
         </div>
         <div className="flex p-4 gap-3 bg-slate-50">
-          <button onClick={onClose} className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[10px] tracking-widest border-none bg-transparent">Hủy bỏ</button>
           <button 
+            type="button"
+            onClick={onClose} 
+            className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[10px] tracking-widest border-none bg-transparent"
+          >
+            Hủy bỏ
+          </button>
+          <button 
+            type="button"
             onClick={onConfirm}
             className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition-all uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 border-none"
           >
-            Xoá
+            <Trash2 size={14} /> Xác nhận xóa
           </button>
         </div>
       </div>

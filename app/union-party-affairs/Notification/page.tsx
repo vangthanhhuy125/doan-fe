@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Bell, Eye, Edit, Trash2, Plus, Calendar, X, Search, RotateCcw } from "lucide-react";
+import { Bell, Eye, Edit, Trash2, Plus, Calendar, X, Search, RotateCcw, FileText } from "lucide-react";
 import NoticeForm from "./NoticeForm";
 import ConfirmNoticeDelete from "./ConfirmNoticeDelete";
 
@@ -10,7 +10,6 @@ export default function NotificationPage() {
   const [selectedNotice, setSelectedNotice] = useState<any>(null);
   const [formMode, setFormMode] = useState<{ open: boolean, data: any }>({ open: false, data: null });
   const [deleteItem, setDeleteItem] = useState<any>(null);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -30,26 +29,46 @@ export default function NotificationPage() {
   }, []);
 
   const handleSave = async (item: any) => {
-    try {
-      const isEdit = !!item._id;
-      const url = isEdit 
-        ? `${process.env.NEXT_PUBLIC_API_URL}/announcements/${item._id}` 
-        : `${process.env.NEXT_PUBLIC_API_URL}/announcements`;
-      
-      const res = await fetch(url, {
-        method: isEdit ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item),
-      });
+    const isEdit = !!item._id;
+    const url = isEdit
+      ? `${process.env.NEXT_PUBLIC_API_URL}/announcements/${item._id}`
+      : `${process.env.NEXT_PUBLIC_API_URL}/announcements`;
 
-      if (res.ok) {
-        await fetchNotices();
-        setFormMode({ open: false, data: null });
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        const formData = new FormData();
+        formData.append('title', item.title);
+        formData.append('content', item.content);
+        formData.append('sendEmail', String(item.sendEmail));
+        formData.append('emailTarget', item.emailTarget || 'ALL');
+
+        if (item.posted_at) {
+          formData.append('posted_at', item.posted_at);
+        }
+
+        if (item.receiverIds && item.receiverIds.length > 0) {
+          formData.append('receiverIds', JSON.stringify(item.receiverIds));
+        }
+        if (item.file) {
+          formData.append('file', item.file);
+        }
+        const res = await fetch(url, {
+          method: isEdit ? 'PUT' : 'POST',
+          body: formData,
+        });
+
+        if (res.ok) {
+          await fetchNotices();
+          setFormMode({ open: false, data: null });
+          resolve();
+        } else {
+          reject(new Error("Lỗi khi lưu thông báo"));
+        }
+      } catch (error) {
+        reject(error);
       }
-    } catch (error) {
-      console.error(error);
-    }
-  };
+    });
+  }; // Bổ sung dấu đóng hàm handleSave bị khuyết trong code cũ
 
   const confirmDelete = async () => {
     try {
@@ -92,47 +111,46 @@ export default function NotificationPage() {
           </div>
           <h2 className="font-black text-[#0054a5] tracking-tight uppercase text-2xl">Thông báo - Triển khai - Triệu tập</h2>
         </div>
-        <button 
+        <button
           onClick={() => setFormMode({ open: true, data: null })}
           className="flex items-center gap-2 bg-[#0054a5] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-[10px] uppercase tracking-widest border-none outline-none"
         >
-          <Plus size={16} /> Soạn thông báo
+          <Plus size={16} /> Soạn thông báo mới
         </button>
       </div>
-
       <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative col-span-1 md:col-span-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm tiêu đề..." 
+            <input
+              type="text"
+              placeholder="Tìm kiếm tiêu đề..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-blue-500 transition-all"
+              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-100 rounded-xl text-sm outline-none focus:border-blue-500 transition-all font-bold"
             />
           </div>
           <div className="flex items-center gap-2 col-span-1 md:col-span-2">
             <div className="flex items-center gap-2 flex-1">
               <label className="text-[10px] font-bold uppercase text-gray-400 whitespace-nowrap">Từ ngày</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={startDate}
                 onChange={(e) => setStartDate(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:border-blue-500"
+                className="w-full p-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:border-blue-500 font-bold"
               />
             </div>
             <div className="flex items-center gap-2 flex-1">
               <label className="text-[10px] font-bold uppercase text-gray-400 whitespace-nowrap">Đến ngày</label>
-              <input 
-                type="date" 
+              <input
+                type="date"
                 value={endDate}
                 onChange={(e) => setEndDate(e.target.value)}
-                className="w-full p-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:border-blue-500"
+                className="w-full p-2 bg-gray-50 border border-gray-100 rounded-xl text-xs outline-none focus:border-blue-500 font-bold"
               />
             </div>
             {isFiltering && (
-              <button 
+              <button
                 onClick={resetFilters}
                 className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500 border-none bg-transparent outline-none"
               >
@@ -142,7 +160,6 @@ export default function NotificationPage() {
           </div>
         </div>
       </div>
-
       <div className="overflow-x-auto rounded-3xl border border-gray-100 shadow-xl bg-white">
         <table className="w-full text-sm text-left border-collapse">
           <thead className="bg-[#0054a5] text-white font-bold text-[13px] tracking-widest">
@@ -150,7 +167,7 @@ export default function NotificationPage() {
               <th className="px-6 py-5 text-center uppercase w-16">STT</th>
               <th className="px-6 py-5 text-center">Nội dung thông báo</th>
               <th className="px-6 py-5 text-center w-40">Ngày đăng</th>
-              <th className="px-6 py-5 text-center w-40">Thao tác</th>
+              <th className="px-6 py-5 text-center w-40"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -171,13 +188,12 @@ export default function NotificationPage() {
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic font-bold">Không tìm thấy thông báo nào phù hợp.</td>
+                <td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic font-bold">Không tìm thấy thông báo phù hợp.</td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
-
       {selectedNotice && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20 max-h-[85vh] flex flex-col">
@@ -190,27 +206,58 @@ export default function NotificationPage() {
                 <Calendar size={12}/> Ngày đăng: {new Date(selectedNotice.posted_at).toLocaleDateString('vi-VN')}
               </div>
               <h2 className="text-2xl font-black text-[#0054a5] leading-tight">{selectedNotice.title}</h2>
-              <div className="p-6 sm:p-8 bg-slate-50 rounded-[2rem] border border-slate-100 text-slate-700 leading-relaxed whitespace-pre-wrap italic shadow-inner">
+              <div className="p-6 sm:p-8 bg-slate-50 rounded-[2rem] border border-slate-100 text-slate-700 leading-relaxed whitespace-pre-wrap italic shadow-inner font-medium">
                 {selectedNotice.content}
               </div>
+              
+              {selectedNotice.file && (
+                <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between animate-in fade-in duration-300">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="p-2.5 bg-blue-500 text-white rounded-xl shrink-0">
+                      <FileText size={18} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-slate-800 truncate">{selectedNotice.file.originalname}</p>
+                      <p className="text-[10px] text-slate-400 font-bold">{(selectedNotice.file.size / 1024).toFixed(1)} KB</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (selectedNotice.file.buffer) {
+                        const base64Data = typeof selectedNotice.file.buffer === 'string' 
+                          ? selectedNotice.file.buffer 
+                          : selectedNotice.file.buffer.data || '';
+                        if (base64Data) {
+                          const link = document.createElement('a');
+                          link.href = `data:${selectedNotice.file.mimetype};base64,${base64Data}`;
+                          link.download = selectedNotice.file.originalname;
+                          link.click();
+                        }
+                      }
+                    }}
+                    className="text-xs font-black text-[#0054a5] hover:underline shrink-0 pl-2"
+                  >
+                    Tải tài liệu
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
-
       {formMode.open && (
-        <NoticeForm 
-          data={formMode.data} 
-          onClose={() => setFormMode({ open: false, data: null })} 
-          onSave={handleSave} 
+        <NoticeForm
+          data={formMode.data}
+          onClose={() => setFormMode({ open: false, data: null })}
+          onSave={handleSave}
         />
       )}
-
       {deleteItem && (
-        <ConfirmNoticeDelete 
-          title={deleteItem.title} 
-          onClose={() => setDeleteItem(null)} 
-          onConfirm={confirmDelete} 
+        <ConfirmNoticeDelete
+          title={deleteItem.title}
+          onClose={() => setDeleteItem(null)}
+          onConfirm={confirmDelete}
         />
       )}
     </div>

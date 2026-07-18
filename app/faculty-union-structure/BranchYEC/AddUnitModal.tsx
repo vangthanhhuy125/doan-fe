@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Plus, X, School, Users, ChevronDown } from "lucide-react";
 
 interface AddUnitModalProps {
@@ -10,6 +10,9 @@ interface AddUnitModalProps {
 
 export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
   const [type, setType] = useState<'CHIDOAN' | 'TAPTHE'>('CHIDOAN');
+  const [userList, setUserList] = useState<any[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<string[]>([]);
+  
   const [formData, setFormData] = useState<any>({
     ten: "",
     group_name: "",
@@ -27,6 +30,28 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
 
   const leaderRoles = ["Chủ nhiệm", "Trưởng ban", "Đội trưởng"];
   const subRoles = ["Phó Chủ nhiệm", "Phó ban", "Đội phó"];
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`);
+        const data = await res.json();
+        const users = Array.isArray(data) ? data : [];
+        setUserList(users);
+        
+        const uniqueClasses = Array.from(new Set(users.map((u: any) => u.class)))
+          .filter(Boolean)
+          .sort() as string[];
+        setAvailableClasses(uniqueClasses);
+      } catch (error) {
+        setUserList([]);
+        setAvailableClasses([]);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  const filteredUsers = userList.filter(u => u.class === formData.ten);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,30 +104,114 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Tên Chi đoàn</label>
-                  <input required placeholder="PMCL2023.1" value={formData.ten} onChange={(e) => setFormData({...formData, ten: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm text-slate-800" />
+                  <div className="relative">
+                    <select
+                      required
+                      value={formData.ten}
+                      onChange={(e) => setFormData({...formData, ten: e.target.value, biThu: "", phoBiThu: "", uvbch: []})}
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold"
+                    >
+                      <option value="" disabled>-- Chọn Chi đoàn --</option>
+                      {availableClasses.map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Khóa</label>
-                  <input required placeholder="2023" value={formData.khoa} onChange={(e) => setFormData({...formData, khoa: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm text-slate-800" />
+                  <input required placeholder="2023" value={formData.khoa} onChange={(e) => setFormData({...formData, khoa: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm text-slate-800 font-bold" />
                 </div>
               </div>
               
               <div className="grid grid-cols-2 gap-4 border-t pt-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-red-400 ml-1">Bí thư</label>
-                  <input required value={formData.biThu} onChange={(e) => setFormData({...formData, biThu: e.target.value})} className="w-full p-3 bg-red-50/30 rounded-xl border border-red-50 focus:bg-white outline-none text-sm text-slate-800" />
+                  <div className="relative">
+                    <select
+                      required
+                      disabled={!formData.ten}
+                      value={formData.biThu}
+                      onChange={(e) => setFormData({...formData, biThu: e.target.value})}
+                      className="w-full p-3 bg-red-50/30 rounded-xl border border-red-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
+                    >
+                      <option value="">-- Chọn nhân sự --</option>
+                      {filteredUsers.map((u: any) => (
+                        <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-amber-500 ml-1">Phó Bí thư</label>
-                  <input required value={formData.phoBiThu} onChange={(e) => setFormData({...formData, phoBiThu: e.target.value})} className="w-full p-3 bg-amber-50/30 rounded-xl border border-amber-50 focus:bg-white outline-none text-sm text-slate-800" />
+                  <div className="relative">
+                    <select
+                      required
+                      disabled={!formData.ten}
+                      value={formData.phoBiThu}
+                      onChange={(e) => setFormData({...formData, phoBiThu: e.target.value})}
+                      className="w-full p-3 bg-amber-50/30 rounded-xl border border-amber-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
+                    >
+                      <option value="">-- Chọn nhân sự --</option>
+                      {filteredUsers.map((u: any) => (
+                        <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 
               <div className="space-y-3 border-t pt-4">
                 <label className="text-[10px] font-black uppercase text-blue-500 ml-1">Ủy viên Ban Chấp hành</label>
-                <input required placeholder="UV BCH 1" value={formData.uvbch[0] || ""} onChange={(e) => { const newUv = [...formData.uvbch]; newUv[0] = e.target.value; setFormData({...formData, uvbch: newUv}); }} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
-                <input placeholder="UV BCH 2" value={formData.uvbch[1] || ""} onChange={(e) => { const newUv = [...formData.uvbch]; newUv[1] = e.target.value; setFormData({...formData, uvbch: newUv}); }} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
-                <input placeholder="UV BCH 3" value={formData.uvbch[2] || ""} onChange={(e) => { const newUv = [...formData.uvbch]; newUv[2] = e.target.value; setFormData({...formData, uvbch: newUv}); }} className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800" />
+                
+                <div className="relative">
+                  <select
+                    required
+                    disabled={!formData.ten}
+                    value={formData.uvbch[0] || ""}
+                    onChange={(e) => { const newUv = [...formData.uvbch]; newUv[0] = e.target.value; setFormData({...formData, uvbch: newUv}); }}
+                    className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
+                  >
+                    <option value="">-- Chọn UV BCH 1 --</option>
+                    {filteredUsers.map((u: any) => (
+                      <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+
+                <div className="relative">
+                  <select
+                    disabled={!formData.ten}
+                    value={formData.uvbch[1] || ""}
+                    onChange={(e) => { const newUv = [...formData.uvbch]; newUv[1] = e.target.value; setFormData({...formData, uvbch: newUv}); }}
+                    className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
+                  >
+                    <option value="">-- Chọn UV BCH 2 --</option>
+                    {filteredUsers.map((u: any) => (
+                      <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+
+                <div className="relative">
+                  <select
+                    disabled={!formData.ten}
+                    value={formData.uvbch[2] || ""}
+                    onChange={(e) => { const newUv = [...formData.uvbch]; newUv[2] = e.target.value; setFormData({...formData, uvbch: newUv}); }}
+                    className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
+                  >
+                    <option value="">-- Chọn UV BCH 3 --</option>
+                    {filteredUsers.map((u: any) => (
+                      <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
               </div>
             </div>
           ) : (

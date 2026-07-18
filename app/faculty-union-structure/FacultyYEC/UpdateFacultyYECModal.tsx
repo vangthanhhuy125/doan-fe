@@ -23,6 +23,7 @@ export default function UpdateBCHModal({ onClose, allMembers, currentBCH }: Upda
   const [userList, setUserList] = useState<any[]>([]);
   const [activeIdx, setActiveIdx] = useState<number | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -74,6 +75,8 @@ export default function UpdateBCHModal({ onClose, allMembers, currentBCH }: Upda
   };
 
   const handleUpdate = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     try {
       const payload = formData.filter(item => item.name !== "");
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/youth-union/bch/update`, {
@@ -84,6 +87,8 @@ export default function UpdateBCHModal({ onClose, allMembers, currentBCH }: Upda
       if (res.ok) onClose();
     } catch (error) {
       console.error("Lỗi cập nhật BCH:", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -102,7 +107,7 @@ export default function UpdateBCHModal({ onClose, allMembers, currentBCH }: Upda
             <Edit size={20} />
             <h3 className="font-bold uppercase tracking-widest text-sm">Cập nhật Ban Chấp hành</h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white">
+          <button disabled={isSubmitting} onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white disabled:opacity-50">
             <X size={20} />
           </button>
         </div>
@@ -124,8 +129,8 @@ export default function UpdateBCHModal({ onClose, allMembers, currentBCH }: Upda
                   <td className="py-2 pl-2 relative">
                     <div className="relative" ref={idx === activeIdx ? dropdownRef : null}>
                       <div 
-                        onClick={() => { setActiveIdx(idx); setSearchTerm(""); }}
-                        className={`w-full p-3 bg-slate-50 rounded-xl text-sm font-bold border-2 border-transparent transition-all cursor-pointer flex items-center justify-between ${activeIdx === idx ? 'bg-white border-blue-500 shadow-md' : 'hover:bg-slate-100'}`}
+                        onClick={() => { if (!isSubmitting) { setActiveIdx(idx); setSearchTerm(""); } }}
+                        className={`w-full p-3 bg-slate-50 rounded-xl text-sm font-bold border-2 border-transparent transition-all cursor-pointer flex items-center justify-between ${activeIdx === idx ? 'bg-white border-blue-500 shadow-md' : 'hover:bg-slate-100'} ${isSubmitting ? 'cursor-not-allowed opacity-70' : ''}`}
                       >
                         <span className={item.name ? "text-slate-800" : "text-slate-400"}>
                           {item.name || "-- Chọn nhân sự --"}
@@ -172,14 +177,25 @@ export default function UpdateBCHModal({ onClose, allMembers, currentBCH }: Upda
         </div>
 
         <div className="p-6 bg-slate-50 flex justify-end gap-3">
-          <button onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-slate-400 hover:bg-slate-200 transition-all uppercase text-[10px] tracking-widest border-none outline-none">
+          <button disabled={isSubmitting} onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-slate-400 hover:bg-slate-200 transition-all uppercase text-[10px] tracking-widest border-none outline-none disabled:opacity-50">
             Hủy bỏ
           </button>
           <button 
+            disabled={isSubmitting}
             onClick={handleUpdate}
-            className="px-10 py-3 bg-[#0054a5] text-white rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-800 transition-all uppercase text-[10px] tracking-widest border-none outline-none flex items-center gap-2"
+            className="px-10 py-3 bg-[#0054a5] text-white rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-800 transition-all uppercase text-[10px] tracking-widest border-none outline-none flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Cập nhật
+            {isSubmitting ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Đang xử lý...</span>
+              </>
+            ) : (
+              'Cập nhật'
+            )}
           </button>
         </div>
       </div>

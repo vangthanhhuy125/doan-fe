@@ -1,4 +1,3 @@
-// app/nhan-su/page.tsx
 'use client';
 
 import { useState, useEffect } from "react";
@@ -37,15 +36,26 @@ export default function NhanSuPage() {
     const url = isAdd 
       ? `${process.env.NEXT_PUBLIC_API_URL}/nhan-su` 
       : `${process.env.NEXT_PUBLIC_API_URL}/nhan-su/${payload._id}`;
-    
-    await fetch(url, {
-      method: isAdd ? 'POST' : 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      
+    return new Promise<void>(async (resolve, reject) => {
+      try {
+        const res = await fetch(url, {
+          method: isAdd ? 'POST' : 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        
+        if (res.ok) {
+          setModal({ open: false, mode: 'view', data: null });
+          fetchNhanSu();
+          resolve();
+        } else {
+          reject(new Error("Lỗi khi cập nhật nhân sự"));
+        }
+      } catch (error) {
+        reject(error);
+      }
     });
-
-    setModal({ open: false, mode: 'view', data: null });
-    fetchNhanSu();
   };
 
   return (
@@ -53,8 +63,8 @@ export default function NhanSuPage() {
       <SectionNhanSu nhanSuList={nhanSuList} onOpenModal={handleOpenModal} />
       {modal.open && (
         <NhanSuModal 
-          mode={modal.mode} 
-          data={modal.data} 
+          mode={modal.mode}
+          data={modal.data}
           onClose={() => setModal({ ...modal, open: false })}
           onConfirmDelete={handleDelete}
           onSave={handleSave}

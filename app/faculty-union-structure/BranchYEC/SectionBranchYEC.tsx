@@ -24,6 +24,13 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
       const sortedData = Array.isArray(data) ? data.sort((a, b) => {
         if (a.unitType === 'CHIDOAN' && b.unitType !== 'CHIDOAN') return -1;
         if (a.unitType !== 'CHIDOAN' && b.unitType === 'CHIDOAN') return 1;
+        
+        if (a.unitType === 'CHIDOAN' && b.unitType === 'CHIDOAN') {
+          const nameA = a.ten || a.group_name || "";
+          const nameB = b.ten || b.group_name || "";
+          return nameA.localeCompare(nameB, undefined, { numeric: true, sensitivity: 'base' });
+        }
+        
         return 0;
       }) : [];
       

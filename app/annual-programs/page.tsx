@@ -122,7 +122,7 @@ export default function ToChucPage() {
             <CalendarDays size={24} /> 
           </div>
           <h2 className="text-2xl font-black uppercase text-[#0054a5] tracking-tight">
-            Chương trình khoa
+            Chương trình hoạt động trong năm
           </h2>
         </div>
         <button 
@@ -226,7 +226,7 @@ export default function ToChucPage() {
             <tr>
               <th className="px-4 py-4 text-center uppercase w-12">STT</th>
               <th className="px-4 py-4 text-center">Tên chương trình</th>
-              <th className="px-4 py-4 text-center">Tháng - Năm - HK - Niên khóa</th>
+              <th className="px-4 py-4 text-center">Thời gian</th>
               <th className="px-4 py-4 text-center w-32"></th>
             </tr>
           </thead>

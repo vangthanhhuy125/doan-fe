@@ -73,7 +73,6 @@ export default function NoticeForm({ data, onClose, onSave }: NoticeFormProps) {
         content,
         sendEmail,
         emailTarget,
-        // Gửi mảng ID người nhận lên hoặc mảng trống nếu gửi ALL
         receiverIds: emailTarget === 'SPECIFIC' ? selectedUsers.map(u => u._id) : [],
         file: attachedFile,
         posted_at: data?.posted_at || new Date().toISOString()

@@ -46,9 +46,9 @@ export default function AuthPage() {
   return (
     <>
       <head>
-        <title>Đăng nhập - Hệ thống nghiệp vụ công tác Đoàn</title>
-        <link rel="shortcut icon" href="/doankhoa.png?v=100" />
-        <link rel="icon" type="image/png" href="/doankhoa.png?v=100" sizes="32x32" />
+        <title>Đăng nhập - Hệ thống nghiệp vụ công tác Đoàn khoa Công nghệ Phần mềm (UIT-VNUHCM)</title>
+        <link rel="shortcut icon" href="/LOGO-DAIHOI-V.png?v=100" />
+        <link rel="icon" type="image/png" href="/LOGO-DAIHOI-V.png?v=100" sizes="32x32" />
       </head>
 
       <main className="flex min-h-screen w-full flex-col md:flex-row bg-white overflow-hidden text-black">

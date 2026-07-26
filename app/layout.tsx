@@ -20,11 +20,11 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
-        <title>Hệ thống nghiệp vụ công tác Đoàn</title>
+        <title>Hệ thống nghiệp vụ công tác Đoàn khoa Công nghệ Phần mềm (UIT-VNUHCM)</title>
         <meta name="description" content="Đoàn TNCS Hồ Chí Minh" />
-        <link rel="icon" href="/doankhoa.png?v=100" />
-        <link rel="shortcut icon" href="/doankhoa.png?v=100" />
-        <link rel="apple-touch-icon" href="/doankhoa.png?v=100" />
+        <link rel="icon" href="/LOGO-DAIHOI-V.png?v=100" />
+        <link rel="shortcut icon" href="/LOGO-DAIHOI-V.png?v=100" />
+        <link rel="apple-touch-icon" href="/LOGO-DAIHOI-V.png?v=100" />
       </head>
       <body className={`${inter.className} antialiased m-0 p-0 bg-white text-slate-900`}>
         {isLoginPage ? (

@@ -13,7 +13,7 @@ export default function AuthPage() {
   const router = useRouter();
 
   useEffect(() => {
-    document.title = "Đăng nhập - Hệ thống nghiệp vụ công tác Đoàn khoa Công nghệ Phần mềm (UIT-VNUHCM)";
+    document.title = "Hệ thống nghiệp vụ công tác Đoàn khoa Công nghệ Phần mềm (UIT-VNUHCM)";
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {

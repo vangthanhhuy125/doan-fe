@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from "react";
-import { X, Save, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, GraduationCap, Phone, Mail, Calendar, Camera } from "lucide-react";
+import { X, User, AlertCircle, PlusCircle, Eye, FileEdit, GraduationCap, Phone, Mail, Calendar, Camera, AtSign } from "lucide-react";
 
 export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSave }: any) {
   const isView = mode === 'view';
@@ -10,6 +10,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
   const formRef = useRef<HTMLFormElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(data?.image_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [mssvInput, setMssvInput] = useState<string>(data?.student_id || data?.mssv || "");
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -30,13 +31,16 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
 
     try {
       const formData = new FormData(formRef.current!);
+      const currentMssv = formData.get("mssv") as string;
       const payload = {
         ...data,
         name: formData.get("name"),
-        mssv: formData.get("mssv"),
+        mssv: currentMssv,
         class: formData.get("class"),
         phone: formData.get("phone"),
         birthday: formData.get("birthday"),
+        personal_email: formData.get("personal_email"),
+        email: currentMssv ? `${currentMssv}@gm.uit.edu.vn` : "",
         image_url: avatarPreview,
       };
 
@@ -143,9 +147,17 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Mã số sinh viên (MSSV)</label>
+              <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Mã số sinh viên</label>
               <div className="relative">
-                <input name="mssv" disabled={isView} defaultValue={data?.student_id || data?.mssv} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập MSSV..." />
+                <input 
+                  name="mssv" 
+                  disabled={isView} 
+                  value={mssvInput} 
+                  onChange={(e) => setMssvInput(e.target.value)} 
+                  required 
+                  className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} 
+                  placeholder="Nhập MSSV..." 
+                />
                 <GraduationCap size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -174,10 +186,20 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
               </div>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Email</label>
+              <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Email sinh viên</label>
               <div className="relative">
-                <input disabled value={data?.student_id || data?.mssv ? `${data.student_id || data.mssv}@gm.uit.edu.vn` : ""} className="w-full p-4 pl-12 bg-slate-100 rounded-2xl border-none text-sm text-slate-400 outline-none" />
-                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                <input disabled value={mssvInput ? `${mssvInput}@gm.uit.edu.vn` : ""} className="w-full p-4 pl-12 bg-slate-100 rounded-2xl border-none text-sm text-slate-500 outline-none" placeholder="mssv@gm.uit.edu.vn" />
+                <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6">
+            <div className="space-y-2">
+              <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Email cá nhân</label>
+              <div className="relative">
+                <input name="personal_email" disabled={isView} defaultValue={data?.personal_email} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} />
+                <AtSign size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
           </div>

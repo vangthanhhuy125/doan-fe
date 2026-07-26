@@ -15,15 +15,15 @@ export default function RootLayout({
 }) {
   const pathname = usePathname()
   
-  const isLoginPage = pathname === '/' || pathname === '/login' || pathname === '/auth'
+  const isLoginPage = pathname === '/' || pathname === '/login' || pathname === '/auth' || pathname?.startsWith('/auth/')
 
   return (
     <html lang="vi">
       <head>
         <title>Hệ thống nghiệp vụ công tác Đoàn</title>
         <meta name="description" content="Đoàn TNCS Hồ Chí Minh" />
+        <link rel="icon" href="/doankhoa.png?v=100" />
         <link rel="shortcut icon" href="/doankhoa.png?v=100" />
-        <link rel="icon" type="image/png" href="/doankhoa.png?v=100" sizes="32x32" />
         <link rel="apple-touch-icon" href="/doankhoa.png?v=100" />
       </head>
       <body className={`${inter.className} antialiased m-0 p-0 bg-white text-slate-900`}>

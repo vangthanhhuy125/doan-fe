@@ -14,15 +14,25 @@ export default function NotificationPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const fetchNotices = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/announcements`);
-      const data = await res.json();
-      setNotices(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error(error);
-    }
-  };
+  const fetchNotices = async () => {     
+  try {       
+    const token = localStorage.getItem('token');
+    const userStr = localStorage.getItem('user');
+    const localUser = userStr ? JSON.parse(userStr) : null;
+    const userId = localUser?._id || localUser?.user_id || '';
+
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/announcements?manage=true&userId=${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'x-user-id': userId,
+      }
+    });       
+    const data = await res.json();       
+    setNotices(Array.isArray(data) ? data : []);     
+  } catch (error) {       
+    console.error(error);     
+  }   
+};
 
   useEffect(() => {
     fetchNotices();

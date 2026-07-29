@@ -122,7 +122,7 @@ export default function NoticeForm({ data, onClose, onSave }: NoticeFormProps) {
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1 tracking-wider">Tài liệu đính kèm</label>
               <input type="file" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
               {!attachedFile ? (
-                <button type="button" disabled={isSubmitting} onClick={() => fileInputRef.current?.click()} className="w-full py-3 border-2 border-dashed border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/30 rounded-xl flex flex-col items-center justify-center gap-1 transition-all text-slate-400 hover:text-blue-500 cursor-pointer disabled:opacity-50 text-xs font-bold uppercase tracking-wider">
+                <button type="button" disabled={isSubmitting} onClick={() => fileInputRef.current?.click()} className="w-full py-3 border-2 border-dashed border-slate-200 hover:border-blue-500 bg-slate-50 hover:bg-blue-50/30 rounded-xl flex flex-col items-center justify-center gap-1 transition-all text-slate-400 hover:text-blue-500 cursor-pointer disabled:opacity-50 text-xs font-bold">
                   <Upload size={16} /> Tải tệp lên hệ thống
                 </button>
               ) : (

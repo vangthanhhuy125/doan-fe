@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Eye, Download, Edit, Trash2, Calendar } from 'lucide-react';
 import { RegistrationForm } from './types';
 import { exportRegistrationToExcel } from './utils/exportExcel';
@@ -14,6 +14,19 @@ interface Props {
 
 export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setCurrentUserId(user._id || user.user_id || user.id || '');
+      } catch (e) {
+        console.error('Lỗi đọc user:', e);
+      }
+    }
+  }, []);
 
   const getFormId = (id: string | { $oid: string }): string => {
     if (typeof id === 'object' && id && '$oid' in id) {
@@ -49,11 +62,19 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
         {filteredForms.length > 0 ? (
           filteredForms.map((form) => {
             const formId = getFormId(form._id);
+            const isCreator = !(form as any).created_by || (form as any).created_by === currentUserId;
             return (
               <div key={formId} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                   <div className="space-y-1">
-                    <h3 className="text-lg font-black text-[#0054a5]">{form.title}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg font-black text-[#0054a5]">{form.title}</h3>
+                      {!isCreator && (
+                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-amber-200">
+                          Chỉ xem
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs font-medium text-gray-600 leading-relaxed">{form.description}</p>
                   </div>
 
@@ -72,19 +93,23 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
                       <Download size={16} /> Excel
                     </button>
 
-                    <button
-                      onClick={() => onEditForm(form)}
-                      className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
-                    >
-                      <Edit size={18} />
-                    </button>
+                    {isCreator && (
+                      <>
+                        <button
+                          onClick={() => onEditForm(form)}
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+                        >
+                          <Edit size={18} />
+                        </button>
 
-                    <button
-                      onClick={() => onDeleteForm(formId)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
-                    >
-                      <Trash2 size={18} />
-                    </button>
+                        <button
+                          onClick={() => onDeleteForm(formId)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
 

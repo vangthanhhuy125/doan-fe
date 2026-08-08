@@ -1,18 +1,24 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { X, Save, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, Key, UserCheck, ChevronDown, Search } from "lucide-react";
+import { X, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, Key, UserCheck, ChevronDown, Search, RotateCcw } from "lucide-react";
 
 export default function AccountsModal({ mode, data, onClose, onConfirmDelete, onSave, nhanSuList = [] }: any) {
   const isView = mode === 'view';
   const isAdd = mode === 'add';
   const formRef = useRef<HTMLFormElement>(null);
-  
   const [isOpenDropdown, setIsOpenDropdown] = useState(false);
   const [searchNS, setSearchNS] = useState("");
   const [selectedNS, setSelectedNS] = useState(data?.displayName || "");
   const [selectedUserId, setSelectedUserId] = useState(data?.user_id || "");
+  const [password, setPassword] = useState(data?.password || "");
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setPassword(data?.password || "");
+    setSelectedNS(data?.displayName || "");
+    setSelectedUserId(data?.user_id || "");
+  }, [data]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -24,6 +30,10 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const isHashed = password?.startsWith('$2b$') || password?.startsWith('$2a$');
+  // Người sở hữu tài khoản chỉ được chọn khi TẠO MỚI. Khi xem hoặc sửa đều khóa lại.
+  const isOwnerEditable = isAdd;
+
   const filteredNS = nhanSuList.filter((ns: any) => {
     const name = (ns.full_name || ns.name || "").toLowerCase();
     const mssv = (ns.student_id || ns.mssv || "").toLowerCase();
@@ -34,16 +44,14 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isView) return;
-
     const formData = new FormData(formRef.current!);
     const payload = {
       ...data,
       user_id: selectedUserId,
       displayName: selectedNS,
       username: formData.get("username"),
-      password: formData.get("password"),
+      password: password,
     };
-
     onSave(payload);
   };
 
@@ -58,24 +66,25 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
             <div className="space-y-2">
               <h3 className="text-xl font-black text-slate-800 tracking-tight">Xác nhận xóa?</h3>
               <p className="text-sm text-slate-500 leading-relaxed px-4">
-                Bạn chắc chắn muốn thu hồi quyền truy cập của <br/>
+                Bạn có chắc chắn muốn thu hồi quyền truy cập của <br/>
                 <span className="font-bold text-red-600">"{data?.displayName}"</span>?
               </p>
             </div>
           </div>
           <div className="flex p-4 gap-3 bg-slate-50">
-            <button onClick={onClose} className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[11px] tracking-widest border-none outline-none">Hủy bỏ</button>
-            <button onClick={() => { onConfirmDelete(data._id); onClose(); }} className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none">Xóa</button>
+            <button onClick={onClose} className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[11px] tracking-widest border-none outline-none cursor-pointer">Hủy</button>
+            <button onClick={() => { onConfirmDelete(data._id); onClose(); }} className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none cursor-pointer">Xóa</button>
           </div>
         </div>
       </div>
     );
   }
 
-  const headerBg = isView ? "bg-[#0054a5]" : "bg-[#f59e0b]";
-  const btnBg = isView ? "bg-[#0054a5] hover:bg-[#004080]" : "bg-[#f59e0b] hover:bg-[#d97706]";
-  const ringColor = isView ? "focus:border-[#0054a5]" : "focus:border-[#f59e0b]";
-  const labelColor = isView ? "text-slate-400" : "text-[#f59e0b]";
+  const isEditMode = !isView && !isAdd;
+  const headerBg = isEditMode ? "bg-[#f59e0b]" : "bg-[#0054a5]";
+  const btnBg = isEditMode ? "bg-[#f59e0b] hover:bg-[#d97706]" : "bg-[#0054a5] hover:bg-[#004080]";
+  const ringColor = isEditMode ? "focus:border-[#f59e0b]" : "focus:border-[#0054a5]";
+  const labelColor = isView ? "text-slate-400" : isEditMode ? "text-[#f59e0b]" : "text-[#0054a5]";
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in zoom-in duration-200 text-black">
@@ -89,33 +98,32 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
               {isView ? 'Chi tiết tài khoản' : isAdd ? 'Cấp tài khoản mới' : 'Chỉnh sửa tài khoản'}
             </h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white cursor-pointer"><X size={20} /></button>
         </div>
-        
+
         <form ref={formRef} className="p-8 space-y-6 overflow-y-auto max-h-[85vh]" onSubmit={handleSubmit}>
           <div className="space-y-2" ref={dropdownRef}>
             <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Người sở hữu tài khoản</label>
             <div className="relative">
-              <div 
-                onClick={() => !isView && setIsOpenDropdown(!isOpenDropdown)}
-                className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent flex items-center justify-between cursor-pointer transition-all ${!isView && 'hover:bg-white hover:border-gray-200'} ${isOpenDropdown && 'bg-white border-gray-200 ring-2 ring-blue-100'} ${isView && 'opacity-70 cursor-not-allowed'}`}
+              <div
+                onClick={() => isOwnerEditable && setIsOpenDropdown(!isOpenDropdown)}
+                className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent flex items-center justify-between transition-all ${isOwnerEditable ? 'cursor-pointer hover:bg-white hover:border-gray-200' : 'cursor-not-allowed opacity-70'} ${isOpenDropdown && 'bg-white border-gray-200 ring-2 ring-blue-100'}`}
               >
                 <span className={`text-sm ${!selectedNS ? 'text-gray-400' : 'text-slate-700 font-bold'}`}>
-                  {selectedNS || "Chọn từ danh sách nhân sự..."}
+                  {selectedNS || "Chọn nhân sự liên kết..."}
                 </span>
-                {!isView && <ChevronDown size={18} className={`text-gray-400 transition-transform ${isOpenDropdown ? 'rotate-180' : ''}`} />}
+                {isOwnerEditable && <ChevronDown size={18} className={`text-gray-400 transition-transform ${isOpenDropdown ? 'rotate-180' : ''}`} />}
               </div>
               <UserCheck size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-
-              {isOpenDropdown && (
+              {isOpenDropdown && isOwnerEditable && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                   <div className="p-3 border-b border-gray-50">
                     <div className="relative">
                       <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                      <input 
+                      <input
                         autoFocus
                         type="text"
-                        placeholder="Gõ tên hoặc MSSV để tìm..."
+                        placeholder="Tìm theo tên hoặc MSSV..."
                         className="w-full pl-9 pr-4 py-2 bg-gray-50 rounded-xl text-xs outline-none focus:ring-1 ring-blue-400 transition-all"
                         value={searchNS}
                         onChange={(e) => setSearchNS(e.target.value)}
@@ -125,7 +133,7 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
                   <div className="max-h-48 overflow-y-auto custom-scrollbar">
                     {filteredNS.length > 0 ? (
                       filteredNS.map((ns: any) => (
-                        <div 
+                        <div
                           key={ns._id}
                           onClick={() => {
                             setSelectedNS(ns.full_name || ns.name);
@@ -136,7 +144,7 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
                           className="px-4 py-3 hover:bg-blue-50 cursor-pointer transition-colors border-b border-gray-50 last:border-none"
                         >
                           <div className="text-sm font-bold text-slate-700">{ns.full_name || ns.name}</div>
-                          <div className="text-[10px] text-gray-400 uppercase tracking-tighter">{ns.student_id || ns.mssv} — {ns.class}</div>
+                          <div className="text-[10px] text-gray-400 uppercase tracking-tighter">{ns.student_id || ns.mssv} - {ns.class}</div>
                         </div>
                       ))
                     ) : (
@@ -156,11 +164,35 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
                 <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
-
             <div className="space-y-2">
-              <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Mật khẩu truy cập</label>
+              <div className="flex items-center justify-between">
+                <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Mật khẩu truy cập</label>
+                {!isView && isHashed && (
+                  <button
+                    type="button"
+                    onClick={() => setPassword("123456")}
+                    className="text-[10px] font-bold text-[#0054a5] hover:text-blue-700 hover:underline flex items-center gap-1 border-none bg-transparent cursor-pointer transition-all"
+                  >
+                    <RotateCcw size={12} /> Đặt lại (123456)
+                  </button>
+                )}
+              </div>
               <div className="relative">
-                <input name="password" type="text" disabled={isView} defaultValue={data?.password} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70 font-bold`} placeholder="Nhập mật khẩu..." />
+                <input
+                  name="password"
+                  type="text"
+                  disabled={isView}
+                  readOnly={isHashed}
+                  value={isHashed ? "(Đã bảo mật)" : password}
+                  onChange={(e) => {
+                    if (!isHashed) {
+                      setPassword(e.target.value);
+                    }
+                  }}
+                  required
+                  className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70 font-bold ${isHashed ? 'text-emerald-600 font-mono cursor-not-allowed focus:bg-gray-50' : ''}`}
+                  placeholder="Nhập mật khẩu..."
+                />
                 <Key size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -168,8 +200,8 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
 
           {!isView && (
             <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
-              <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none">Hủy bỏ</button>
-              <button type="submit" className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none`}>
+              <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none cursor-pointer">Hủy</button>
+              <button type="submit" className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none cursor-pointer`}>
                 {isAdd ? 'Cấp tài khoản' : 'Cập nhật'}
               </button>
             </div>

@@ -159,14 +159,31 @@ export default function ToChucPage() {
   // 📌 4. Tạo mới phiếu đăng ký qua API
   const handleCreateRegistrationFormSave = async (newFormPayload: RegistrationForm) => {
     try {
+      let currentUserId = '';
+      if (typeof window !== 'undefined') {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr);
+            currentUserId = user._id || user.user_id || user.id || '';
+          } catch (err) {
+            console.error('Lỗi đọc user:', err);
+          }
+        }
+      }
+
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId,
+        },
         body: JSON.stringify({
           title: newFormPayload.title,
           description: newFormPayload.description,
           created_at: newFormPayload.created_at,
           programs: newFormPayload.programs,
+          created_by: (newFormPayload as any).created_by || currentUserId,
         }),
       });
 

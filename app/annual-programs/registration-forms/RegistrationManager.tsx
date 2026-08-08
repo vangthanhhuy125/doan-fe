@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FileSpreadsheet, ArrowLeft } from 'lucide-react';
 import { RegistrationForm } from './types';
 import FormList from './FormList';
@@ -18,6 +18,19 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
   const [selectedForm, setSelectedForm] = useState<RegistrationForm | null>(null);
   const [editTargetForm, setEditTargetForm] = useState<RegistrationForm | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
+
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setCurrentUserId(user._id || user.user_id || user.id || '');
+      } catch (e) {
+        console.error('Lỗi đọc user:', e);
+      }
+    }
+  }, []);
 
   const getFormId = (id: string | { $oid: string }): string => {
     if (typeof id === 'object' && id && '$oid' in id) {
@@ -32,6 +45,11 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${deleteTargetId}`, {
         method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId,
+        },
+        body: JSON.stringify({ user_id: currentUserId }),
       });
 
       if (res.ok) {
@@ -55,11 +73,16 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${formId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId,
+        },
         body: JSON.stringify({
           title: updatedForm.title,
           description: updatedForm.description,
           programs: updatedForm.programs,
+          user_id: currentUserId,
+          created_by: (updatedForm as any).created_by,
         }),
       });
 
@@ -100,15 +123,6 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
             {currentSelectedForm ? "Chi tiết phiếu đăng ký" : "Quản lý phiếu đăng ký chương trình"}
           </h2>
         </div>
-
-        {currentSelectedForm && (
-          <button
-            onClick={() => setSelectedForm(null)}
-            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all border-none outline-none cursor-pointer"
-          >
-            <ArrowLeft size={16} /> Quay lại danh sách
-          </button>
-        )}
       </div>
 
       {!currentSelectedForm ? (

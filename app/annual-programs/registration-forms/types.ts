@@ -18,6 +18,9 @@ export interface ProgramConfig {
   program_name: string;
   description: string;
   departments: string[];
+  enable_leadership_survey?: boolean;  // Bật/tắt mục ứng cử
+  leadership_title?: string;           // Tiêu đề mục (vd: "Ứng cử vào các chức vụ Trưởng/Phó Ban:")
+  leadership_options?: string[];       // Danh sách các vị trí ứng cử (vd: ["Trưởng Ban Tổ chức", "Trưởng Ban Nội dung"])
 }
 
 export interface Submission {
@@ -25,6 +28,7 @@ export interface Submission {
   full_name: string;
   class_name: string;
   choices: Record<string, string>;
+  leadership_choices?: Record<string, string[]>; // Lưu danh sách vị trí đã tích chọn
   submitted_at: string;
 }
 
@@ -33,6 +37,7 @@ export interface RegistrationForm {
   title: string;
   description: string;
   created_at: string;
+  is_locked?: boolean; 
   programs: ProgramConfig[];
   submissions: Submission[];
 }

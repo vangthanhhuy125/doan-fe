@@ -1,9 +1,19 @@
 'use client';
 
 import { useState, useRef, useEffect } from "react";
-import { X, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, Key, UserCheck, ChevronDown, Search, RotateCcw } from "lucide-react";
+import { X, User, Trash2, AlertCircle, PlusCircle, Eye, FileEdit, Key, UserCheck, ChevronDown, Search, RotateCcw, ShieldCheck, AlertTriangle } from "lucide-react";
 
-export default function AccountsModal({ mode, data, onClose, onConfirmDelete, onSave, nhanSuList = [] }: any) {
+interface Props {
+  mode: 'view' | 'add' | 'edit' | 'delete';
+  data?: any;
+  onClose: () => void;
+  onConfirmDelete: (id: string) => void;
+  onSave: (payload: any) => Promise<boolean | void>;
+  nhanSuList?: any[];
+  groupsList?: any[];
+}
+
+export default function AccountsModal({ mode, data, onClose, onConfirmDelete, onSave, nhanSuList = [], groupsList = [] }: Props) {
   const isView = mode === 'view';
   const isAdd = mode === 'add';
   const formRef = useRef<HTMLFormElement>(null);
@@ -11,14 +21,19 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
   const [searchNS, setSearchNS] = useState("");
   const [selectedNS, setSelectedNS] = useState(data?.displayName || "");
   const [selectedUserId, setSelectedUserId] = useState(data?.user_id || "");
-  const [password, setPassword] = useState(data?.password || "");
+  const [selectedGroupId, setSelectedGroupId] = useState(data?.group_id || data?.groupId || data?.permission_id || "");
+  const [password, setPassword] = useState(data?.password || (isAdd ? "123456" : ""));
+  const [errorMessage, setErrorMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setPassword(data?.password || "");
+    setPassword(data?.password || (isAdd ? "123456" : ""));
     setSelectedNS(data?.displayName || "");
     setSelectedUserId(data?.user_id || "");
-  }, [data]);
+    setSelectedGroupId(data?.group_id || data?.groupId || data?.permission_id || "");
+    setErrorMessage("");
+  }, [data, isAdd]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -31,7 +46,6 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
   }, []);
 
   const isHashed = password?.startsWith('$2b$') || password?.startsWith('$2a$');
-  // Người sở hữu tài khoản chỉ được chọn khi TẠO MỚI. Khi xem hoặc sửa đều khóa lại.
   const isOwnerEditable = isAdd;
 
   const filteredNS = nhanSuList.filter((ns: any) => {
@@ -41,18 +55,37 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
     return name.includes(search) || mssv.includes(search);
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isView) return;
+    if (isView || isSubmitting) return;
+
+    setErrorMessage("");
+
+    if (!selectedNS || !selectedUserId) {
+      setErrorMessage("Vui lòng chọn nhân sự sở hữu tài khoản!");
+      return;
+    }
+
+    setIsSubmitting(true);
     const formData = new FormData(formRef.current!);
     const payload = {
       ...data,
       user_id: selectedUserId,
       displayName: selectedNS,
       username: formData.get("username"),
-      password: password,
+      password: password || "123456",
+      group_id: selectedGroupId,
+      groupId: selectedGroupId,
+      permission_id: selectedGroupId
     };
-    onSave(payload);
+
+    try {
+      await onSave(payload);
+    } catch (err: any) {
+      setErrorMessage(err.message || "Có lỗi xảy ra khi lưu tài khoản!");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (mode === 'delete') {
@@ -102,6 +135,14 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
         </div>
 
         <form ref={formRef} className="p-8 space-y-6 overflow-y-auto max-h-[85vh]" onSubmit={handleSubmit}>
+          {/* THÔNG BÁO LỖI TRÙNG TÀI KHOẢN / NHÂN SỰ */}
+          {errorMessage && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl flex items-center gap-3 text-red-700 text-xs font-bold animate-in fade-in">
+              <AlertTriangle size={18} className="shrink-0 text-red-500" />
+              <span>{errorMessage}</span>
+            </div>
+          )}
+
           <div className="space-y-2" ref={dropdownRef}>
             <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Người sở hữu tài khoản</label>
             <div className="relative">
@@ -156,6 +197,27 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
             </div>
           </div>
 
+          <div className="space-y-2">
+            <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Nhóm người dùng (Phân quyền)</label>
+            <div className="relative">
+              <select
+                disabled={isView}
+                value={selectedGroupId}
+                onChange={(e) => setSelectedGroupId(e.target.value)}
+                className={`w-full p-4 pl-12 pr-10 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm appearance-none cursor-pointer ${ringColor} disabled:opacity-70 font-bold ${!selectedGroupId ? 'text-gray-400' : 'text-slate-700'}`}
+              >
+                <option value="">Chọn nhóm quyền phân bổ</option>
+                {groupsList.map((g: any) => (
+                  <option key={g._id || g.id} value={g._id || g.id} className="text-slate-700 font-bold">
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+              <ShieldCheck size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+              {!isView && <ChevronDown size={18} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Tên đăng nhập</label>
@@ -164,6 +226,7 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
                 <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
+
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label className={`text-[10px] font-bold uppercase ml-1 ${labelColor}`}>Mật khẩu truy cập</label>
@@ -201,7 +264,7 @@ export default function AccountsModal({ mode, data, onClose, onConfirmDelete, on
           {!isView && (
             <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
               <button type="button" onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none cursor-pointer">Hủy</button>
-              <button type="submit" className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none cursor-pointer`}>
+              <button type="submit" disabled={isSubmitting} className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none cursor-pointer disabled:opacity-50`}>
                 {isAdd ? 'Cấp tài khoản' : 'Cập nhật'}
               </button>
             </div>

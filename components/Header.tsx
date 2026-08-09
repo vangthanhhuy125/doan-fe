@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { 
-  LogOut, User, UserCircle, KeyRound, X, Eye, EyeOff, Check, Lock, Loader2 
+  LogOut, User, UserCircle, KeyRound, X, Eye, EyeOff, Check, Lock, Loader2, ClipboardList 
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -181,10 +181,22 @@ export default function Header() {
               <div className="p-1.5 space-y-1">
                 <button
                   onClick={handleProfile}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-[#0054a5] hover:bg-blue-50/80 rounded-xl transition-all cursor-pointer"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-[#0054a5] hover:bg-blue-50/80 rounded-xl transition-all cursor-pointer border-none bg-transparent"
                 >
                   <UserCircle size={18} className="text-[#0054a5]" />
                   <span>Trang cá nhân</span>
+                </button>
+
+                {/* 🟢 ĐIỀU HƯỚNG TỚI APP/SURVEY */}
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    router.push("/survey");
+                  }}
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-[#0054a5] hover:bg-blue-50/80 rounded-xl transition-all cursor-pointer border-none bg-transparent"
+                >
+                  <ClipboardList size={18} className="text-[#0054a5]" />
+                  <span>Tạo phiếu khảo sát</span>
                 </button>
 
                 <button
@@ -192,7 +204,7 @@ export default function Header() {
                     setIsOpen(false);
                     setShowPasswordModal(true);
                   }}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-[#0054a5] hover:bg-blue-50/80 rounded-xl transition-all cursor-pointer"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-[#0054a5] hover:bg-blue-50/80 rounded-xl transition-all cursor-pointer border-none bg-transparent"
                 >
                   <KeyRound size={18} className="text-[#0054a5]" />
                   <span>Đổi mật khẩu</span>
@@ -200,7 +212,7 @@ export default function Header() {
 
                 <button 
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer"
+                  className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-xl transition-all cursor-pointer border-none bg-transparent"
                   title="Đăng xuất"
                 >
                   <LogOut size={18} />
@@ -212,6 +224,7 @@ export default function Header() {
         </div>
       </div>
 
+      {/* MODAL ĐỔI MẬT KHẨU */}
       {showPasswordModal && mounted && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in zoom-in duration-200 text-black">
           <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-white/20 flex flex-col">

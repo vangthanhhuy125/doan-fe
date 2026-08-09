@@ -74,7 +74,7 @@ export default function SectionTaiLieu({ taiLieuList, onOpenModal, documentCateg
       <div className="bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-xs sm:text-sm text-left table-auto min-w-[700px] sm:min-w-0">
-            <thead className="bg-[#0054a5] text-white font-bold text-[11px] sm:text-[13px] tracking-widest text-center uppercase">
+            <thead className="bg-[#0054a5] text-white font-bold text-[11px] sm:text-[13px] tracking-widest text-center">
               <tr>
                 <th className="px-3 sm:px-4 py-4 sm:py-5 w-12 sm:w-16 text-center">STT</th>
                 <th className="px-4 sm:px-6 py-4 sm:py-5 text-center">Tên tài liệu</th>

@@ -37,7 +37,7 @@ export default function ProfileHeader({
 
       <div className="space-y-2 text-center md:text-left">
         <h2 className="text-2xl font-bold uppercase text-[#0054a5]">
-          {'Đoàn viên'}
+          {fullName || 'Chưa cập nhật họ tên'}
         </h2>
         <p className="text-sm font-semibold text-gray-500">
           MSSV: <span className="text-gray-800">{studentId || '—'}</span> | Lớp: <span className="text-gray-800">{className || 'Chưa cập nhật'}</span>

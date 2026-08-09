@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Eye, Download, Edit, Trash2, Calendar } from 'lucide-react';
-import { RegistrationForm } from './types';
+import { Search, Eye, Download, Edit, Trash2, Calendar, Share2 } from 'lucide-react';
+import { RegistrationForm, FormPermission } from './types';
 import { exportRegistrationToExcel } from './utils/exportExcel';
 
 interface Props {
@@ -10,9 +10,10 @@ interface Props {
   onSelectForm: (form: RegistrationForm) => void;
   onEditForm: (form: RegistrationForm) => void;
   onDeleteForm: (id: string) => void;
+  onOpenShareModal: (form: RegistrationForm) => void;
 }
 
-export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm }: Props) {
+export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm, onOpenShareModal }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
@@ -35,10 +36,14 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
     return String(id || '');
   };
 
-  const filteredForms = forms.filter(f =>
-    f.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    f.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // 🟢 Đã bọc an toàn tránh crash khi title hoặc description bị null / undefined
+  const filteredForms = forms.filter(f => {
+    const titleStr = (f?.title || '').toLowerCase();
+    const descStr = (f?.description || '').toLowerCase();
+    const searchStr = (searchTerm || '').toLowerCase();
+
+    return titleStr.includes(searchStr) || descStr.includes(searchStr);
+  });
 
   return (
     <div className="space-y-4">
@@ -62,53 +67,76 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
         {filteredForms.length > 0 ? (
           filteredForms.map((form) => {
             const formId = getFormId(form._id);
-            const isCreator = !(form as any).created_by || (form as any).created_by === currentUserId;
+            const createdBy = (form as any).created_by;
+            const isCreator = !createdBy || String(createdBy) === String(currentUserId);
+
+            const sharedList: FormPermission[] = form.shared_permissions || [];
+            const myPerm = sharedList.find(p => String(p.user_id) === String(currentUserId));
+
+            const canExport = isCreator || Boolean(myPerm?.can_export);
+            const canEdit = isCreator || Boolean(myPerm?.can_edit);
+            const canDelete = isCreator || Boolean(myPerm?.can_delete);
+
             return (
               <div key={formId} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="text-lg font-black text-[#0054a5]">{form.title}</h3>
+                      <h3 className="text-lg font-black text-[#0054a5]">{form.title || "Chưa có tiêu đề"}</h3>
                       {!isCreator && (
-                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full text-[10px] font-bold border border-amber-200">
-                          Chỉ xem
+                        <span className="inline-flex items-center gap-1 bg-[#0054a5]/10 text-[#0054a5] px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#0054a5]/20">
+                          Được chia sẻ
                         </span>
                       )}
                     </div>
-                    <p className="text-xs font-medium text-gray-600 leading-relaxed">{form.description}</p>
+                    <p className="text-xs font-medium text-gray-600 leading-relaxed">{form.description || "Không có mô tả"}</p>
                   </div>
 
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
                     <button
                       onClick={() => onSelectForm(form)}
                       className="flex items-center gap-1.5 bg-[#0054a5] hover:bg-blue-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
                     >
-                      <Eye size={16} /> Theo dõi ({form.submissions.length})
-                    </button>
-
-                    <button
-                      onClick={() => exportRegistrationToExcel(form)}
-                      className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
-                    >
-                      <Download size={16} /> Excel
+                      <Eye size={16} /> Theo dõi ({(form.submissions || []).length})
                     </button>
 
                     {isCreator && (
-                      <>
-                        <button
-                          onClick={() => onEditForm(form)}
-                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
-                        >
-                          <Edit size={18} />
-                        </button>
+                      <button
+                        onClick={() => onOpenShareModal(form)}
+                        className="p-2 text-[#0054a5] hover:bg-blue-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+                        title="Chia sẻ phiếu"
+                      >
+                        <Share2 size={18} />
+                      </button>
+                    )}
 
-                        <button
-                          onClick={() => onDeleteForm(formId)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </>
+                    {canExport && (
+                      <button
+                        onClick={() => exportRegistrationToExcel(form)}
+                        className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
+                      >
+                        <Download size={16} /> Excel
+                      </button>
+                    )}
+
+                    {canEdit && (
+                      <button
+                        onClick={() => onEditForm(form)}
+                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+                        title="Chỉnh sửa phiếu"
+                      >
+                        <Edit size={18} />
+                      </button>
+                    )}
+
+                    {canDelete && (
+                      <button
+                        onClick={() => onDeleteForm(formId)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+                        title="Xóa phiếu"
+                      >
+                        <Trash2 size={18} />
+                      </button>
                     )}
                   </div>
                 </div>
@@ -116,15 +144,15 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
                 <div className="flex flex-wrap items-center justify-between text-xs text-gray-500 font-bold gap-2">
                   <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-[#1d92ff]" />
-                    <span>Ngày phát hành: {new Date(form.created_at).toLocaleDateString('vi-VN')}</span>
+                    <span>Ngày phát hành: {form.created_at ? new Date(form.created_at).toLocaleDateString('vi-VN') : 'N/A'}</span>
                   </div>
 
                   <div className="flex items-center gap-3">
                     <span className="bg-blue-50 text-[#0054a5] px-2.5 py-1 rounded-lg border border-blue-100">
-                      {form.programs.length} Chương trình áp dụng
+                      {(form.programs || []).length} Chương trình áp dụng
                     </span>
                     <span className="bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-lg border border-emerald-100">
-                      {form.submissions.length} Sinh viên đã đăng ký
+                      {(form.submissions || []).length} Sinh viên đã đăng ký
                     </span>
                   </div>
                 </div>

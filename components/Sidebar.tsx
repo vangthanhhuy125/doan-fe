@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
@@ -8,20 +8,48 @@ import {
 } from "lucide-react"; 
 
 const menuItems = [
-  { name: "Giới thiệu", href: "/about", icon: Info },
-  { name: "Tài liệu", href: "/documents", icon: FileText },
-  { name: "Chương trình năm", href: "/annual-programs", icon: CalendarDays },
-  { name: "Công tác Đoàn - Đảng", href: "/union-party-affairs", icon: Flag },
-  { name: "Thi đua", href: "/emulation-awards", icon: Trophy },
-  { name: "Tổ chức Đoàn khoa", href: "/faculty-union-structure", icon: Network },
-  { name: "Nhân sự", href: "/personnel", icon: UserSquare2 },
-  { name: "Mô hình CLPI", href: "/clpi-models", icon: LayoutGrid },
-  { name: "Cài đặt", href: "/settings", icon: Settings },
+  { id: "gioi-thieu", name: "Giới thiệu", href: "/about", icon: Info },
+  { id: "tai-lieu", name: "Tài liệu", href: "/documents", icon: FileText },
+  { id: "chuong-trinh-nam", name: "Chương trình năm", href: "/annual-programs", icon: CalendarDays },
+  { id: "cong-tac-doan", name: "Công tác Đoàn - Đảng", href: "/union-party-affairs", icon: Flag },
+  { id: "thi-dua", name: "Thi đua", href: "/emulation-awards", icon: Trophy },
+  { id: "to-chuc-doan", name: "Tổ chức Đoàn khoa", href: "/faculty-union-structure", icon: Network },
+  { id: "nhan-su", name: "Nhân sự", href: "/personnel", icon: UserSquare2 },
+  { id: "mo-hinh-clb", name: "Mô hình CLPI", href: "/clpi-models", icon: LayoutGrid },
+  { id: "cai-dat", name: "Cài đặt", href: "/settings", icon: Settings },
 ];
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [allowedMenuItems, setAllowedMenuItems] = useState(menuItems);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const fetchUserPermissions = async () => {
+      try {
+        const userStr = localStorage.getItem('user');
+        if (!userStr) return;
+
+        const user = JSON.parse(userStr);
+        const groupId = user.group_id || user.groupId || user.permission_id;
+        if (!groupId) return;
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/permissions/${groupId}`);
+        if (res.ok) {
+          const groupData = await res.json();
+          const permissions: string[] = groupData.permissions || [];
+          if (Array.isArray(permissions) && permissions.length > 0) {
+            const filtered = menuItems.filter(item => permissions.includes(item.id));
+            setAllowedMenuItems(filtered);
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi tải phân quyền Sidebar:", error);
+      }
+    };
+
+    fetchUserPermissions();
+  }, []);
 
   return (
     <>
@@ -58,7 +86,7 @@ export default function Sidebar() {
           </div>
         </div>      
         <nav className="flex-1 mt-6 overflow-y-auto px-3">
-          {menuItems.map((item) => {
+          {allowedMenuItems.map((item) => {
             const isActive = pathname === item.href;
             return (
               <Link 

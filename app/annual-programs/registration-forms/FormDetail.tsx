@@ -1,17 +1,18 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Edit, Trash2, Users, CheckCircle2, Calendar, Lock, Unlock, ShieldAlert } from 'lucide-react';
-import { RegistrationForm, ProgramConfig } from './types';
+import { Download, Edit, Trash2, Users, CheckCircle2, Calendar, Lock, Unlock, ShieldAlert, Share2 } from 'lucide-react';
+import { RegistrationForm, ProgramConfig, FormPermission } from './types';
 import { exportRegistrationToExcel } from './utils/exportExcel';
 
 interface Props {
   form: RegistrationForm;
   onEditForm: (form: RegistrationForm) => void;
   onDeleteForm: (id: string) => void;
+  onOpenShareModal: (form: RegistrationForm) => void;
 }
 
-export default function FormDetail({ form, onEditForm, onDeleteForm }: Props) {
+export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShareModal }: Props) {
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
   useEffect(() => {
@@ -26,7 +27,17 @@ export default function FormDetail({ form, onEditForm, onDeleteForm }: Props) {
     }
   }, []);
 
-  const isCreator = !(form as any).created_by || (form as any).created_by === currentUserId;
+  const createdBy = (form as any).created_by;
+  const isCreator = !createdBy || String(createdBy) === String(currentUserId);
+
+  const sharedList: FormPermission[] = form.shared_permissions || [];
+  const myPerm = sharedList.find(p => String(p.user_id) === String(currentUserId));
+
+  const canViewSubmissions = isCreator || Boolean(myPerm?.can_view_submissions);
+  const canExport = isCreator || Boolean(myPerm?.can_export);
+  const canEdit = isCreator || Boolean(myPerm?.can_edit);
+  const canLock = isCreator || Boolean(myPerm?.can_lock);
+  const canDelete = isCreator || Boolean(myPerm?.can_delete);
 
   const getFormId = (id: string | { $oid: string }): string => {
     if (typeof id === 'object' && id && '$oid' in id) {
@@ -40,8 +51,8 @@ export default function FormDetail({ form, onEditForm, onDeleteForm }: Props) {
   };
 
   const handleToggleLock = async () => {
-    if (!isCreator) {
-      alert('Bạn không có quyền khóa/mở khóa phiếu này! Chỉ người tạo phiếu mới có quyền.');
+    if (!canLock) {
+      alert('Bạn không có quyền khóa/mở khóa phiếu này!');
       return;
     }
 
@@ -77,8 +88,8 @@ export default function FormDetail({ form, onEditForm, onDeleteForm }: Props) {
   };
 
   const handleDelete = async () => {
-    if (!isCreator) {
-      alert('Bạn không có quyền xóa phiếu này! Chỉ người tạo phiếu mới có quyền.');
+    if (!canDelete) {
+      alert('Bạn không có quyền xóa phiếu này!');
       return;
     }
 
@@ -143,12 +154,11 @@ export default function FormDetail({ form, onEditForm, onDeleteForm }: Props) {
 
   return (
     <div className="space-y-6 text-black">
-      {/* THÔNG TIN PHIẾU & ACTION BAR */}
       <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
         {!isCreator && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-amber-800 text-xs font-bold">
             <ShieldAlert size={16} className="shrink-0 text-amber-600" />
-            <span>Bạn đang ở chế độ Chỉ Xem vì phiếu này do thành viên khác tạo.</span>
+            <span>Phiếu này được chia sẻ với bạn. Quyền hạn của bạn sẽ dựa theo sự ủy quyền của Người tạo phiếu.</span>
           </div>
         )}
 
@@ -158,55 +168,70 @@ export default function FormDetail({ form, onEditForm, onDeleteForm }: Props) {
               <h3 className="text-xl font-black text-[#0054a5]">{form.title}</h3>
               {form.is_locked && (
                 <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-rose-200">
-                  <Lock size={12} /> Đã khóa[cite: 7]
+                  <Lock size={12} /> Đã khóa
                 </span>
               )}
             </div>
             <p className="text-xs text-gray-600 font-medium">{form.description}</p>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
-            {/* Xuất Excel: Tất cả Admin đều được phép[cite: 7] */}
-            <button
-              onClick={() => exportRegistrationToExcel(form)}
-              className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
-            >
-              <Download size={16} /> Xuất Excel
-            </button>
-
-            {/* CHỈ NGƯỜI TẠO MỚI THẤY & THỰC HIỆN ĐƯỢC CÁC NÚT KHÓA / SỬA / XÓA[cite: 7] */}
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
+            {/* NÚT CHIA SẺ (CHỈ DÀNH CHO NGƯỜI TẠO) */}
             {isCreator && (
-              <>
-                <button
-                  onClick={handleToggleLock}
-                  className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer text-white ${
-                    form.is_locked ? 'bg-slate-700 hover:bg-slate-800' : 'bg-rose-600 hover:bg-rose-700'
-                  }`}
-                >
-                  {form.is_locked ? <Unlock size={16} /> : <Lock size={16} />}
-                  <span>{form.is_locked ? 'Mở khóa phiếu' : 'Khóa phiếu'}</span>
-                </button>
+              <button
+                onClick={() => onOpenShareModal(form)}
+                className="flex items-center gap-1.5 bg-blue-50 text-[#0054a5] hover:bg-blue-100 px-3.5 py-2.5 rounded-xl text-xs font-bold border border-blue-200 transition-all cursor-pointer"
+              >
+                <Share2 size={16} /> Chia sẻ
+              </button>
+            )}
 
-                <button
-                  onClick={() => onEditForm(form)}
-                  className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
-                >
-                  <Edit size={16} /> Chỉnh sửa phiếu
-                </button>
+            {/* NÚT XUẤT EXCEL */}
+            {canExport && (
+              <button
+                onClick={() => exportRegistrationToExcel(form)}
+                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
+              >
+                <Download size={16} /> Xuất Excel
+              </button>
+            )}
 
-                <button
-                  onClick={handleDelete}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
-                  title="Xóa phiếu"
-                >
-                  <Trash2 size={18} />
-                </button>
-              </>
+            {/* NÚT KHÓA */}
+            {canLock && (
+              <button
+                onClick={handleToggleLock}
+                className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer text-white ${
+                  form.is_locked ? 'bg-slate-700 hover:bg-slate-800' : 'bg-rose-600 hover:bg-rose-700'
+                }`}
+              >
+                {form.is_locked ? <Unlock size={16} /> : <Lock size={16} />}
+                <span>{form.is_locked ? 'Mở khóa phiếu' : 'Khóa phiếu'}</span>
+              </button>
+            )}
+
+            {/* NÚT SỬA */}
+            {canEdit && (
+              <button
+                onClick={() => onEditForm(form)}
+                className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
+              >
+                <Edit size={16} /> Chỉnh sửa
+              </button>
+            )}
+
+            {/* NÚT XÓA */}
+            {canDelete && (
+              <button
+                onClick={handleDelete}
+                className="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+                title="Xóa phiếu"
+              >
+                <Trash2 size={18} />
+              </button>
             )}
           </div>
         </div>
 
-        {/* THỐNG KÊ NHANH */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
           <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-100 flex items-center gap-3">
             <div className="p-3 bg-[#0054a5] text-white rounded-xl">
@@ -238,7 +263,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm }: Props) {
         </div>
       </div>
 
-      {/* THỐNG KÊ LƯỢT ĐĂNG KÝ TỪNG BAN THEO CHƯƠNG TRÌNH */}
       <div className="space-y-4">
         <h4 className="text-sm font-black text-[#0054a5] uppercase tracking-wider">
           Thống kê lượt đăng ký từng Ban theo chương trình
@@ -277,83 +301,93 @@ export default function FormDetail({ form, onEditForm, onDeleteForm }: Props) {
         </div>
       </div>
 
-      {/* BẢNG DANH SÁCH CHI TIẾT */}
       <div className="space-y-3">
         <h4 className="text-sm font-black text-[#0054a5] uppercase tracking-wider">
           Danh sách chi tiết sinh viên đăng ký ({form.submissions.length})
         </h4>
-        <div className="overflow-x-auto rounded-3xl border border-gray-200 shadow-sm bg-white">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-[#0054a5] text-white text-[13px] font-bold tracking-wider">
-              <tr>
-                <th className="px-4 py-4 text-center w-12">STT</th>
-                <th className="px-4 py-4 text-center w-28">MSSV</th>
-                <th className="px-4 py-4 text-left w-44">Họ và Tên</th>
-                <th className="px-4 py-4 text-center w-28">Lớp</th>
-                <th className="px-4 py-4 text-left">Nguyện vọng / Ban đăng ký</th>
-                <th className="px-4 py-4 text-center w-48">Thời gian</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {form.submissions.length > 0 ? (
-                form.submissions.map((sub: any, idx) => (
-                  <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
-                    <td className="px-4 py-4 text-center font-bold text-gray-400">{idx + 1}</td>
-                    <td className="px-4 py-4 text-center font-bold text-[#0054a5]">{sub.student_id}</td>
-                    <td className="px-4 py-4 font-bold text-slate-800">{sub.full_name}</td>
-                    <td className="px-4 py-4 text-center font-semibold text-gray-600">{sub.class_name}</td>
-                    
-                    {/* CỘT NGUYỆN VỌNG & TRƯỜNG BAN */}
-                    <td className="px-4 py-4">
-                      <div className="flex flex-col gap-2">
-                        {form.programs.map((prog: ProgramConfig) => {
-                          const dept = sub.choices?.[prog.program_id];
-                          const leaderOpts: string[] = sub.leadership_choices?.[prog.program_id] || [];
 
-                          if (!dept && leaderOpts.length === 0) return null;
+        {canViewSubmissions ? (
+          <div className="overflow-x-auto rounded-3xl border border-gray-200 shadow-sm bg-white">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-[#0054a5] text-white text-[13px] font-bold tracking-wider">
+                <tr>
+                  <th className="px-4 py-4 text-center w-12">STT</th>
+                  <th className="px-4 py-4 text-center w-28">MSSV</th>
+                  <th className="px-4 py-4 text-left w-44">Họ và Tên</th>
+                  <th className="px-4 py-4 text-center w-28">Lớp</th>
+                  <th className="px-4 py-4 text-left">Nguyện vọng / Ban đăng ký</th>
+                  <th className="px-4 py-4 text-center w-48">Thời gian</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {form.submissions.length > 0 ? (
+                  form.submissions.map((sub: any, idx) => (
+                    <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
+                      <td className="px-4 py-4 text-center font-bold text-gray-400">{idx + 1}</td>
+                      <td className="px-4 py-4 text-center font-bold text-[#0054a5]">{sub.student_id}</td>
+                      <td className="px-4 py-4 font-bold text-slate-800">{sub.full_name}</td>
+                      <td className="px-4 py-4 text-center font-semibold text-gray-600">{sub.class_name}</td>
+                      
+                      <td className="px-4 py-4">
+                        <div className="flex flex-col gap-2">
+                          {form.programs.map((prog: ProgramConfig) => {
+                            const dept = sub.choices?.[prog.program_id];
+                            const leaderOpts: string[] = sub.leadership_choices?.[prog.program_id] || [];
 
-                          return (
-                            <div key={prog.program_id} className="space-y-1 text-xs">
-                              <div className="font-bold text-slate-700 flex items-center gap-1.5 flex-wrap">
-                                <span>• {prog.program_name}:</span>
-                                {dept && (
-                                  <span className="bg-blue-50 text-[#0054a5] px-2.5 py-0.5 rounded-md font-bold border border-blue-100">
-                                    {dept}
-                                  </span>
+                            if (!dept && leaderOpts.length === 0) return null;
+
+                            return (
+                              <div key={prog.program_id} className="space-y-1 text-xs">
+                                <div className="font-bold text-slate-700 flex items-center gap-1.5 flex-wrap">
+                                  <span>• {prog.program_name}:</span>
+                                  {dept && (
+                                    <span className="bg-blue-50 text-[#0054a5] px-2.5 py-0.5 rounded-md font-bold border border-blue-100">
+                                      {dept}
+                                    </span>
+                                  )}
+                                </div>
+
+                                {leaderOpts.length > 0 && (
+                                  <div className="pl-4 flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-[11px] font-bold text-amber-700">Ứng cử:</span>
+                                    {leaderOpts.map((opt) => (
+                                      <span key={opt} className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md font-bold border border-amber-200 text-[11px]">
+                                        ★ {opt}
+                                      </span>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
-
-                              {/* HIỂN THỊ NGUYỆN VỌNG TRƯỞNG / PHÓ BAN */}
-                              {leaderOpts.length > 0 && (
-                                <div className="pl-4 flex items-center gap-1.5 flex-wrap">
-                                  <span className="text-[11px] font-bold text-amber-700">Ứng cử:</span>
-                                  {leaderOpts.map((opt) => (
-                                    <span key={opt} className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md font-bold border border-amber-200 text-[11px]">
-                                      ★ {opt}
-                                    </span>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </td>
-                    <td className="px-4 py-4 text-center text-xs font-semibold text-gray-600 whitespace-nowrap">
-                      {formatDateTime(sub.submitted_at)}
+                            );
+                          })}
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-center text-xs font-semibold text-gray-600 whitespace-nowrap">
+                        {formatDateTime(sub.submitted_at)}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-gray-400 italic font-bold">
+                      Chưa có sinh viên đăng ký phiếu này...
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-gray-400 italic font-bold">
-                    Chưa có sinh viên đăng ký phiếu này...
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-8 bg-white rounded-3xl border border-gray-200 text-center space-y-2 shadow-sm">
+            <ShieldAlert className="mx-auto text-amber-500" size={36} />
+            <p className="text-sm font-bold text-slate-800">
+              Bạn không có quyền xem danh sách chi tiết sinh viên đăng ký
+            </p>
+            <p className="text-xs text-gray-500 font-medium">
+              Bạn cần được Người tạo phiếu cấp quyền "Xem danh sách SV" để truy cập thông tin này.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

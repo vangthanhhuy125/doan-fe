@@ -7,11 +7,13 @@ import TabNavigation from './TabNavigation';
 import InfoTab from './InfoTab';
 import NotificationsTab from './NotificationsTab';
 import UserRegistrationTab from './UserRegistrationTab';
+import SurveyTab from './SurveyTab';
 import AnnouncementModal from './AnnouncementModal';
 
 export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState<'info' | 'notifications' | 'registrations'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'notifications' | 'registrations' | 'surveys'>('info');
   const [profile, setProfile] = useState<any>(null);
+  const [currentUserId, setCurrentUserId] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -32,8 +34,42 @@ export default function ProfilePage() {
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState<any>(null);
 
-  // State đếm số phiếu CHƯA đăng ký
+  // State đếm số phiếu CHƯA đăng ký & CHƯA làm khảo sát
   const [unsubmittedCount, setUnsubmittedCount] = useState(0);
+  const [unsubmittedSurveyCount, setUnsubmittedSurveyCount] = useState(0);
+
+  // ĐÁNH DẤU ĐÃ ĐỌC QUA API BACKEND
+  const handleMarkAsRead = async (notifId: string) => {
+    if (!notifId || !currentUserId) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/announcements/${notifId}/read`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-user-id': currentUserId,
+        },
+        body: JSON.stringify({ user_id: currentUserId })
+      });
+
+      if (res.ok) {
+        setAnnouncements(prev => prev.map(a => {
+          const aId = a._id || a.id;
+          if (String(aId) === String(notifId)) {
+            const existingReadBy = Array.isArray(a.read_by) ? a.read_by : [];
+            if (!existingReadBy.includes(currentUserId)) {
+              return { ...a, read_by: [...existingReadBy, currentUserId] };
+            }
+          }
+          return a;
+        }));
+      }
+    } catch (e) {
+      console.error('Lỗi khi lưu trạng thái đã đọc lên Server:', e);
+    }
+  };
 
   const fetchUnsubmittedCount = async (currentStudentId: string) => {
     if (!currentStudentId) return;
@@ -56,6 +92,27 @@ export default function ProfilePage() {
     }
   };
 
+  const fetchUnsubmittedSurveyCount = async (currentStudentId: string) => {
+    if (!currentStudentId) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const count = data.filter((survey: any) => {
+            const isSubmitted = survey.responses?.some(
+              (r: any) => r.student_id === currentStudentId
+            );
+            return !isSubmitted;
+          }).length;
+          setUnsubmittedSurveyCount(count);
+        }
+      }
+    } catch (e) {
+      console.error('Lỗi đếm phiếu khảo sát chưa làm:', e);
+    }
+  };
+
   const fetchAnnouncements = async (realUserId: string) => {
     setLoadingNotifs(true);
     try {
@@ -68,7 +125,7 @@ export default function ProfilePage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setAnnouncements(data);
+        setAnnouncements(Array.isArray(data) ? data : []);
       }
     } catch (e) {
       console.error('Lỗi lấy thông báo:', e);
@@ -87,7 +144,8 @@ export default function ProfilePage() {
       try {
         const localUser = JSON.parse(userStr);
         const token = localStorage.getItem('token');
-        const accountId = localUser._id || localUser.user_id || localUser.id;
+        const accountId = String(localUser._id || localUser.user_id || localUser.id || '');
+        setCurrentUserId(accountId);
 
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/profile`, {
           headers: {
@@ -99,6 +157,9 @@ export default function ProfilePage() {
         if (res.ok) {
           const data = await res.json();
           setProfile(data);
+          const realProfileId = String(data._id || data.user_id || accountId);
+          setCurrentUserId(realProfileId);
+
           setFullName(data.full_name || '');
           setStudentId(data.student_id || '');
           setStudentEmail(data.email || (data.student_id ? `${data.student_id}@gm.uit.edu.vn` : ''));
@@ -109,11 +170,11 @@ export default function ProfilePage() {
           setImageUrl(data.image_url || '');
           setRoles(Array.isArray(data.roles) ? data.roles : ['Đoàn viên']);
 
-          const realProfileId = data._id || data.user_id || accountId;
           await fetchAnnouncements(realProfileId);
 
           if (data.student_id) {
             await fetchUnsubmittedCount(data.student_id);
+            await fetchUnsubmittedSurveyCount(data.student_id);
           }
         } else {
           await fetchAnnouncements(accountId);
@@ -238,6 +299,11 @@ export default function ProfilePage() {
     document.body.removeChild(link);
   };
 
+  const unreadNotifCount = announcements.filter(item => {
+    const readByArr = Array.isArray(item.read_by) ? item.read_by : [];
+    return !readByArr.includes(currentUserId);
+  }).length;
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -246,8 +312,12 @@ export default function ProfilePage() {
     );
   }
 
+  const isSelectedNotifRead = selectedNotif
+    ? (Array.isArray(selectedNotif.read_by) && selectedNotif.read_by.includes(currentUserId))
+    : false;
+
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
+    <div className="mx-auto max-w-5xl space-y-6 p-6 text-black">
       <ProfileHeader
         fullName={fullName}
         studentId={studentId}
@@ -260,8 +330,9 @@ export default function ProfilePage() {
         <TabNavigation
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          notifCount={announcements.length}
+          notifCount={unreadNotifCount}
           registrationCount={unsubmittedCount}
+          surveyCount={unsubmittedSurveyCount}
         />
         {activeTab === 'info' && (
           <InfoTab
@@ -282,6 +353,7 @@ export default function ProfilePage() {
           <NotificationsTab
             loading={loadingNotifs}
             announcements={announcements}
+            currentUserId={currentUserId}
             onSelectNotif={setSelectedNotif}
             formatDate={formatDate}
           />
@@ -296,6 +368,15 @@ export default function ProfilePage() {
             onRefreshCount={() => fetchUnsubmittedCount(studentId)}
           />
         )}
+        {activeTab === 'surveys' && (
+          <SurveyTab
+            userInfo={{
+              student_id: studentId,
+              full_name: fullName,
+            }}
+            onRefreshCount={() => fetchUnsubmittedSurveyCount(studentId)}
+          />
+        )}
       </div>
 
       <AnnouncementModal
@@ -303,6 +384,8 @@ export default function ProfilePage() {
         onClose={() => setSelectedNotif(null)}
         formatDate={formatDate}
         handleDownloadFile={handleDownloadFile}
+        onMarkAsRead={handleMarkAsRead}
+        isRead={isSelectedNotifRead}
       />
     </div>
   );

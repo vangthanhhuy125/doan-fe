@@ -2,11 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { FileSpreadsheet, ArrowLeft } from 'lucide-react';
-import { RegistrationForm } from './types';
+import { RegistrationForm, FormPermission } from './types';
 import FormList from './FormList';
 import FormDetail from './FormDetail';
 import EditFormModal from './EditFormModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import ShareFormModal from './ShareFormModal';
 
 interface Props {
   forms: RegistrationForm[];
@@ -17,6 +18,7 @@ interface Props {
 export default function RegistrationManager({ forms, onRefresh, onBack }: Props) {
   const [selectedForm, setSelectedForm] = useState<RegistrationForm | null>(null);
   const [editTargetForm, setEditTargetForm] = useState<RegistrationForm | null>(null);
+  const [shareTargetForm, setShareTargetForm] = useState<RegistrationForm | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
 
@@ -39,7 +41,6 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
     return String(id || '');
   };
 
-  // 📌 Xử lý xóa phiếu qua API
   const handleDeleteConfirm = async () => {
     if (!deleteTargetId) return;
     try {
@@ -67,7 +68,6 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
     }
   };
 
-  // 📌 Xử lý cập nhật phiếu qua API
   const handleSaveEditedForm = async (updatedForm: RegistrationForm) => {
     const formId = getFormId(updatedForm._id);
     try {
@@ -101,7 +101,38 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
     }
   };
 
-  // Đồng bộ thông tin selectedForm khi `forms` thay đổi từ API re-fetch
+  const handleSavePermissions = async (updatedPermissions: FormPermission[]) => {
+    if (!shareTargetForm) return;
+    const formId = getFormId(shareTargetForm._id);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${formId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': currentUserId,
+        },
+        body: JSON.stringify({
+          shared_permissions: updatedPermissions,
+          user_id: currentUserId,
+        }),
+      });
+
+      if (res.ok) {
+        await onRefresh();
+        const updatedData = await res.json();
+        if (selectedForm && getFormId(selectedForm._id) === formId) {
+          setSelectedForm(updatedData);
+        }
+        setShareTargetForm(null);
+      } else {
+        alert('Lưu thông tin chia sẻ thất bại!');
+      }
+    } catch (e) {
+      console.error('Lỗi khi lưu chia sẻ:', e);
+    }
+  };
+
   const currentSelectedForm = selectedForm 
     ? forms.find(f => getFormId(f._id) === getFormId(selectedForm._id)) || selectedForm 
     : null;
@@ -131,12 +162,14 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
           onSelectForm={setSelectedForm}
           onEditForm={setEditTargetForm}
           onDeleteForm={setDeleteTargetId}
+          onOpenShareModal={setShareTargetForm}
         />
       ) : (
         <FormDetail
           form={currentSelectedForm}
           onEditForm={setEditTargetForm}
           onDeleteForm={setDeleteTargetId}
+          onOpenShareModal={setShareTargetForm}
         />
       )}
 
@@ -145,6 +178,14 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
           form={editTargetForm}
           onClose={() => setEditTargetForm(null)}
           onSave={handleSaveEditedForm}
+        />
+      )}
+
+      {shareTargetForm && (
+        <ShareFormModal
+          form={shareTargetForm}
+          onClose={() => setShareTargetForm(null)}
+          onSavePermissions={handleSavePermissions}
         />
       )}
 

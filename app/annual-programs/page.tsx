@@ -22,7 +22,8 @@ export default function ToChucPage() {
   const [systemConfig, setSystemConfig] = useState<any>({     
     years: [],     
     academicYears: [],     
-    semesters: []   
+    semesters: [],
+    formManagers: []
   });   
 
   const [searchTerm, setSearchTerm] = useState("");   
@@ -36,6 +37,7 @@ export default function ToChucPage() {
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
   const [showCreateFormModal, setShowCreateFormModal] = useState(false);
   const [createdRegistrationForms, setCreatedRegistrationForms] = useState<RegistrationForm[]>([]);
+  const [canCreateForm, setCanCreateForm] = useState(false);
 
   // 📌 1. Fetch danh sách chương trình hoạt động
   const fetchPrograms = async () => {     
@@ -57,7 +59,8 @@ export default function ToChucPage() {
         setSystemConfig({           
           years: result?.years || [],           
           academicYears: result?.academicYears || [],           
-          semesters: result?.semesters || []         
+          semesters: result?.semesters || [],
+          formManagers: result?.formManagers || result?.registrationFormManagers || []
         });       
       }     
     } catch (error) {       
@@ -65,7 +68,27 @@ export default function ToChucPage() {
     }   
   };   
 
-  // 📌 3. Fetch danh sách phiếu đăng ký từ Backend API
+  // 📌 3. Kiểm tra quyền tạo & quản lý phiếu của người dùng hiện tại
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const currentUserId = String(user._id || user.user_id || user.id || '');
+          const managers = systemConfig.formManagers || [];
+
+          // CHỈ hiện các nút và cột chọn phiếu nếu tài khoản nằm trong danh sách Mục 7 (formManagers)
+          const isManager = managers.some((m: any) => String(m.user_id || m._id) === currentUserId);
+          setCanCreateForm(isManager);
+        } catch (err) {
+          console.error('Lỗi đọc thông tin user:', err);
+        }
+      }
+    }
+  }, [systemConfig]);
+
+  // 📌 4. Fetch danh sách phiếu đăng ký từ Backend API
   const fetchRegistrationForms = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms`);
@@ -156,7 +179,7 @@ export default function ToChucPage() {
     }
   };
 
-  // 📌 4. Tạo mới phiếu đăng ký qua API
+  // 📌 5. Tạo mới phiếu đăng ký qua API
   const handleCreateRegistrationFormSave = async (newFormPayload: RegistrationForm) => {
     try {
       let currentUserId = '';
@@ -228,26 +251,31 @@ export default function ToChucPage() {
         </div>         
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setViewMode('registrations')}
-            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all border-none outline-none cursor-pointer"
-          >
-            <FileSpreadsheet size={18} className="text-emerald-600" />
-            Quản lý phiếu ({createdRegistrationForms.length})
-          </button>
+          {/* CHỈ HIỂN THỊ NÚT QUẢN LÝ PHIẾU VÀ TẠO PHIẾU KHI CÓ QUYỀN Ở MỤC 7 */}
+          {canCreateForm && (
+            <>
+              <button
+                onClick={() => setViewMode('registrations')}
+                className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all border-none outline-none cursor-pointer"
+              >
+                <FileSpreadsheet size={18} className="text-emerald-600" />
+                Quản lý phiếu ({createdRegistrationForms.length})
+              </button>
 
-          <button
-            disabled={selectedProgramIds.length === 0}
-            onClick={() => setShowCreateFormModal(true)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all border-none outline-none ${
-              selectedProgramIds.length > 0
-                ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-100 cursor-pointer active:scale-95'
-                : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-            }`}
-          >
-            <FileCheck2 size={18} />
-            Tạo phiếu đăng ký ({selectedProgramIds.length})
-          </button>
+              <button
+                disabled={selectedProgramIds.length === 0}
+                onClick={() => setShowCreateFormModal(true)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg font-bold text-xs uppercase tracking-wider transition-all border-none outline-none ${
+                  selectedProgramIds.length > 0
+                    ? 'bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-100 cursor-pointer active:scale-95'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                <FileCheck2 size={18} />
+                Tạo phiếu đăng ký ({selectedProgramIds.length})
+              </button>
+            </>
+          )}
 
           <button            
             onClick={() => setFormModal({ open: true, mode: 'add', item: null })}           
@@ -349,19 +377,22 @@ export default function ToChucPage() {
         <table className="w-full text-sm text-left border-collapse">           
           <thead className="bg-[#0054a5] text-white text-[14px] font-bold">             
             <tr>               
-              <th className="px-4 py-4 text-center uppercase w-10">
-                <button type="button" onClick={handleToggleSelectAll} className="p-1 text-white hover:opacity-80 border-none bg-transparent outline-none cursor-pointer">
-                  {selectedProgramIds.length === filteredData.length && filteredData.length > 0 ? (
-                    <CheckSquare size={18} />
-                  ) : (
-                    <Square size={18} />
-                  )}
-                </button>
-              </th>
+              {/* 🟢 CHỈ HIỂN THỊ CỘT CHECKBOX HEADER KHI CÓ QUYỀN TẠO PHIẾU */}
+              {canCreateForm && (
+                <th className="px-4 py-4 text-center uppercase w-10">
+                  <button type="button" onClick={handleToggleSelectAll} className="p-1 text-white hover:opacity-80 border-none bg-transparent outline-none cursor-pointer">
+                    {selectedProgramIds.length === filteredData.length && filteredData.length > 0 ? (
+                      <CheckSquare size={18} />
+                    ) : (
+                      <Square size={18} />
+                    )}
+                  </button>
+                </th>
+              )}
               <th className="px-4 py-4 text-center uppercase w-12">STT</th>               
               <th className="px-4 py-4 text-center">Tên chương trình</th>               
               <th className="px-4 py-4 text-center">Thời gian</th>               
-              <th className="px-4 py-4 text-center w-32">Thao tác</th>             
+              <th className="px-4 py-4 text-center w-32"></th>             
             </tr>           
           </thead>           
           <tbody className="divide-y divide-gray-200">             
@@ -371,11 +402,14 @@ export default function ToChucPage() {
                 const isChecked = selectedProgramIds.includes(progId);
                 return (                 
                   <tr key={progId} className={`hover:bg-blue-50/40 transition-colors ${isChecked ? 'bg-blue-50/30' : ''}`}>                   
-                    <td className="px-4 py-4 text-center">
-                      <button type="button" onClick={() => handleToggleSelectProgram(progId)} className="text-[#0054a5] border-none bg-transparent outline-none cursor-pointer">
-                        {isChecked ? <CheckSquare size={18} /> : <Square size={18} className="text-gray-300" />}
-                      </button>
-                    </td>
+                    {/* 🟢 CHỈ HIỂN THỊ CỘT CHECKBOX ROW KHI CÓ QUYỀN TẠO PHIẾU */}
+                    {canCreateForm && (
+                      <td className="px-4 py-4 text-center">
+                        <button type="button" onClick={() => handleToggleSelectProgram(progId)} className="text-[#0054a5] border-none bg-transparent outline-none cursor-pointer">
+                          {isChecked ? <CheckSquare size={18} /> : <Square size={18} className="text-gray-300" />}
+                        </button>
+                      </td>
+                    )}
                     <td className="px-4 py-4 text-center font-bold text-gray-400">{index + 1}</td>                   
                     <td className="px-4 py-4 font-bold text-[#0054a5]">{item.program_name}</td>                   
                     <td className="px-4 py-4 text-center text-gray-600 font-medium whitespace-nowrap">                     
@@ -393,7 +427,8 @@ export default function ToChucPage() {
               })             
             ) : (               
               <tr>                 
-                <td colSpan={5} className="p-10 text-center text-gray-400 italic">                   
+                {/* 🟢 TỰ ĐỘNG ĐIỀU CHỈNH COLSPAN (5 hoặc 4) KHI ẨN CỘT CHECKBOX */}
+                <td colSpan={canCreateForm ? 5 : 4} className="p-10 text-center text-gray-400 italic">                   
                   Không tìm thấy hoạt động nào phù hợp.                 
                 </td>               
               </tr>             

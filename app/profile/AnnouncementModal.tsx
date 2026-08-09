@@ -1,12 +1,14 @@
 'use client';
 
-import { Bell, X, Paperclip, Download } from 'lucide-react';
+import { Bell, X, Paperclip, Download, CheckCheck } from 'lucide-react';
 
 interface AnnouncementModalProps {
   selectedNotif: any;
   onClose: () => void;
   formatDate: (d: string) => string;
   handleDownloadFile: (f: any) => void;
+  onMarkAsRead?: (notifId: string) => void;
+  isRead?: boolean;
 }
 
 export default function AnnouncementModal({
@@ -14,11 +16,22 @@ export default function AnnouncementModal({
   onClose,
   formatDate,
   handleDownloadFile,
+  onMarkAsRead,
+  isRead = false,
 }: AnnouncementModalProps) {
   if (!selectedNotif) return null;
 
+  const notifId = selectedNotif._id || selectedNotif.id;
+
+  const handleMarkReadAndClose = () => {
+    if (onMarkAsRead && notifId) {
+      onMarkAsRead(notifId);
+    }
+    onClose();
+  };
+
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 text-black">
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-gray-100 animate-in zoom-in duration-300">
         <div className="bg-[#0054a5] p-5 text-white flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -26,8 +39,9 @@ export default function AnnouncementModal({
             <h4 className="font-bold text-sm uppercase tracking-wider">Chi tiết thông báo</h4>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-1.5 hover:bg-white/20 rounded-full transition-colors cursor-pointer border-none bg-transparent text-white"
+            className="p-1.5 hover:bg-white/20 rounded-full transition-colors cursor-pointer border-none outline-none focus:outline-none bg-transparent text-white"
           >
             <X size={20} />
           </button>
@@ -52,8 +66,9 @@ export default function AnnouncementModal({
                 <span className="truncate">{selectedNotif.file.originalname}</span>
               </div>
               <button
+                type="button"
                 onClick={() => handleDownloadFile(selectedNotif.file)}
-                className="flex items-center gap-1 bg-[#0054a5] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all cursor-pointer border-none"
+                className="flex items-center gap-1 bg-[#0054a5] text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-blue-700 transition-all cursor-pointer border-none outline-none focus:outline-none"
               >
                 <Download size={14} /> Tải về
               </button>
@@ -61,12 +76,18 @@ export default function AnnouncementModal({
           )}
         </div>
 
-        <div className="p-4 bg-gray-50 flex justify-end border-t">
+        <div className="p-4 bg-gray-50 flex justify-end border-t border-gray-100">
           <button
-            onClick={onClose}
-            className="px-6 py-2 bg-gray-200 hover:bg-gray-300 font-bold text-xs uppercase tracking-wider text-gray-700 rounded-xl transition-all cursor-pointer border-none"
+            type="button"
+            onClick={handleMarkReadAndClose}
+            className={`px-6 py-2.5 font-bold text-xs uppercase tracking-wider rounded-xl transition-all cursor-pointer border-none outline-none focus:outline-none focus:ring-0 flex items-center gap-2 shadow-sm ${
+              isRead 
+                ? 'bg-gray-200 hover:bg-gray-300 text-gray-700' 
+                : 'bg-[#0054a5] hover:bg-blue-700 text-white shadow-blue-100'
+            }`}
           >
-            Đóng
+            <CheckCheck size={16} />
+            <span>{isRead ? 'Đã đọc (Đóng)' : 'Đánh dấu đã đọc'}</span>
           </button>
         </div>
       </div>

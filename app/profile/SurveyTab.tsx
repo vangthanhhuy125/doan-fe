@@ -90,8 +90,9 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
   }
 
   return (
-    <div className="p-6 space-y-6 text-black">
-      <div className="flex items-center justify-between border-b pb-3">
+    <div className="p-4 sm:p-6 space-y-6 text-black">
+      {/* HEADER DANH SÁCH */}
+      <div className="flex items-center justify-between border-b border-gray-200 pb-3">
         <h3 className="flex items-center gap-2 text-lg font-bold text-gray-800">
           <ClipboardList className="text-[#0054a5]" size={20} /> Danh sách phiếu khảo sát
         </h3>
@@ -101,11 +102,11 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
       </div>
 
       {surveys.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 bg-gray-50/50 p-12 text-center text-sm font-medium text-gray-400 italic">
+        <div className="rounded-2xl border border-gray-200 bg-gray-50/50 p-12 text-center text-sm font-medium text-gray-400 italic">
           Hiện tại chưa có phiếu khảo sát nào.
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-5">
           {surveys.map((survey) => {
             const surveyId = getFormId(survey._id);
             const userResp = getUserResponse(survey);
@@ -115,47 +116,57 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
             return (
               <div
                 key={surveyId}
-                className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm space-y-3 hover:border-[#0054a5]/40 transition-all"
+                className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs hover:border-[#0054a5]/50 hover:shadow-md transition-all space-y-4"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
-                  <div className="space-y-1">
+                {/* HÀNG TOP: TIÊU ĐỀ, TRẠNG THÁI & NÚT THAO TÁC */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
+                  <div className="space-y-2 flex-1 pr-2">
                     <div className="flex items-center gap-2.5 flex-wrap">
-                      <h4 className="font-bold text-gray-800 text-base">{survey.title}</h4>
+                      <h4 className="font-extrabold text-slate-900 text-base sm:text-lg leading-snug">
+                        {survey.title}
+                      </h4>
                       
                       {isLocked ? (
-                        <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-rose-200">
+                        <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full text-xs font-bold border border-rose-200/80">
                           <Lock size={12} /> Đã khóa
                         </span>
                       ) : isSubmitted ? (
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-emerald-200">
-                          <CheckCircle2 size={12} /> Đã thực hiện khảo sát
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-bold border border-emerald-200/80">
+                          <CheckCircle2 size={12} /> Đã thực hiện
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-amber-200">
+                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full text-xs font-bold border border-amber-200/80">
                           <Clock size={12} /> Đang mở khảo sát
                         </span>
                       )}
                     </div>
-                    {survey.description && (
-                      <p className="text-xs font-medium text-gray-500">{survey.description}</p>
-                    )}
                   </div>
 
                   <button
                     onClick={() => setSelectedSurvey(survey)}
-                    className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition-all border-none active:scale-95 shrink-0 ${
+                    className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold shadow-sm transition-all border-none active:scale-95 shrink-0 w-full sm:w-auto ${
                       isSubmitted || isLocked
-                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                        : 'bg-[#0054a5] text-white hover:bg-blue-700'
+                        ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                        : 'bg-[#0054a5] text-white hover:bg-blue-700 shadow-blue-500/20'
                     }`}
                   >
                     <span>{isSubmitted ? 'Xem / Chỉnh sửa khảo sát' : isLocked ? 'Xem câu hỏi (Khóa)' : 'Thực hiện khảo sát'}</span>
-                    <ChevronRight size={14} />
+                    <ChevronRight size={15} />
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-gray-400 font-medium">
-                  <div className="flex items-center gap-1">
+                {/* NỘI DUNG MÔ TẢ PHIẾU (HIỂN THỊ CHUẨN XUỐNG DÒNG PARAGRAPH) */}
+                {survey.description && (
+                  <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100">
+                    <p className="text-xs sm:text-sm font-normal text-slate-700 leading-relaxed whitespace-pre-wrap">
+                      {survey.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* FOOTER THÔNG TIN NGÀY TẠO & SỐ CÂU HỎI */}
+                <div className="flex items-center justify-between text-xs text-slate-400 font-semibold pt-1">
+                  <div className="flex items-center gap-1.5">
                     <Calendar size={14} className="text-[#0054a5]" />
                     <span>Ngày tạo: {new Date(survey.created_at).toLocaleDateString('vi-VN')}</span>
                   </div>

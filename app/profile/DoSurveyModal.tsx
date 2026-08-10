@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { X, Send, Loader2, ChevronRight, ChevronLeft, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { X, Send, Loader2, ChevronRight, ChevronLeft, RefreshCw, CheckCircle2, Bold, Italic, Underline } from 'lucide-react';
 import { SurveyForm, Question } from './SurveyTab';
 
 interface Props {
@@ -12,12 +12,147 @@ interface Props {
   onSubmitSuccess: () => void;
 }
 
+// 🟢 COMPONENT Ô NHẬP LIỆU PHONG CÁCH NOTION / SLACK (INTEGRATED TOOLBAR)
+function FormattingTextarea({
+  value,
+  onChange,
+  disabled,
+  placeholder,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = () => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.max(120, textareaRef.current.scrollHeight)}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value]);
+
+  const applyFormatting = (formatType: 'bold' | 'italic' | 'underline') => {
+    const textarea = textareaRef.current;
+    if (!textarea || disabled) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selectedText = text.substring(start, end);
+
+    let prefix = '';
+    let suffix = '';
+
+    if (formatType === 'bold') {
+      prefix = '**';
+      suffix = '**';
+    } else if (formatType === 'italic') {
+      prefix = '*';
+      suffix = '*';
+    } else if (formatType === 'underline') {
+      prefix = '<u>';
+      suffix = '</u>';
+    }
+
+    const replacement = selectedText ? `${prefix}${selectedText}${suffix}` : `${prefix}nội_dung${suffix}`;
+    const newValue = text.substring(0, start) + replacement + text.substring(end);
+
+    onChange(newValue);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newCursorPos = start + prefix.length + (selectedText ? selectedText.length : 8);
+      textarea.setSelectionRange(start + prefix.length, newCursorPos);
+    }, 0);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && !disabled) {
+      const key = e.key.toLowerCase();
+      if (key === 'b') {
+        e.preventDefault();
+        applyFormatting('bold');
+      } else if (key === 'i') {
+        e.preventDefault();
+        applyFormatting('italic');
+      } else if (key === 'u') {
+        e.preventDefault();
+        applyFormatting('underline');
+      }
+    }
+  };
+
+  return (
+    <div className={`group relative border border-slate-200 focus-within:border-[#0054a5] focus-within:ring-4 focus-within:ring-[#0054a5]/10 rounded-2xl bg-white overflow-hidden transition-all duration-200 shadow-sm ${disabled ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}>
+      {/* Toolbar liền khối phía trên */}
+      {!disabled && (
+        <div className="flex items-center justify-between px-3.5 py-2 bg-slate-50/80 border-b border-slate-100 text-slate-500 select-none">
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => applyFormatting('bold')}
+              className="p-1.5 hover:bg-slate-200/70 hover:text-slate-900 rounded-lg transition-colors border-none cursor-pointer bg-transparent"
+              title="In đậm (Ctrl+B)"
+            >
+              <Bold size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormatting('italic')}
+              className="p-1.5 hover:bg-slate-200/70 hover:text-slate-900 rounded-lg transition-colors border-none cursor-pointer bg-transparent"
+              title="In nghiêng (Ctrl+I)"
+            >
+              <Italic size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={() => applyFormatting('underline')}
+              className="p-1.5 hover:bg-slate-200/70 hover:text-slate-900 rounded-lg transition-colors border-none cursor-pointer bg-transparent"
+              title="Gạch chân (Ctrl+U)"
+            >
+              <Underline size={15} />
+            </button>
+          </div>
+
+          <div className="hidden sm:flex items-center gap-1 text-[11px] font-medium text-slate-400">
+            <span>Dùng</span>
+            <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-[10px] font-mono shadow-xs text-slate-600">Ctrl</kbd>
+            <span>+</span>
+            <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-[10px] font-mono shadow-xs text-slate-600">B</kbd>
+            <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-[10px] font-mono shadow-xs text-slate-600">I</kbd>
+            <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-[10px] font-mono shadow-xs text-slate-600">U</kbd>
+          </div>
+        </div>
+      )}
+
+      {/* Ô gõ nội dung */}
+      <textarea
+        ref={textareaRef}
+        disabled={disabled}
+        value={value}
+        onChange={(e) => {
+          onChange(e.target.value);
+          adjustHeight();
+        }}
+        onKeyDown={handleKeyDown}
+        placeholder={placeholder}
+        className="w-full p-4 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 outline-none resize-none leading-relaxed transition-all min-h-[120px]"
+      />
+    </div>
+  );
+}
+
 export default function DoSurveyModal({ survey, userInfo, existingResponse, onClose, onSubmitSuccess }: Props) {
   const isSubmitted = !!existingResponse;
   const isLocked = !!survey.is_locked;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Quản lý phần/trang hiện tại
   const sections = survey.sections && survey.sections.length > 0
     ? survey.sections
     : [{ id: 'default', title: survey.title, description: survey.description }];
@@ -25,12 +160,10 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const currentSec = sections[currentSectionIndex];
 
-  // Lọc câu hỏi thuộc phần hiện tại
   const currentQuestions = (survey.questions || []).filter(
     q => !q.section_id || q.section_id === currentSec.id || sections.length === 1
   );
 
-  // Khởi tạo giá trị đáp án cũ (nếu có)
   const [answers, setAnswers] = useState<Record<string, any>>(() => {
     const initial: Record<string, any> = {};
     if (existingResponse?.answers) {
@@ -54,12 +187,10 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
     }
   };
 
-  // 🟢 CHUYỂN PHẦN KHI BẤM "TIẾP TỤC" (KHÔNG SUBMIT FORM)
   const handleNextSection = (e: React.MouseEvent) => {
-    e.preventDefault(); // Ngăn chặn tuyệt đối hành vi submit form
+    e.preventDefault();
     e.stopPropagation();
 
-    // Validate các câu hỏi bắt buộc ở phần hiện tại
     for (const q of currentQuestions) {
       if (q.required) {
         const val = answers[q.id];
@@ -75,7 +206,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
     }
   };
 
-  // 🟢 QUAY LẠI PHẦN TRƯỚC (KHÔNG SUBMIT FORM)
   const handlePrevSection = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -84,12 +214,10 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
     }
   };
 
-  // 🟢 HÀM NỘP PHIẾU (CHỈ KÍCH HOẠT Ở PHẦN CUỐI CÙNG)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLocked || isSubmitting) return;
 
-    // Validate toàn bộ câu hỏi bắt buộc trong tất cả các phần
     for (const q of survey.questions) {
       if (q.required) {
         const val = answers[q.id];
@@ -135,54 +263,81 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
   };
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in zoom-in duration-200 text-black">
-      <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 max-h-[90vh] flex flex-col">
-        {/* HEADER MODAL */}
-        <div className="bg-[#0054a5] p-5 flex items-center justify-between text-white shrink-0">
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-bold">
-                Phần {currentSectionIndex + 1} / {sections.length}
-              </span>
-              <h3 className="font-bold uppercase tracking-widest text-sm">{survey.title}</h3>
-              {isSubmitted && (
-                <span className="bg-emerald-500/80 text-white px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1">
-                  <CheckCircle2 size={12} /> Đã thực hiện
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-2 sm:p-6 text-black animate-in fade-in duration-200">
+      
+      {/* 🟢 KHUNG MODAL RỘNG 2/3 MÀN HÌNH (lg:w-2/3 max-w-5xl) */}
+      <div className="bg-white w-full h-full sm:h-auto lg:w-2/3 max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 sm:max-h-[90vh] flex flex-col">
+        
+        {/* HEADER VỚI CHỦ ĐỀ SANG TRỌNG */}
+        <div className="bg-gradient-to-r from-[#004282] to-[#0054a5] p-5 sm:p-6 text-white shrink-0 shadow-md">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1.5 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="bg-white/15 text-blue-100 border border-white/20 px-3 py-0.5 rounded-full text-xs font-bold tracking-wide backdrop-blur-xs">
+                  Phần {currentSectionIndex + 1} / {sections.length}
                 </span>
+                {isSubmitted && (
+                  <span className="bg-emerald-500/90 text-white px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs">
+                    <CheckCircle2 size={13} /> Đã thực hiện
+                  </span>
+                )}
+              </div>
+
+              <h3 className="font-extrabold uppercase tracking-wide text-base sm:text-lg leading-snug text-white pt-1">
+                {survey.title}
+              </h3>
+
+              {currentSec.description && (
+                <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed font-normal pt-1">
+                  {currentSec.description}
+                </p>
               )}
             </div>
-            {currentSec.description && <p className="text-xs text-blue-100 mt-1">{currentSec.description}</p>}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 hover:bg-white/15 rounded-full text-white/80 hover:text-white transition-all border-none bg-transparent cursor-pointer shrink-0"
+            >
+              <X size={22} />
+            </button>
           </div>
-          <button type="button" onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full text-white border-none bg-transparent cursor-pointer">
-            <X size={20} />
-          </button>
         </div>
 
-        {/* THÔNG BÁO TỪNG NỘP PHIẾU */}
+        {/* THÔNG BÁO ĐÃ NỘP BÀI */}
         {isSubmitted && (
-          <div className="bg-emerald-50 p-3 px-6 border-b border-emerald-100 text-xs text-emerald-800 font-semibold flex items-center justify-between">
-            <span>✓ Bạn đã nộp phiếu này trước đây. Bạn có thể thay đổi đáp án và gửi lại!</span>
+          <div className="bg-emerald-50/80 p-3.5 px-6 border-b border-emerald-100 text-xs sm:text-sm text-emerald-800 font-semibold flex items-center justify-between shrink-0">
+            <span className="flex items-center gap-2">
+              <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+              Bạn đã nộp phiếu này trước đây. Có thể chỉnh sửa câu trả lời và gửi lại.
+            </span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-left">
+        {/* NỘI DUNG CÂU HỎI (ĐÃ MỞ RỘNG KHÔNG GIAN HỢP LÝ) */}
+        <form onSubmit={handleSubmit} className="p-5 sm:p-8 overflow-y-auto space-y-6 flex-1 text-left bg-slate-50/50">
           {currentQuestions.map((q: Question, idx: number) => {
             const val = answers[q.id];
 
             return (
-              <div key={q.id} className="p-5 bg-slate-50/70 rounded-2xl border border-slate-200 space-y-3">
-                <label className="text-xs font-bold text-slate-800 block leading-relaxed">
-                  {idx + 1}. {q.text} {q.required && <span className="text-red-500">*</span>}
-                </label>
+              <div key={q.id} className="p-6 sm:p-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4 hover:border-slate-300 transition-all">
+                <div className="flex items-start gap-3">
+                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-xl bg-blue-50 text-[#0054a5] font-black text-xs sm:text-sm shrink-0 mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <label className="text-sm sm:text-base font-bold text-slate-800 leading-relaxed block flex-1">
+                    {q.text} {q.required && <span className="text-rose-500 font-bold ml-0.5">*</span>}
+                  </label>
+                </div>
 
-                {/* ẢNH CÂU HỎI */}
+                {/* ẢNH MINH HỌA CÂU HỎI */}
                 {q.image_url && (
-                  <div className="rounded-xl overflow-hidden border border-gray-200 max-w-md bg-white">
-                    <img src={q.image_url} alt="Minh họa" className="w-full max-h-60 object-contain p-2" />
+                  <div className="rounded-xl overflow-hidden border border-slate-200 max-w-lg bg-slate-50">
+                    <img src={q.image_url} alt="Minh họa" className="w-full max-h-72 object-contain p-2" />
                   </div>
                 )}
 
-                {/* INPUTS */}
+                {/* INPUT CÂU TRẢ LỜI NGẮN */}
                 {q.type === 'short_text' && (
                   <input
                     type="text"
@@ -190,65 +345,81 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                     value={val || ''}
                     onChange={(e) => handleTextChange(q.id, e.target.value)}
                     placeholder="Câu trả lời của bạn..."
-                    className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-[#0054a5] disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium outline-none focus:border-[#0054a5] focus:ring-4 focus:ring-[#0054a5]/10 disabled:bg-slate-100 disabled:cursor-not-allowed transition-all shadow-xs"
                   />
                 )}
 
+                {/* INPUT CÂU TRẢ LỜI ĐOẠN VĂN (VỚI TOOLBAR TÍCH HỢP) */}
                 {q.type === 'paragraph' && (
-                  <textarea
-                    rows={3}
+                  <FormattingTextarea
                     disabled={isLocked}
                     value={val || ''}
-                    onChange={(e) => handleTextChange(q.id, e.target.value)}
-                    placeholder="Câu trả lời của bạn..."
-                    className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-medium outline-none focus:border-[#0054a5] resize-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    onChange={(newVal) => handleTextChange(q.id, newVal)}
+                    placeholder="Nhập câu trả lời chi tiết của bạn..."
                   />
                 )}
 
+                {/* CÂU HỎI TRẮC NGHIỆM */}
                 {q.type === 'multiple_choice' && (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5 pt-1">
                     {q.options?.map((opt) => (
-                      <label key={opt.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                      <label 
+                        key={opt.id} 
+                        className={`flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border cursor-pointer text-xs sm:text-sm font-semibold transition-all ${
+                          val === opt.text 
+                            ? 'bg-blue-50/60 border-[#0054a5]/40 text-[#0054a5]' 
+                            : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                        }`}
+                      >
                         <input
                           type="radio"
                           name={q.id}
                           disabled={isLocked}
                           checked={val === opt.text}
                           onChange={() => handleTextChange(q.id, opt.text)}
-                          className="w-4 h-4 accent-[#0054a5] disabled:cursor-not-allowed"
+                          className="w-4 h-4 accent-[#0054a5] disabled:cursor-not-allowed shrink-0"
                         />
-                        <span>{opt.text}</span>
+                        <span className="leading-snug">{opt.text}</span>
                       </label>
                     ))}
                   </div>
                 )}
 
+                {/* CÂU HỎI HỘP KIỂM (CHECKBOXES) */}
                 {q.type === 'checkboxes' && (
-                  <div className="space-y-2">
+                  <div className="space-y-2.5 pt-1">
                     {q.options?.map((opt) => {
                       const isChecked = Array.isArray(val) && val.includes(opt.text);
                       return (
-                        <label key={opt.id} className="flex items-center gap-2 cursor-pointer text-xs font-semibold text-slate-700">
+                        <label 
+                          key={opt.id} 
+                          className={`flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border cursor-pointer text-xs sm:text-sm font-semibold transition-all ${
+                            isChecked 
+                              ? 'bg-blue-50/60 border-[#0054a5]/40 text-[#0054a5]' 
+                              : 'bg-white border-slate-200/80 text-slate-700 hover:bg-slate-50 hover:border-slate-300'
+                          }`}
+                        >
                           <input
                             type="checkbox"
                             disabled={isLocked}
                             checked={isChecked}
                             onChange={(e) => handleCheckboxChange(q.id, opt.text, e.target.checked)}
-                            className="w-4 h-4 accent-[#0054a5] rounded disabled:cursor-not-allowed"
+                            className="w-4 h-4 accent-[#0054a5] rounded-md disabled:cursor-not-allowed shrink-0"
                           />
-                          <span>{opt.text}</span>
+                          <span className="leading-snug">{opt.text}</span>
                         </label>
                       );
                     })}
                   </div>
                 )}
 
+                {/* DROPDOWN */}
                 {q.type === 'dropdown' && (
                   <select
                     disabled={isLocked}
                     value={val || ''}
                     onChange={(e) => handleTextChange(q.id, e.target.value)}
-                    className="w-full p-3 bg-white border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-[#0054a5] cursor-pointer disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold outline-none focus:border-[#0054a5] focus:ring-4 focus:ring-[#0054a5]/10 cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed shadow-xs"
                   >
                     <option value="">-- Chọn đáp án --</option>
                     {q.options?.map((opt) => (
@@ -262,13 +433,13 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
             );
           })}
 
-          {/* CỤM NÚT ĐIỀU HƯỚNG BẮT BỘC PHẢI CÓ type="button" CHO CÁC NÚT KHÔNG PHẢI NỘP BÀI */}
-          <div className="pt-4 border-t border-slate-100 flex items-center justify-between shrink-0">
+          {/* CỤM NÚT ĐIỀU HƯỚNG BOTTOM */}
+          <div className="pt-4 border-t border-slate-200/60 flex items-center justify-between shrink-0 gap-2">
             {currentSectionIndex > 0 ? (
               <button
                 type="button"
                 onClick={handlePrevSection}
-                className="flex items-center gap-1.5 px-5 py-2.5 bg-gray-100 hover:bg-gray-200 font-bold text-xs uppercase text-gray-700 rounded-xl transition-all border-none cursor-pointer"
+                className="flex items-center gap-1.5 px-6 py-2.5 bg-slate-100 hover:bg-slate-200/80 font-bold text-xs uppercase text-slate-700 rounded-xl transition-all border-none cursor-pointer"
               >
                 <ChevronLeft size={16} /> Quay lại
               </button>
@@ -278,7 +449,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
               <button
                 type="button"
                 onClick={handleNextSection}
-                className="flex items-center gap-1.5 px-6 py-2.5 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase shadow-md transition-all border-none cursor-pointer"
+                className="flex items-center gap-1.5 px-6 py-2.5 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase shadow-md shadow-blue-500/10 transition-all border-none cursor-pointer active:scale-95 ml-auto"
               >
                 <span>Tiếp tục</span> <ChevronRight size={16} />
               </button>
@@ -287,8 +458,10 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className={`flex items-center justify-center gap-2 px-6 py-2.5 text-white font-bold rounded-xl text-xs uppercase shadow-lg border-none cursor-pointer transition-all active:scale-95 disabled:opacity-50 ${
-                    isSubmitted ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-100' : 'bg-[#0054a5] hover:bg-blue-700 shadow-blue-100'
+                  className={`flex items-center justify-center gap-2 px-7 py-3 text-white font-bold rounded-xl text-xs uppercase shadow-lg border-none cursor-pointer transition-all active:scale-95 disabled:opacity-50 ml-auto ${
+                    isSubmitted 
+                      ? 'bg-amber-600 hover:bg-amber-700 shadow-amber-500/20' 
+                      : 'bg-gradient-to-r from-[#004282] to-[#0054a5] hover:brightness-110 shadow-blue-500/25'
                   }`}
                 >
                   {isSubmitting ? (
@@ -298,7 +471,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                   ) : (
                     <Send size={16} />
                   )}
-                  <span>{isSubmitted ? 'Cập nhật / Gửi lại phiếu' : 'Gửi phiếu khảo sát'}</span>
+                  <span>{isSubmitted ? 'Cập nhật / Gửi lại' : 'Gửi phiếu khảo sát'}</span>
                 </button>
               )
             )}

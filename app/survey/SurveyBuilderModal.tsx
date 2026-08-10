@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { 
   X, Plus, Copy, Trash2, Save, Lock, Unlock, 
   Loader2, MessageSquareText, Image as ImageIcon, Split,
@@ -14,6 +14,83 @@ interface Props {
   currentUserId: string;
   onClose: () => void;
   onSaved: () => void;
+}
+
+// 🟢 COMPONENT TỰ DÃN CHIỀU CAO + HỖ TRỢ PHÍM ENTER & CTRL+B/I/U
+function AutoResizeTextarea({
+  value,
+  onChange,
+  placeholder,
+  className = '',
+  disabled = false,
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder?: string;
+  className?: string;
+  disabled?: boolean;
+}) {
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const adjustHeight = () => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      textarea.style.height = 'auto';
+      textarea.style.height = `${textarea.scrollHeight}px`;
+    }
+  };
+
+  useEffect(() => {
+    adjustHeight();
+  }, [value]);
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && !disabled) {
+      const key = e.key.toLowerCase();
+      const textarea = textareaRef.current;
+      if (!textarea) return;
+
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const selectedText = value.substring(start, end);
+
+      let tag = '';
+      if (key === 'b') tag = '**';
+      else if (key === 'i') tag = '*';
+      else if (key === 'u') tag = '<u>';
+
+      if (tag) {
+        e.preventDefault();
+        const closeTag = tag === '<u>' ? '</u>' : tag;
+        const replacement = selectedText ? `${tag}${selectedText}${closeTag}` : `${tag}chữ_mới${closeTag}`;
+        const newValue = value.substring(0, start) + replacement + value.substring(end);
+
+        onChange(newValue);
+
+        setTimeout(() => {
+          textarea.focus();
+          const newPos = start + tag.length + (selectedText ? selectedText.length : 7);
+          textarea.setSelectionRange(start + tag.length, newPos);
+        }, 0);
+      }
+    }
+  };
+
+  return (
+    <textarea
+      ref={textareaRef}
+      rows={1}
+      disabled={disabled}
+      value={value || ''}
+      onChange={(e) => {
+        onChange(e.target.value);
+        adjustHeight();
+      }}
+      onKeyDown={handleKeyDown}
+      placeholder={placeholder}
+      className={`w-full resize-none overflow-hidden leading-relaxed outline-none transition-all ${className}`}
+    />
+  );
 }
 
 export default function SurveyBuilderModal({ survey, currentUserId, onClose, onSaved }: Props) {
@@ -259,21 +336,21 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
   return (
     <div className="fixed inset-0 z-[100] bg-[#f0f4f9] flex flex-col overflow-hidden text-black animate-in fade-in duration-200">
       {/* HEADER TOP FIXED */}
-      <header className="bg-white border-b border-gray-200 shadow-sm px-6 h-16 flex items-center justify-between gap-4 shrink-0">
-        <div className="flex items-center gap-3">
+      <header className="bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3">
           <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-md">
             <MessageSquareText size={20} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="bg-blue-100 text-[#0054a5] font-black text-[10px] px-2 py-0.5 rounded-md">
+              <span className="bg-blue-100 text-[#0054a5] font-black text-[10px] px-2 py-0.5 rounded-md hidden sm:inline">
                 {survey?.voucherNo || 'TẠO MỚI'}
               </span>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="font-bold text-base text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-[#0054a5] outline-none px-1 py-0.5 transition-all truncate max-w-md"
+                className="font-bold text-sm sm:text-base text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-[#0054a5] outline-none px-1 py-0.5 transition-all truncate max-w-[150px] sm:max-w-md"
               />
             </div>
           </div>
@@ -284,7 +361,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
           <button
             type="button"
             onClick={() => setActiveTab('editor')}
-            className={`px-5 py-1.5 rounded-lg font-bold text-xs uppercase transition-all border-none cursor-pointer ${
+            className={`px-3 sm:px-5 py-1.5 rounded-lg font-bold text-xs uppercase transition-all border-none cursor-pointer ${
               activeTab === 'editor' 
                 ? 'bg-[#0054a5] text-white shadow-sm' 
                 : 'text-gray-500 hover:text-gray-800 bg-transparent'
@@ -295,13 +372,13 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
           <button
             type="button"
             onClick={() => setActiveTab('responses')}
-            className={`px-5 py-1.5 rounded-lg font-bold text-xs uppercase transition-all border-none cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 sm:px-5 py-1.5 rounded-lg font-bold text-xs uppercase transition-all border-none cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'responses' 
                 ? 'bg-[#0054a5] text-white shadow-sm' 
                 : 'text-gray-500 hover:text-gray-800 bg-transparent'
             }`}
           >
-            <span>Câu trả lời</span>
+            <span>Trả lời</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
               activeTab === 'responses' ? 'bg-white text-[#0054a5]' : 'bg-gray-200 text-gray-700'
             }`}>
@@ -310,15 +387,15 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
           </button>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 px-5 py-2 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-lg border-none cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-2 px-3 sm:px-5 py-2 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-lg border-none cursor-pointer transition-all active:scale-95 disabled:opacity-50"
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            <span>Lưu biểu mẫu</span>
+            <span className="hidden sm:inline">Lưu biểu mẫu</span>
           </button>
           <button
             type="button"
@@ -332,25 +409,26 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
       {/* 🟢 VIEW 1: TRÌNH THIẾT KẾ CÂU HỎI (EDITOR) */}
       {activeTab === 'editor' && (
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           <div className="max-w-3xl mx-auto space-y-6 relative pb-24">
             
             {/* THẺ TÊN BIỂU MẪU CHÍNH */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden border-t-8 border-t-[#0054a5]">
-              <div className="p-6 space-y-3">
+              <div className="p-4 sm:p-6 space-y-3">
                 <input
                   type="text"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   placeholder="Tiêu đề biểu mẫu"
-                  className="w-full text-2xl font-black text-gray-900 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none pb-1 transition-all"
+                  className="w-full text-xl sm:text-2xl font-black text-gray-900 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none pb-1 transition-all"
                 />
-                <textarea
-                  rows={2}
+                
+                {/* 🟢 TỰ ĐỘNG CO GIÃN THEO NỘI DUNG MÔ TẢ BIỂU MẪU */}
+                <AutoResizeTextarea
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Mô tả chi tiết biểu mẫu..."
-                  className="w-full text-xs font-semibold text-gray-600 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none resize-none transition-all"
+                  onChange={(val) => setDescription(val)}
+                  placeholder="Mô tả chi tiết biểu mẫu (Ấn Enter xuống dòng, Ctrl+B/I/U để định dạng)..."
+                  className="text-xs font-semibold text-gray-600 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] p-1"
                 />
               </div>
             </div>
@@ -367,14 +445,14 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                       Phần {secIdx + 1} / {sections.length}
                     </div>
 
-                    <div className="p-5 space-y-2">
+                    <div className="p-4 sm:p-5 space-y-2">
                       <div className="flex items-center justify-between gap-3">
                         <input
                           type="text"
                           value={sec.title}
                           onChange={(e) => handleSectionChange(sec.id, 'title', e.target.value)}
                           placeholder="Mục không có tiêu đề"
-                          className="w-full text-lg font-bold text-gray-800 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none transition-all"
+                          className="w-full text-base sm:text-lg font-bold text-gray-800 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none transition-all"
                         />
                         {sections.length > 1 && (
                           <button
@@ -387,12 +465,13 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                           </button>
                         )}
                       </div>
-                      <input
-                        type="text"
+
+                      {/* 🟢 TỰ ĐỘNG CO GIÃN MÔ TẢ PHẦN */}
+                      <AutoResizeTextarea
                         value={sec.description || ''}
-                        onChange={(e) => handleSectionChange(sec.id, 'description', e.target.value)}
-                        placeholder="Mô tả (không bắt buộc)"
-                        className="w-full text-xs text-gray-500 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none transition-all"
+                        onChange={(val) => handleSectionChange(sec.id, 'description', val)}
+                        placeholder="Mô tả mục (không bắt buộc)..."
+                        className="text-xs text-gray-500 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] p-1"
                       />
                     </div>
                   </div>
@@ -407,24 +486,27 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                         onClick={() => setActiveQuestionId(q.id)}
                         className={`bg-white rounded-2xl border shadow-sm transition-all relative ${
                           isActive 
-                            ? 'border-gray-300 ring-2 ring-[#0054a5]/30 border-l-8 border-l-[#0054a5] p-6 space-y-5' 
-                            : 'border-gray-200 hover:border-gray-300 p-5 space-y-3 cursor-pointer'
+                            ? 'border-gray-300 ring-2 ring-[#0054a5]/30 border-l-8 border-l-[#0054a5] p-4 sm:p-6 space-y-5' 
+                            : 'border-gray-200 hover:border-gray-300 p-4 sm:p-5 space-y-3 cursor-pointer'
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                          <input
-                            type="text"
-                            value={q.text}
-                            onChange={(e) => handleQuestionChange(q.id, 'text', e.target.value)}
-                            placeholder="Nội dung câu hỏi"
-                            className="w-full sm:flex-1 p-3 bg-gray-50 focus:bg-white border-b-2 border-transparent focus:border-[#0054a5] text-sm font-bold text-gray-800 outline-none transition-all rounded-lg"
-                          />
+                          
+                          {/* 🟢 TỰ ĐỘNG CO GIÃN NỘI DUNG CÂU HỎI */}
+                          <div className="w-full sm:flex-1 bg-gray-50/80 p-2 sm:p-3 rounded-xl border border-gray-200 focus-within:border-[#0054a5] focus-within:bg-white transition-all">
+                            <AutoResizeTextarea
+                              value={q.text}
+                              onChange={(val) => handleQuestionChange(q.id, 'text', val)}
+                              placeholder="Nội dung câu hỏi..."
+                              className="text-xs sm:text-sm font-bold text-gray-800 bg-transparent"
+                            />
+                          </div>
 
                           {isActive && (
                             <select
                               value={q.type}
                               onChange={(e) => handleQuestionChange(q.id, 'type', e.target.value as QuestionType)}
-                              className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 outline-none focus:border-[#0054a5] cursor-pointer"
+                              className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 outline-none focus:border-[#0054a5] cursor-pointer w-full sm:w-auto"
                             >
                               <option value="short_text">Trả lời ngắn</option>
                               <option value="paragraph">Đoạn văn</option>
@@ -461,7 +543,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
                           {q.type === 'paragraph' && (
                             <div className="p-3 border-b border-dashed border-gray-300 text-xs text-gray-400 font-medium max-w-md">
-                              Văn bản câu trả lời dài
+                              Văn bản câu trả lời dài (Ctrl+B/I/U)
                             </div>
                           )}
 
@@ -560,7 +642,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
             })}
 
             {/* THANH CÔNG CỤ NỔI (+ | =) */}
-            <div className="fixed bottom-8 right-8 bg-white rounded-2xl border border-gray-200 shadow-2xl p-2 flex flex-col items-center gap-3 z-30">
+            <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 bg-white rounded-2xl border border-gray-200 shadow-2xl p-2 flex flex-col items-center gap-3 z-30">
               <button
                 type="button"
                 onClick={() => handleAddQuestion()}
@@ -585,14 +667,14 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
       {/* 🟢 VIEW 2: QUẢN LÝ & BẢN TÓM TẮT CÂU TRẢ LỜI (GOOGLE FORMS SUMMARY) */}
       {activeTab === 'responses' && (
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-3xl mx-auto space-y-5 pb-24">
             
             {/* THẺ TỔNG SỐ LƯỢNG VÀ NÚT TẢI EXCEL */}
-            <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+            <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                 <div>
-                  <h2 className="text-2xl font-black text-gray-900">
+                  <h2 className="text-xl sm:text-2xl font-black text-gray-900">
                     {responses.length} câu trả lời
                   </h2>
                   <p className="text-xs text-gray-500 font-semibold mt-1">
@@ -635,7 +717,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
               </div>
             ) : (
               questions.map((q, idx) => {
-                // Lọc danh sách câu trả lời của câu hỏi q này
                 const answerList = responses
                   .map(r => {
                     const found = (r.answers || []).find((a: any) => a.question_id === q.id);
@@ -650,7 +731,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                 const totalAnswersForQ = answerList.length;
 
                 return (
-                  <div key={q.id} className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
+                  <div key={q.id} className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
                     <div className="border-b border-gray-100 pb-3">
                       <h3 className="font-bold text-gray-800 text-sm">
                         {idx + 1}. {q.text}
@@ -668,7 +749,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                         ) : (
                           answerList.map((item, aIdx) => (
                             <div key={aIdx} className="p-3 bg-[#f8f9fa] rounded-xl border border-gray-100 text-xs text-gray-700 font-medium space-y-1">
-                              <p className="font-bold text-gray-800">{String(item.val)}</p>
+                              <p className="font-bold text-gray-800 whitespace-pre-wrap">{String(item.val)}</p>
                               {(item.student_id || item.full_name) && (
                                 <p className="text-[10px] text-gray-400 font-semibold">
                                   — {item.full_name || 'Sinh viên'} ({item.student_id || 'MSSV'})
@@ -684,7 +765,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                     {['multiple_choice', 'checkboxes', 'dropdown'].includes(q.type) && (
                       <div className="space-y-3">
                         {(q.options || []).map((opt) => {
-                          // Đếm số người chọn tùy chọn opt
                           const count = answerList.filter(item => {
                             if (Array.isArray(item.val)) {
                               return item.val.includes(opt.text);
@@ -704,7 +784,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                                   {count} lượt ({percentage}%)
                                 </span>
                               </div>
-                              {/* Thanh tỉ lệ % đắp nền */}
                               <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
                                 <div
                                   className="bg-[#0054a5] h-3 rounded-full transition-all duration-500"

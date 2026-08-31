@@ -1,19 +1,20 @@
+// Sidebar.tsx
 'use client';
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { 
-  Info, Flag, Trophy, UserSquare2, Settings, Network, CalendarDays, FileText, Menu, X, LayoutGrid
+  LayoutDashboard, Flag, Trophy, Users, Settings, UserSquare2, CalendarDays, FileText, Menu, X, LayoutGrid
 } from "lucide-react"; 
 
 const menuItems = [
-  { id: "gioi-thieu", name: "Giới thiệu", href: "/about", icon: Info },
+  { id: "gioi-thieu", name: "Giới thiệu", href: "/about", icon: LayoutDashboard },
   { id: "tai-lieu", name: "Tài liệu", href: "/documents", icon: FileText },
   { id: "chuong-trinh-nam", name: "Chương trình năm", href: "/annual-programs", icon: CalendarDays },
   { id: "cong-tac-doan", name: "Công tác Đoàn - Đảng", href: "/union-party-affairs", icon: Flag },
   { id: "thi-dua", name: "Thi đua", href: "/emulation-awards", icon: Trophy },
-  { id: "to-chuc-doan", name: "Tổ chức Đoàn khoa", href: "/faculty-union-structure", icon: Network },
+  { id: "to-chuc-doan", name: "Tổ chức Đoàn khoa", href: "/faculty-union-structure", icon: Users },
   { id: "nhan-su", name: "Nhân sự", href: "/personnel", icon: UserSquare2 },
   { id: "mo-hinh-clb", name: "Mô hình CLPI", href: "/clpi-models", icon: LayoutGrid },
   { id: "cai-dat", name: "Cài đặt", href: "/settings", icon: Settings },
@@ -54,15 +55,16 @@ export default function Sidebar() {
   return (
     <>
       <button 
-        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-[#0054a5] text-white rounded-md"
+        className="lg:hidden fixed top-3.5 left-3 z-50 p-2 bg-[#0054a5] text-white rounded-xl shadow-md border-none cursor-pointer flex items-center justify-center active:scale-95"
         onClick={() => setIsOpen(!isOpen)}
+        aria-label="Toggle Menu"
       >
-        {isOpen ? <X size={24} /> : <Menu size={24} />}
+        {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
 
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden" 
+          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-40 lg:hidden animate-in fade-in duration-200" 
           onClick={() => setIsOpen(false)}
         />
       )}
@@ -70,7 +72,7 @@ export default function Sidebar() {
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-40
         w-64 bg-[#0054a5] text-white min-h-screen flex flex-col
-        transition-transform duration-300 ease-in-out
+        transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
         <div className="p-4 text-xl text-center font-bold">

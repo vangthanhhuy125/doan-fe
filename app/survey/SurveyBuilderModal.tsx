@@ -1,10 +1,12 @@
+// SurveyBuilderModal.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { 
   X, Plus, Copy, Trash2, Save, Lock, Unlock, 
   Loader2, MessageSquareText, Image as ImageIcon, Split,
-  FileSpreadsheet, Users, User, Hash, CheckSquare, List
+  FileSpreadsheet, Users, User, Hash, CheckSquare, List,
+  AlertCircle, CheckCircle2
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { SurveyForm, Question, QuestionType, Section } from './types';
@@ -16,7 +18,6 @@ interface Props {
   onSaved: () => void;
 }
 
-// 🟢 COMPONENT TỰ DÃN CHIỀU CAO + HỖ TRỢ PHÍM ENTER & CTRL+B/I/U
 function AutoResizeTextarea({
   value,
   onChange,
@@ -100,15 +101,19 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
   const [title, setTitle] = useState(survey?.title || 'Mẫu khảo sát chưa có tiêu đề');
   const [description, setDescription] = useState(survey?.description || '');
   const [isLocked, setIsLocked] = useState(!!survey?.is_locked);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
-  // 📑 DANH SÁCH CÁC PHẦN / TRANG (SECTIONS)
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
   const [sections, setSections] = useState<Section[]>(
     survey?.sections && survey.sections.length > 0
       ? survey.sections
       : [{ id: 'sec_default', title: 'Mục chưa có tiêu đề', description: '' }]
   );
 
-  // ❓ DANH SÁCH CÂU HỎI
   const [questions, setQuestions] = useState<Question[]>(
     survey?.questions && survey.questions.length > 0 
       ? survey.questions 
@@ -128,7 +133,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(questions[0]?.id || null);
   const responses = survey?.responses || [];
 
-  // Thêm câu hỏi
   const handleAddQuestion = (targetSectionId?: string) => {
     const secId = targetSectionId || sections[sections.length - 1].id;
     const newQ: Question = {
@@ -143,7 +147,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
     setActiveQuestionId(newQ.id);
   };
 
-  // Tách phần / Tách trang (Section Break)
   const handleAddSection = () => {
     const newSec: Section = {
       id: 'sec_' + Date.now(),
@@ -154,10 +157,9 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
     handleAddQuestion(newSec.id);
   };
 
-  // Xóa phần
   const handleRemoveSection = (secId: string) => {
     if (sections.length <= 1) {
-      alert('Biểu mẫu phải có ít nhất 1 phần!');
+      showToast('Biểu mẫu phải có ít nhất 1 phần!', 'error');
       return;
     }
     setSections(sections.filter(s => s.id !== secId));
@@ -169,7 +171,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
     setSections(prev => prev.map(s => s.id === secId ? { ...s, [field]: val } : s));
   };
 
-  // Nhân bản câu hỏi
   const handleDuplicateQuestion = (qToDup: Question) => {
     const duplicated: Question = {
       ...qToDup,
@@ -183,10 +184,9 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
     setActiveQuestionId(duplicated.id);
   };
 
-  // Xóa câu hỏi
   const handleRemoveQuestion = (id: string) => {
     if (questions.length === 1) {
-      alert('Phiếu khảo sát phải có ít nhất 1 câu hỏi!');
+      showToast('Phiếu khảo sát phải có ít nhất 1 câu hỏi!', 'error');
       return;
     }
     const filtered = questions.filter(q => q.id !== id);
@@ -200,12 +200,11 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
     setQuestions(prev => prev.map(q => q.id === id ? { ...q, [field]: value } : q));
   };
 
-  // Thêm/Upload hình ảnh vào câu hỏi
   const handleImageUpload = (qId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 3 * 1024 * 1024) {
-        alert('Dung lượng ảnh tối đa 3MB!');
+        showToast('Dung lượng ảnh tối đa 3MB!', 'error');
         return;
       }
       const reader = new FileReader();
@@ -216,7 +215,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
     }
   };
 
-  // Quản lý options đáp án
   const handleAddOption = (qId: string) => {
     setQuestions(prev => prev.map(q => {
       if (q.id === qId) {
@@ -246,7 +244,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
     setQuestions(prev => prev.map(q => {
       if (q.id === qId) {
         if ((q.options || []).length <= 1) {
-          alert('Câu hỏi phải có ít nhất 1 tùy chọn đáp án!');
+          showToast('Câu hỏi phải có ít nhất 1 tùy chọn đáp án!', 'error');
           return q;
         }
         return { ...q, options: (q.options || []).filter(o => o.id !== optId) };
@@ -255,10 +253,9 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
     }));
   };
 
-  // Lưu biểu mẫu
   const handleSave = async () => {
     if (!title.trim()) {
-      alert('Vui lòng nhập tiêu đề phiếu khảo sát!');
+      showToast('Vui lòng nhập tiêu đề phiếu khảo sát!', 'error');
       return;
     }
 
@@ -290,15 +287,17 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
       });
 
       if (res.ok) {
-        alert('Đã lưu phiếu khảo sát thành công!');
-        onSaved();
-        onClose();
+        showToast('Đã lưu phiếu khảo sát thành công!', 'success');
+        setTimeout(() => {
+          onSaved();
+          onClose();
+        }, 1200);
       } else {
-        alert('Lưu phiếu khảo sát thất bại!');
+        showToast('Lưu phiếu khảo sát thất bại!', 'error');
       }
     } catch (e) {
       console.error(e);
-      alert('Không thể kết nối đến máy chủ!');
+      showToast('Không thể kết nối đến máy chủ!', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -306,7 +305,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
   const exportResponsesToExcel = () => {
     if (!responses || responses.length === 0) {
-      alert('Chưa có lượt nộp bài khảo sát nào!');
+      showToast('Chưa có lượt nộp bài khảo sát nào!', 'info');
       return;
     }
 
@@ -335,7 +334,15 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
   return (
     <div className="fixed inset-0 z-[100] bg-[#f0f4f9] flex flex-col overflow-hidden text-black animate-in fade-in duration-200">
-      {/* HEADER TOP FIXED */}
+      {toastMessage && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold animate-in slide-in-from-top-4 duration-300 text-white ${
+          toastMessage.type === 'success' ? 'bg-emerald-600' : toastMessage.type === 'error' ? 'bg-rose-600' : 'bg-[#0054a5]'
+        }`}>
+          {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
+
       <header className="bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
         <div className="flex items-center gap-2 sm:gap-3">
           <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-md">
@@ -356,7 +363,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
           </div>
         </div>
 
-        {/* TAB GOOGLE FORMS */}
         <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
           <button
             type="button"
@@ -407,12 +413,9 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
         </div>
       </header>
 
-      {/* 🟢 VIEW 1: TRÌNH THIẾT KẾ CÂU HỎI (EDITOR) */}
       {activeTab === 'editor' && (
         <div className="flex-1 overflow-y-auto p-3 sm:p-6">
           <div className="max-w-3xl mx-auto space-y-6 relative pb-24">
-            
-            {/* THẺ TÊN BIỂU MẪU CHÍNH */}
             <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden border-t-8 border-t-[#0054a5]">
               <div className="p-4 sm:p-6 space-y-3">
                 <input
@@ -422,8 +425,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                   placeholder="Tiêu đề biểu mẫu"
                   className="w-full text-xl sm:text-2xl font-black text-gray-900 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none pb-1 transition-all"
                 />
-                
-                {/* 🟢 TỰ ĐỘNG CO GIÃN THEO NỘI DUNG MÔ TẢ BIỂU MẪU */}
                 <AutoResizeTextarea
                   value={description}
                   onChange={(val) => setDescription(val)}
@@ -433,13 +434,11 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
               </div>
             </div>
 
-            {/* LẶP QUA TỪNG PHẦN (SECTIONS) */}
             {sections.map((sec, secIdx) => {
               const secQuestions = questions.filter(q => (q.section_id || sections[0].id) === sec.id);
 
               return (
                 <div key={sec.id} className="space-y-4">
-                  {/* HEADER BADGE PHẦN */}
                   <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden border-l-8 border-l-[#0054a5]">
                     <div className="bg-[#0054a5] text-white px-4 py-1.5 inline-block font-black text-xs uppercase rounded-br-xl">
                       Phần {secIdx + 1} / {sections.length}
@@ -466,7 +465,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                         )}
                       </div>
 
-                      {/* 🟢 TỰ ĐỘNG CO GIÃN MÔ TẢ PHẦN */}
                       <AutoResizeTextarea
                         value={sec.description || ''}
                         onChange={(val) => handleSectionChange(sec.id, 'description', val)}
@@ -476,7 +474,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                     </div>
                   </div>
 
-                  {/* CÁC CÂU HỎI THUỘC PHẦN NÀY */}
                   {secQuestions.map((q) => {
                     const isActive = activeQuestionId === q.id;
 
@@ -491,8 +488,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                          
-                          {/* 🟢 TỰ ĐỘNG CO GIÃN NỘI DUNG CÂU HỎI */}
                           <div className="w-full sm:flex-1 bg-gray-50/80 p-2 sm:p-3 rounded-xl border border-gray-200 focus-within:border-[#0054a5] focus-within:bg-white transition-all">
                             <AutoResizeTextarea
                               value={q.text}
@@ -517,7 +512,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                           )}
                         </div>
 
-                        {/* KHU VỰC HIỂN THỊ ẢNH CÂU HỎI */}
                         {q.image_url && (
                           <div className="relative group max-w-md rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
                             <img src={q.image_url} alt="Ảnh câu hỏi" className="w-full max-h-64 object-contain" />
@@ -641,7 +635,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
               );
             })}
 
-            {/* THANH CÔNG CỤ NỔI (+ | =) */}
             <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 bg-white rounded-2xl border border-gray-200 shadow-2xl p-2 flex flex-col items-center gap-3 z-30">
               <button
                 type="button"
@@ -665,12 +658,9 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
         </div>
       )}
 
-      {/* 🟢 VIEW 2: QUẢN LÝ & BẢN TÓM TẮT CÂU TRẢ LỜI (GOOGLE FORMS SUMMARY) */}
       {activeTab === 'responses' && (
         <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           <div className="max-w-3xl mx-auto space-y-5 pb-24">
-            
-            {/* THẺ TỔNG SỐ LƯỢNG VÀ NÚT TẢI EXCEL */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
                 <div>
@@ -710,7 +700,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
               </div>
             </div>
 
-            {/* Render TỔNG HỢP CÂU TRẢ LỜI CHO TỪNG CÂU HỎI */}
             {responses.length === 0 ? (
               <div className="bg-white p-12 rounded-2xl border border-gray-200 text-center text-gray-400 font-medium italic">
                 Chưa có lượt phản hồi nào cho bài khảo sát này.
@@ -741,7 +730,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                       </p>
                     </div>
 
-                    {/* A. DẠNG TRẢ LỜI NGẮN Hoặc ĐOẠN VĂN */}
                     {['short_text', 'paragraph'].includes(q.type) && (
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                         {answerList.length === 0 ? (
@@ -761,7 +749,6 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                       </div>
                     )}
 
-                    {/* B. DẠNG TRẮC NGHIỆM / HỘP KIỂM / DROPDOWN (BẢN TÓM TẮT PHẦN TRĂM) */}
                     {['multiple_choice', 'checkboxes', 'dropdown'].includes(q.type) && (
                       <div className="space-y-3">
                         {(q.options || []).map((opt) => {

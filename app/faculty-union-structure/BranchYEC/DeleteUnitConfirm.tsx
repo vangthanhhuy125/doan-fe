@@ -10,26 +10,35 @@ interface Props {
 
 export default function DeleteUnitConfirm({ unitName, onClose, onConfirm }: Props) {
   return (
-    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white w-full max-w-sm rounded-[2.5rem] shadow-2xl overflow-hidden border border-red-50">
-        <div className="p-8 text-center space-y-4">
-          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full mx-auto flex items-center justify-center shadow-inner animate-bounce">
-            <AlertCircle size={32} />
+    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 animate-in fade-in duration-200 text-black">
+      <div className="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden border border-rose-100">
+        <div className="p-6 text-center space-y-3">
+          <div className="w-14 h-14 bg-rose-50 text-rose-500 rounded-2xl mx-auto flex items-center justify-center shadow-inner">
+            <AlertCircle size={28} />
           </div>
-          <div className="space-y-2">
-            <h3 className="text-xl font-black text-slate-800 tracking-tight">Xóa tập thể?</h3>
-            <p className="text-[13px] text-slate-500 leading-relaxed px-4">
-              Má chắc chắn muốn xóa <span className="font-bold text-red-600">"{unitName}"</span> khỏi danh sách trực thuộc không?
+          <div className="space-y-1.5">
+            <h3 className="text-lg font-black text-slate-800 tracking-tight">Xóa đơn vị này?</h3>
+            <p className="text-xs text-slate-500 leading-relaxed px-2">
+              Bạn có chắc chắn muốn xóa <br/>
+              <span className="font-extrabold text-rose-600">"{unitName}"</span> khỏi danh sách trực thuộc?
             </p>
           </div>
         </div>
-        <div className="flex p-6 gap-3 bg-slate-50">
-          <button onClick={onClose} className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-400 hover:bg-slate-200 transition-all uppercase text-[10px] tracking-widest">Hủy bỏ</button>
+
+        <div className="flex p-4 gap-3 bg-slate-50 border-t border-slate-100">
           <button 
-            onClick={() => { onConfirm(); onClose(); }}
-            className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-100 hover:bg-red-700 transition-all uppercase text-[10px] tracking-widest flex items-center justify-center gap-2"
+            type="button"
+            onClick={onClose} 
+            className="flex-1 py-2.5 px-4 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-xs tracking-wider border-none outline-none cursor-pointer"
           >
-            <Trash2 size={14} /> Xác nhận xóa
+            Hủy
+          </button>
+          <button 
+            type="button"
+            onClick={() => { onConfirm(); onClose(); }} 
+            className="flex-1 py-2.5 px-4 bg-rose-600 text-white rounded-xl font-bold shadow-md shadow-rose-200 hover:bg-rose-700 transition-all uppercase text-xs tracking-wider flex items-center justify-center gap-1.5 border-none outline-none cursor-pointer active:scale-95"
+          >
+            <Trash2 size={14} /> Xóa
           </button>
         </div>
       </div>

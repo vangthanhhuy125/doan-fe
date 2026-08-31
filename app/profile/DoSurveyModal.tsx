@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { X, Send, Loader2, ChevronRight, ChevronLeft, RefreshCw, CheckCircle2, Bold, Italic, Underline } from 'lucide-react';
+import { 
+  X, Send, Loader2, ChevronRight, ChevronLeft, RefreshCw, 
+  CheckCircle2, Bold, Italic, Underline, AlertCircle, BookmarkCheck 
+} from 'lucide-react';
 import { SurveyForm, Question } from './SurveyTab';
 
 interface Props {
@@ -12,7 +15,7 @@ interface Props {
   onSubmitSuccess: () => void;
 }
 
-// 🟢 COMPONENT Ô NHẬP LIỆU PHONG CÁCH NOTION / SLACK (INTEGRATED TOOLBAR)
+// 🟢 COMPONENT Ô NHẬP LIỆU PHONG CÁCH NOTION (INTEGRATED TOOLBAR)
 function FormattingTextarea({
   value,
   onChange,
@@ -90,7 +93,6 @@ function FormattingTextarea({
 
   return (
     <div className={`group relative border border-slate-200 focus-within:border-[#0054a5] focus-within:ring-4 focus-within:ring-[#0054a5]/10 rounded-2xl bg-white overflow-hidden transition-all duration-200 shadow-sm ${disabled ? 'bg-slate-50 cursor-not-allowed opacity-75' : ''}`}>
-      {/* Toolbar liền khối phía trên */}
       {!disabled && (
         <div className="flex items-center justify-between px-3.5 py-2 bg-slate-50/80 border-b border-slate-100 text-slate-500 select-none">
           <div className="flex items-center gap-1">
@@ -131,7 +133,6 @@ function FormattingTextarea({
         </div>
       )}
 
-      {/* Ô gõ nội dung */}
       <textarea
         ref={textareaRef}
         disabled={disabled}
@@ -152,6 +153,15 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
   const isSubmitted = !!existingResponse;
   const isLocked = !!survey.is_locked;
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const getSurveyId = (id: any) => typeof id === 'object' && id?.$oid ? id.$oid : String(id);
+  const draftKey = `survey_draft_${getSurveyId(survey._id)}_${userInfo.student_id}`;
 
   const sections = survey.sections && survey.sections.length > 0
     ? survey.sections
@@ -164,7 +174,17 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
     q => !q.section_id || q.section_id === currentSec.id || sections.length === 1
   );
 
+  // 🟢 1. KHỞI TẠO ĐÁP ÁN: ƯU TIÊN BẢN NHÁP TRƯỚC ĐÓ -> ĐÁP ÁN ĐÃ LƯU TRÊN SERVER
   const [answers, setAnswers] = useState<Record<string, any>>(() => {
+    if (typeof window !== 'undefined') {
+      const draft = localStorage.getItem(draftKey);
+      if (draft) {
+        try {
+          return JSON.parse(draft);
+        } catch (e) {}
+      }
+    }
+
     const initial: Record<string, any> = {};
     if (existingResponse?.answers) {
       existingResponse.answers.forEach((ans: any) => {
@@ -173,6 +193,13 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
     }
     return initial;
   });
+
+  // 🟢 2. TỰ ĐỘNG LƯU NHÁP VÀO LOCALSTORAGE KHI CÓ THAY ĐỔI
+  useEffect(() => {
+    if (Object.keys(answers).length > 0 && !isLocked) {
+      localStorage.setItem(draftKey, JSON.stringify(answers));
+    }
+  }, [answers, draftKey, isLocked]);
 
   const handleTextChange = (qId: string, val: string) => {
     setAnswers((prev) => ({ ...prev, [qId]: val }));
@@ -195,7 +222,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
       if (q.required) {
         const val = answers[q.id];
         if (!val || (Array.isArray(val) && val.length === 0)) {
-          alert(`Vui lòng trả lời câu hỏi bắt buộc: "${q.text}"`);
+          showToast(`Vui lòng trả lời câu hỏi bắt buộc: "${q.text}"`, 'error');
           return;
         }
       }
@@ -222,7 +249,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
       if (q.required) {
         const val = answers[q.id];
         if (!val || (Array.isArray(val) && val.length === 0)) {
-          alert(`Vui lòng trả lời câu hỏi bắt buộc: "${q.text}"`);
+          showToast(`Vui lòng trả lời câu hỏi bắt buộc: "${q.text}"`, 'error');
           return;
         }
       }
@@ -235,8 +262,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
         value: val,
       }));
 
-      const getFormId = (id: any) => typeof id === 'object' && id?.$oid ? id.$oid : String(id);
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys/${getFormId(survey._id)}/submit`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys/${getSurveyId(survey._id)}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -247,16 +273,19 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
       });
 
       if (res.ok) {
-        alert(isSubmitted ? 'Cập nhật câu trả lời thành công!' : 'Nộp phiếu khảo sát thành công!');
-        onSubmitSuccess();
-        onClose();
+        localStorage.removeItem(draftKey); // 🟢 Xóa bản nháp khi nộp thành công
+        showToast(isSubmitted ? 'Cập nhật câu trả lời thành công!' : 'Nộp phiếu khảo sát thành công!', 'success');
+        setTimeout(() => {
+          onSubmitSuccess();
+          onClose();
+        }, 1200);
       } else {
         const err = await res.json();
-        alert(err.message || 'Nộp phiếu khảo sát thất bại!');
+        showToast(err.message || 'Nộp phiếu khảo sát thất bại!', 'error');
       }
     } catch (e) {
       console.error(e);
-      alert('Không thể kết nối máy chủ!');
+      showToast('Không thể kết nối máy chủ!', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -265,10 +294,20 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-2 sm:p-6 text-black animate-in fade-in duration-200">
       
-      {/* 🟢 KHUNG MODAL RỘNG 2/3 MÀN HÌNH (lg:w-2/3 max-w-5xl) */}
+      {/* TOAST THÔNG BÁO THAY THẾ ALERT */}
+      {toastMessage && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold animate-in slide-in-from-top-4 duration-300 text-white ${
+          toastMessage.type === 'success' ? 'bg-emerald-600' : toastMessage.type === 'error' ? 'bg-rose-600' : 'bg-[#0054a5]'
+        }`}>
+          {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
+
+      {/* KHUNG MODAL RỘNG 2/3 MÀN HÌNH (lg:w-2/3 max-w-5xl) */}
       <div className="bg-white w-full h-full sm:h-auto lg:w-2/3 max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 sm:max-h-[90vh] flex flex-col">
         
-        {/* HEADER VỚI CHỦ ĐỀ SANG TRỌNG */}
+        {/* HEADER MODAL */}
         <div className="bg-gradient-to-r from-[#004282] to-[#0054a5] p-5 sm:p-6 text-white shrink-0 shadow-md">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1.5 flex-1">
@@ -276,9 +315,13 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                 <span className="bg-white/15 text-blue-100 border border-white/20 px-3 py-0.5 rounded-full text-xs font-bold tracking-wide backdrop-blur-xs">
                   Phần {currentSectionIndex + 1} / {sections.length}
                 </span>
-                {isSubmitted && (
+                {isSubmitted ? (
                   <span className="bg-emerald-500/90 text-white px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs">
                     <CheckCircle2 size={13} /> Đã thực hiện
+                  </span>
+                ) : (
+                  <span className="bg-white/15 text-blue-100 px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                    <BookmarkCheck size={13} /> Tự động lưu nháp
                   </span>
                 )}
               </div>
@@ -298,6 +341,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
               type="button"
               onClick={onClose}
               className="p-2 hover:bg-white/15 rounded-full text-white/80 hover:text-white transition-all border-none bg-transparent cursor-pointer shrink-0"
+              title="Đóng (Không mất nội dung đã điền)"
             >
               <X size={22} />
             </button>
@@ -314,7 +358,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
           </div>
         )}
 
-        {/* NỘI DUNG CÂU HỎI (ĐÃ MỞ RỘNG KHÔNG GIAN HỢP LÝ) */}
+        {/* NỘI DUNG CÂU HỎI */}
         <form onSubmit={handleSubmit} className="p-5 sm:p-8 overflow-y-auto space-y-6 flex-1 text-left bg-slate-50/50">
           {currentQuestions.map((q: Question, idx: number) => {
             const val = answers[q.id];
@@ -330,14 +374,12 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                   </label>
                 </div>
 
-                {/* ẢNH MINH HỌA CÂU HỎI */}
                 {q.image_url && (
                   <div className="rounded-xl overflow-hidden border border-slate-200 max-w-lg bg-slate-50">
                     <img src={q.image_url} alt="Minh họa" className="w-full max-h-72 object-contain p-2" />
                   </div>
                 )}
 
-                {/* INPUT CÂU TRẢ LỜI NGẮN */}
                 {q.type === 'short_text' && (
                   <input
                     type="text"
@@ -349,7 +391,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                   />
                 )}
 
-                {/* INPUT CÂU TRẢ LỜI ĐOẠN VĂN (VỚI TOOLBAR TÍCH HỢP) */}
                 {q.type === 'paragraph' && (
                   <FormattingTextarea
                     disabled={isLocked}
@@ -359,7 +400,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                   />
                 )}
 
-                {/* CÂU HỎI TRẮC NGHIỆM */}
                 {q.type === 'multiple_choice' && (
                   <div className="space-y-2.5 pt-1">
                     {q.options?.map((opt) => (
@@ -385,7 +425,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                   </div>
                 )}
 
-                {/* CÂU HỎI HỘP KIỂM (CHECKBOXES) */}
                 {q.type === 'checkboxes' && (
                   <div className="space-y-2.5 pt-1">
                     {q.options?.map((opt) => {
@@ -413,7 +452,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                   </div>
                 )}
 
-                {/* DROPDOWN */}
                 {q.type === 'dropdown' && (
                   <select
                     disabled={isLocked}
@@ -433,7 +471,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
             );
           })}
 
-          {/* CỤM NÚT ĐIỀU HƯỚNG BOTTOM */}
           <div className="pt-4 border-t border-slate-200/60 flex items-center justify-between shrink-0 gap-2">
             {currentSectionIndex > 0 ? (
               <button

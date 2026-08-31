@@ -1,7 +1,8 @@
+// SubmitRegistrationModal.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, FileCheck2, User, Send, UserCheck, Check, Loader2, Lock } from 'lucide-react';
+import { X, FileCheck2, User, Send, UserCheck, Check, Loader2, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { RegistrationForm, ProgramConfig } from '../annual-programs/registration-forms/types';
 
 interface Props {
@@ -19,7 +20,7 @@ export default function SubmitRegistrationModal({
   onClose, 
   onSubmitSuccess 
 }: Props) {
-  const isLocked = !!form.is_locked; // Check xem phiếu có bị khóa không
+  const isLocked = !!form.is_locked;
 
   const [choices, setChoices] = useState<Record<string, string>>(
     existingSubmission?.choices || {}
@@ -28,6 +29,12 @@ export default function SubmitRegistrationModal({
     existingSubmission?.leadership_choices || {}
   );
   const [submitting, setSubmitting] = useState(false);
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   useEffect(() => {
     if (existingSubmission) {
@@ -57,7 +64,7 @@ export default function SubmitRegistrationModal({
   };
 
   const handleSelectDepartment = (programId: string, deptName: string) => {
-    if (isLocked) return; // Nếu bị khóa thì không cho chọn
+    if (isLocked) return;
 
     setChoices(prev => {
       const updated = { ...prev };
@@ -85,16 +92,16 @@ export default function SubmitRegistrationModal({
   };
 
   const handleSelectLeadership = (programId: string, option: string) => {
-    if (isLocked) return; // Nếu bị khóa thì không cho chọn
+    if (isLocked) return;
 
     const selectedDept = choices[programId];
     const isAllowed = isLeadershipOptionAllowed(selectedDept, option);
 
     if (!isAllowed) {
       if (!selectedDept) {
-        alert(`Bạn cần chọn 1 Ban ứng tuyển ở trên trước khi đăng ký vị trí này!`);
+        showToast('Bạn cần chọn 1 Ban ứng tuyển ở trên trước khi đăng ký vị trí này!', 'error');
       } else {
-        alert(`Bạn đang chọn "${selectedDept}" nên chỉ có thể ứng cử vị trí của Ban này, các vị trí Ban Tổ chức hoặc Mentor/Cố vấn!`);
+        showToast(`Bạn đang chọn "${selectedDept}" nên chỉ có thể ứng cử vị trí của Ban này, các vị trí Ban Tổ chức hoặc Mentor/Cố vấn!`, 'error');
       }
       return;
     }
@@ -118,7 +125,7 @@ export default function SubmitRegistrationModal({
     if (isLocked) return;
     
     if (Object.keys(choices).length === 0 && Object.keys(leadershipChoices).length === 0) {
-      alert('Vui lòng chọn ít nhất 1 Ban tham gia hoặc 1 vị trí ứng cử!');
+      showToast('Vui lòng chọn ít nhất 1 Ban tham gia hoặc 1 vị trí ứng cử!', 'error');
       return;
     }
 
@@ -141,16 +148,18 @@ export default function SubmitRegistrationModal({
       });
 
       if (res.ok) {
-        alert(existingSubmission ? 'Cập nhật nguyện vọng thành công!' : 'Gửi phiếu đăng ký thành công!');
-        onSubmitSuccess();
-        onClose();
+        showToast(existingSubmission ? 'Cập nhật nguyện vọng thành công!' : 'Gửi phiếu đăng ký thành công!', 'success');
+        setTimeout(() => {
+          onSubmitSuccess();
+          onClose();
+        }, 1200);
       } else {
         const err = await res.json();
-        alert(err.message || 'Gửi phiếu thất bại, vui lòng thử lại!');
+        showToast(err.message || 'Gửi phiếu thất bại, vui lòng thử lại!', 'error');
       }
     } catch (error) {
       console.error('Lỗi nộp phiếu:', error);
-      alert('Không thể kết nối đến máy chủ!');
+      showToast('Không thể kết nối đến máy chủ!', 'error');
     } finally {
       setSubmitting(false);
     }
@@ -158,6 +167,15 @@ export default function SubmitRegistrationModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in zoom-in duration-200 text-black">
+      {toastMessage && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold animate-in slide-in-from-top-4 duration-300 text-white ${
+          toastMessage.type === 'success' ? 'bg-emerald-600' : toastMessage.type === 'error' ? 'bg-rose-600' : 'bg-[#0054a5]'
+        }`}>
+          {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
+
       <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-white/20 max-h-[90vh] flex flex-col">
         <div className="bg-[#0054a5] p-5 flex items-center justify-between text-white shrink-0">
           <div className="flex items-center gap-2">
@@ -172,7 +190,6 @@ export default function SubmitRegistrationModal({
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-left">
-          {/* CẢNH BÁO PHIẾU ĐÃ KHÓA */}
           {isLocked && (
             <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl flex items-center gap-3 text-rose-700 text-xs font-bold">
               <Lock size={18} className="shrink-0" />
@@ -223,7 +240,6 @@ export default function SubmitRegistrationModal({
                     )}
                   </div>
 
-                  {/* CHỌN BAN CHUYÊN MÔN */}
                   <div className="space-y-2 pt-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {prog.departments.map((dept: string) => {
@@ -257,7 +273,6 @@ export default function SubmitRegistrationModal({
                     </div>
                   </div>
 
-                  {/* KHẢO SÁT ỨNG CỬ TRƯỞNG BAN / PHÓ BAN */}
                   {prog.enable_leadership_survey && (
                     <div className="pt-3 border-t border-gray-100 space-y-2.5">
                       <label className="text-[11px] font-bold uppercase text-amber-700 tracking-wider flex items-center gap-1">

@@ -3,6 +3,9 @@
 import { useState, useEffect } from "react";
 import { Info, Target, ShieldCheck, Award, LayoutDashboard, MapPin, Mail, Facebook, X } from "lucide-react";
 
+let memoryCachedBanners: string[] | null = null;
+let memoryCachedConfig: any = null;
+
 export default function GioiThieuPage() {
   const [banners, setBanners] = useState<string[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -12,40 +15,76 @@ export default function GioiThieuPage() {
     contact: { address: "", email: "", fanpage: "", introduction: "", mission: "", vocation: "", structure: "", softwareIntro: "" }
   });
 
-  // State quản lý phần tử thành tích đang chọn để hiển thị PopUp Modal công trình vinh danh
   const [selectedAchievement, setSelectedAchievement] = useState<any>(null);
 
   useEffect(() => {
-    const fetchBanners = async () => {
+    if (memoryCachedBanners && memoryCachedBanners.length > 0) {
+      setBanners(memoryCachedBanners);
+    } else {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/banner-config`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && Array.isArray(data.images) && data.images.length > 0) setBanners(data.images);
+        const localBanners = sessionStorage.getItem('gioithieu_banners');
+        if (localBanners) {
+          const parsed = JSON.parse(localBanners);
+          memoryCachedBanners = parsed;
+          setBanners(parsed);
         }
-      } catch (error) { console.error("Lỗi lấy banner:", error); }
-    };
-    fetchBanners();
-  }, []);
+      } catch (e) {}
+    }
 
-  useEffect(() => {
-    const fetchSystemConfig = async () => {
+    if (memoryCachedConfig) {
+      setConfig(memoryCachedConfig);
+    } else {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/system-config`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data) setConfig(data);
+        const localConfig = sessionStorage.getItem('gioithieu_config');
+        if (localConfig) {
+          const parsed = JSON.parse(localConfig);
+          memoryCachedConfig = parsed;
+          setConfig(parsed);
         }
-      } catch (error) { console.error("Lỗi lấy cấu hình hệ thống:", error); }
+      } catch (e) {}
+    }
+
+    const fetchData = async () => {
+      try {
+        const [bannerRes, configRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/banner-config`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/system-config`)
+        ]);
+
+        if (bannerRes.ok) {
+          const bannerData = await bannerRes.json();
+          if (bannerData && Array.isArray(bannerData.images) && bannerData.images.length > 0) {
+            memoryCachedBanners = bannerData.images;
+            setBanners(bannerData.images);
+            try {
+              sessionStorage.setItem('gioithieu_banners', JSON.stringify(bannerData.images));
+            } catch (e) {}
+          }
+        }
+
+        if (configRes.ok) {
+          const configData = await configRes.json();
+          if (configData) {
+            memoryCachedConfig = configData;
+            setConfig(configData);
+            try {
+              sessionStorage.setItem('gioithieu_config', JSON.stringify(configData));
+            } catch (e) {}
+          }
+        }
+      } catch (error) {
+        console.error("Lỗi lấy dữ liệu giới thiệu:", error);
+      }
     };
-    fetchSystemConfig();
+
+    fetchData();
   }, []);
 
   useEffect(() => {
     if (banners.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentIndex((prevIndex) => (prevIndex + 1) % banners.length);
-    }, 1000);
+    }, 4000);
     return () => clearInterval(interval);
   }, [banners]);
 
@@ -54,7 +93,6 @@ export default function GioiThieuPage() {
 
   return (
     <div className="space-y-8 text-left relative">
-      {/* 1. Header Trang */}
       <div className="border-b pb-4">
         <div className="flex items-center gap-3 pb-3">
           <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100">
@@ -68,7 +106,6 @@ export default function GioiThieuPage() {
         </p>
       </div>
 
-      {/* 2. Banner chính */}
       <div className="relative h-64 w-full rounded-xl overflow-hidden shadow-lg bg-gray-100 block">
         <img src={banners.length > 0 ? banners[currentIndex] : "/banner-doan.jpg"} alt="Banner Đoàn" className="absolute inset-0 w-full h-full object-cover transition-all duration-500 z-0" />
         <div className="absolute inset-0 bg-blue-900/40 flex items-center px-8 z-10">
@@ -79,7 +116,6 @@ export default function GioiThieuPage() {
         </div>
       </div>
 
-      {/* 3. Lưới thông tin (Grid Sứ mệnh, Nhiệm vụ, Cơ cấu) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <div className="p-6 bg-blue-50 rounded-xl border border-blue-100 hover:shadow-md transition-all">
           <div className="w-12 h-12 bg-blue-500 rounded-lg flex items-center justify-center text-white mb-4 shadow-md"><Target size={24} /></div>
@@ -98,7 +134,6 @@ export default function GioiThieuPage() {
         </div>
       </div>
 
-      {/* ĐÃ SỬA: BIẾN KHỐI THÀNH TÍCH THÀNH LƯỚI GRID HÌNH ẢNH LỊCH SỬ KÈM NĂM HỌC */}
       <div className="space-y-4">
         <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
           <Award size={22} className="text-yellow-500" />
@@ -133,19 +168,16 @@ export default function GioiThieuPage() {
         )}
       </div>
 
-      {/* ĐÃ THÊM MỚI: BỘ POPUP MODAL HIỂN THỊ CHI TIẾT THÀNH TÍCH KHI NGƯỜI DÙNG NHẤP VÀO */}
       {selectedAchievement && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl border border-white/20 overflow-hidden flex flex-col max-h-[85vh] animate-in zoom-in-95 duration-300 text-black">
-            {/* Header popup màu vàng vinh danh */}
             <div className="bg-gradient-to-r from-yellow-500 to-amber-600 p-6 flex items-center justify-between text-white">
               <div className="flex items-center gap-3">
                 <Award size={22} className="animate-bounce" />
                 <h3 className="font-black tracking-widest text-sm">Thành tích năm học {selectedAchievement.academicYear}</h3>
               </div>
-              <button onClick={() => setSelectedAchievement(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20} /></button>
+              <button onClick={() => setSelectedAchievement(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white cursor-pointer"><X size={20} /></button>
             </div>
-            {/* Nội dung popup */}
             <div className="p-6 overflow-y-auto space-y-5">
               {selectedAchievement.image && (
                 <div className="w-full h-64 rounded-2xl overflow-hidden shadow-md bg-gray-50">
@@ -163,7 +195,6 @@ export default function GioiThieuPage() {
         </div>
       )}
 
-      {/* 4. Về phần mềm quản lý & Liên hệ */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 bg-white p-8 rounded-xl border border-gray-100 shadow-sm space-y-5">
           <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2"><span className="w-2 h-6 bg-blue-600 rounded-full"></span>Về phần mềm quản lý</h3>

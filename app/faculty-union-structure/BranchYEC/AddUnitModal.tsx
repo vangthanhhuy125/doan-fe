@@ -8,11 +8,12 @@ interface AddUnitModalProps {
   onSave: (newUnit: any) => void;
 }
 
+let cachedUsersForAddUnit: any[] | null = null;
+
 export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
   const [type, setType] = useState<'CHIDOAN' | 'TAPTHE'>('CHIDOAN');
   const [userList, setUserList] = useState<any[]>([]);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  
   const [formData, setFormData] = useState<any>({
     ten: "",
     group_name: "",
@@ -20,23 +21,32 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
     intake: "",
     biThu: "",
     phoBiThu: "",
-    uvbch: [],
+    uvbch: ["", "", ""],
     member: [
-      { role: "", name: "" },
-      { role: "", name: "" },
-      { role: "", name: "" }
+      { role: "Chủ nhiệm", name: "" },
+      { role: "Phó Chủ nhiệm", name: "" },
+      { role: "Ủy viên", name: "" }
     ]
   });
 
   const leaderRoles = ["Chủ nhiệm", "Trưởng ban", "Đội trưởng"];
-  const subRoles = ["Phó Chủ nhiệm", "Phó ban", "Đội phó"];
+  const subRoles = ["Phó Chủ nhiệm", "Phó ban", "Đội phó", "Ủy viên"];
 
   useEffect(() => {
+    if (cachedUsersForAddUnit && cachedUsersForAddUnit.length > 0) {
+      setUserList(cachedUsersForAddUnit);
+      const uniqueClasses = Array.from(new Set(cachedUsersForAddUnit.map((u: any) => u.class)))
+        .filter(Boolean)
+        .sort() as string[];
+      setAvailableClasses(uniqueClasses);
+    }
+
     const fetchUsers = async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`);
         const data = await res.json();
         const users = Array.isArray(data) ? data : [];
+        cachedUsersForAddUnit = users;
         setUserList(users);
         
         const uniqueClasses = Array.from(new Set(users.map((u: any) => u.class)))
@@ -44,8 +54,10 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
           .sort() as string[];
         setAvailableClasses(uniqueClasses);
       } catch (error) {
-        setUserList([]);
-        setAvailableClasses([]);
+        if (!cachedUsersForAddUnit) {
+          setUserList([]);
+          setAvailableClasses([]);
+        }
       }
     };
     fetchUsers();
@@ -56,10 +68,10 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const payload = { 
-        ...formData, 
-        unitType: type, 
-        group_name: formData.ten,
-        intake: formData.khoa 
+      ...formData, 
+      unitType: type, 
+      group_name: formData.ten,
+      intake: formData.khoa 
     };
     onSave(payload);
   };
@@ -71,45 +83,58 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in zoom-in duration-200 text-black">
-      <div className="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-purple-100 max-h-[90vh] flex flex-col">
-        <div className="bg-purple-600 p-6 flex items-center justify-between text-white shrink-0">
+    <div className="fixed inset-0 z-[160] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-3 sm:p-4 animate-in fade-in duration-200 text-black">
+      <div className="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden border border-slate-100 max-h-[90vh] flex flex-col">
+        <div className="bg-gradient-to-r from-[#004282] to-[#0054a5] p-5 sm:p-6 flex items-center justify-between text-white shrink-0 shadow-md">
           <div className="flex items-center gap-3">
-            <Plus size={20} />
-            <h3 className="font-bold uppercase tracking-widest text-xs">Thêm đơn vị trực thuộc</h3>
+            <div className="p-2 bg-white/15 rounded-xl border border-white/20">
+              <Plus size={18} />
+            </div>
+            <h3 className="font-extrabold uppercase tracking-wide text-xs sm:text-sm">
+              Thêm đơn vị trực thuộc
+            </h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors"><X size={20} /></button>
+          <button 
+            onClick={onClose} 
+            className="p-1.5 hover:bg-white/15 rounded-full text-white transition-colors border-none bg-transparent cursor-pointer"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <div className="flex p-2 bg-slate-100 m-6 mb-0 rounded-2xl shrink-0">
+        <div className="flex p-1.5 bg-slate-100 m-5 mb-0 rounded-2xl shrink-0">
           <button 
             type="button"
             onClick={() => setType('CHIDOAN')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${type === 'CHIDOAN' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all border-none cursor-pointer ${
+              type === 'CHIDOAN' ? 'bg-white text-[#0054a5] shadow-xs' : 'text-slate-600 hover:text-slate-900 bg-transparent'
+            }`}
           >
             <School size={16} /> Chi đoàn
           </button>
           <button 
             type="button"
             onClick={() => setType('TAPTHE')}
-            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all ${type === 'TAPTHE' ? 'bg-white text-purple-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all border-none cursor-pointer ${
+              type === 'TAPTHE' ? 'bg-white text-[#0054a5] shadow-xs' : 'text-slate-600 hover:text-slate-900 bg-transparent'
+            }`}
           >
-            <Users size={16} /> CLB / Ban / Đội
+            <Users size={16} /> CLB / Đội / Ban
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-8 space-y-6 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {type === 'CHIDOAN' ? (
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Tên Chi đoàn</label>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Tên Chi đoàn</label>
                   <div className="relative">
                     <select
                       required
                       value={formData.ten}
-                      onChange={(e) => setFormData({...formData, ten: e.target.value, biThu: "", phoBiThu: "", uvbch: []})}
-                      className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold"
+                      onChange={(e) => setFormData({...formData, ten: e.target.value, biThu: "", phoBiThu: "", uvbch: ["", "", ""]})}
+                      className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm text-slate-800 appearance-none cursor-pointer pr-8 font-bold"
                     >
                       <option value="" disabled>-- Chọn Chi đoàn --</option>
                       {availableClasses.map((c) => (
@@ -119,44 +144,52 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Khóa</label>
-                  <input required placeholder="2023" value={formData.khoa} onChange={(e) => setFormData({...formData, khoa: e.target.value})} className="w-full p-3 bg-slate-50 rounded-xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm text-slate-800 font-bold" />
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Khóa</label>
+                  <input 
+                    required 
+                    placeholder="VD: 2023" 
+                    value={formData.khoa} 
+                    onChange={(e) => setFormData({...formData, khoa: e.target.value})} 
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm text-slate-800 font-bold" 
+                  />
                 </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 border-t pt-4">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-red-400 ml-1">Bí thư</label>
+              <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase text-rose-600 ml-1">Bí thư</label>
                   <div className="relative">
                     <select
                       required
                       disabled={!formData.ten}
                       value={formData.biThu}
                       onChange={(e) => setFormData({...formData, biThu: e.target.value})}
-                      className="w-full p-3 bg-red-50/30 rounded-xl border border-red-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
+                      className="w-full p-3 bg-rose-50/50 rounded-xl border border-rose-100 focus:bg-white outline-none text-xs sm:text-sm text-slate-800 appearance-none cursor-pointer pr-8 font-bold disabled:opacity-50"
                     >
                       <option value="">-- Chọn nhân sự --</option>
                       {filteredUsers.map((u: any) => (
-                        <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                        <option key={u._id || u.id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
                       ))}
                     </select>
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-amber-500 ml-1">Phó Bí thư</label>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold uppercase text-amber-600 ml-1">Phó Bí thư</label>
                   <div className="relative">
                     <select
                       required
                       disabled={!formData.ten}
                       value={formData.phoBiThu}
                       onChange={(e) => setFormData({...formData, phoBiThu: e.target.value})}
-                      className="w-full p-3 bg-amber-50/30 rounded-xl border border-amber-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
+                      className="w-full p-3 bg-amber-50/50 rounded-xl border border-amber-100 focus:bg-white outline-none text-xs sm:text-sm text-slate-800 appearance-none cursor-pointer pr-8 font-bold disabled:opacity-50"
                     >
                       <option value="">-- Chọn nhân sự --</option>
                       {filteredUsers.map((u: any) => (
-                        <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                        <option key={u._id || u.id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
                       ))}
                     </select>
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -164,73 +197,54 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
                 </div>
               </div>
 
-              <div className="space-y-3 border-t pt-4">
-                <label className="text-[10px] font-black uppercase text-blue-500 ml-1">Ủy viên Ban Chấp hành</label>
+              <div className="space-y-2.5 border-t border-slate-100 pt-3">
+                <label className="text-[10px] font-bold uppercase text-[#0054a5] ml-1">Ủy viên Ban Chấp hành Chi đoàn</label>
                 
-                <div className="relative">
-                  <select
-                    required
-                    disabled={!formData.ten}
-                    value={formData.uvbch[0] || ""}
-                    onChange={(e) => { const newUv = [...formData.uvbch]; newUv[0] = e.target.value; setFormData({...formData, uvbch: newUv}); }}
-                    className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
-                  >
-                    <option value="">-- Chọn UV BCH 1 --</option>
-                    {filteredUsers.map((u: any) => (
-                      <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
-
-                <div className="relative">
-                  <select
-                    disabled={!formData.ten}
-                    value={formData.uvbch[1] || ""}
-                    onChange={(e) => { const newUv = [...formData.uvbch]; newUv[1] = e.target.value; setFormData({...formData, uvbch: newUv}); }}
-                    className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
-                  >
-                    <option value="">-- Chọn UV BCH 2 --</option>
-                    {filteredUsers.map((u: any) => (
-                      <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
-
-                <div className="relative">
-                  <select
-                    disabled={!formData.ten}
-                    value={formData.uvbch[2] || ""}
-                    onChange={(e) => { const newUv = [...formData.uvbch]; newUv[2] = e.target.value; setFormData({...formData, uvbch: newUv}); }}
-                    className="w-full p-3 bg-blue-50/30 rounded-xl border border-blue-50 focus:bg-white outline-none text-sm text-slate-800 appearance-none cursor-pointer pr-10 font-bold disabled:opacity-50"
-                  >
-                    <option value="">-- Chọn UV BCH 3 --</option>
-                    {filteredUsers.map((u: any) => (
-                      <option key={u._id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
-                    ))}
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
+                {[0, 1, 2].map((idx) => (
+                  <div key={idx} className="relative">
+                    <select
+                      disabled={!formData.ten}
+                      value={formData.uvbch[idx] || ""}
+                      onChange={(e) => {
+                        const newUv = [...formData.uvbch];
+                        newUv[idx] = e.target.value;
+                        setFormData({...formData, uvbch: newUv});
+                      }}
+                      className="w-full p-2.5 bg-blue-50/40 rounded-xl border border-blue-100 focus:bg-white outline-none text-xs text-slate-800 appearance-none cursor-pointer pr-8 font-bold disabled:opacity-50"
+                    >
+                      <option value="">-- Chọn UV BCH {idx + 1} (Tùy chọn) --</option>
+                      {filteredUsers.map((u: any) => (
+                        <option key={u._id || u.id} value={u.full_name || u.name}>{u.full_name || u.name}</option>
+                      ))}
+                    </select>
+                    <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  </div>
+                ))}
               </div>
             </div>
           ) : (
-            <div className="space-y-5">
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Tên CLB / Ban / Đội</label>
-                <input required placeholder="CLB GamApp" value={formData.ten} onChange={(e) => setFormData({...formData, ten: e.target.value})} className="w-full p-4 bg-slate-50 rounded-2xl border border-transparent focus:bg-white focus:border-purple-400 outline-none text-sm text-slate-800" />
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Tên CLB / Ban / Đội</label>
+                <input 
+                  required 
+                  placeholder="VD: CLB GameApp" 
+                  value={formData.ten} 
+                  onChange={(e) => setFormData({...formData, ten: e.target.value})} 
+                  className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm font-bold text-slate-800" 
+                />
               </div>
 
-              <div className="space-y-4 border-t pt-4">
-                <label className="text-[10px] font-black uppercase text-slate-400 ml-1">Cơ cấu nhân sự</label>
+              <div className="space-y-3 border-t border-slate-100 pt-3">
+                <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Ban điều hành / Trưởng ban</label>
                 {formData.member.map((member: any, index: number) => (
-                  <div key={index} className="grid grid-cols-2 gap-3 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                  <div key={index} className="grid grid-cols-2 gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
                     <div className="relative">
                       <select 
                         required 
                         value={member.role} 
                         onChange={(e) => updateMember(index, 'role', e.target.value)}
-                        className="w-full p-2.5 bg-white rounded-lg border border-slate-200 text-xs font-bold outline-none focus:border-purple-400 appearance-none pr-8 cursor-pointer" 
+                        className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs font-bold outline-none focus:border-[#0054a5] appearance-none pr-7 cursor-pointer"
                       >
                         <option value="" disabled>-- Chức vụ --</option>
                         {(index === 0 ? leaderRoles : subRoles).map((opt) => (
@@ -239,12 +253,13 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
                       </select>
                       <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
+
                     <input 
                       required 
-                      placeholder="Họ và tên" 
+                      placeholder="Họ và tên..." 
                       value={member.name} 
                       onChange={(e) => updateMember(index, 'name', e.target.value)}
-                      className="p-2.5 bg-white rounded-lg border border-slate-200 text-xs font-bold outline-none focus:border-purple-400" 
+                      className="p-2 bg-white rounded-lg border border-slate-200 text-xs font-bold outline-none focus:border-[#0054a5]"
                     />
                   </div>
                 ))}
@@ -252,10 +267,19 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
             </div>
           )}
 
-          <div className="pt-4 flex gap-3 shrink-0">
-            <button type="button" onClick={onClose} className="flex-1 py-3 rounded-2xl font-bold text-slate-400 hover:bg-slate-100 transition-all text-[10px] uppercase tracking-widest text-black">Hủy</button>
-            <button type="submit" className="flex-1 py-3 bg-purple-600 text-white rounded-2xl font-bold shadow-lg shadow-purple-100 hover:bg-purple-700 transition-all text-[10px] uppercase tracking-widest flex items-center justify-center gap-2">
-               Lưu
+          <div className="pt-4 flex gap-3 border-t border-slate-100 shrink-0">
+            <button 
+              type="button" 
+              onClick={onClose} 
+              className="flex-1 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-xs uppercase tracking-wider border-none cursor-pointer"
+            >
+              Hủy
+            </button>
+            <button 
+              type="submit" 
+              className="flex-1 py-2.5 bg-[#0054a5] text-white hover:bg-blue-700 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 border-none cursor-pointer active:scale-95"
+            >
+              Lưu đơn vị
             </button>
           </div>
         </form>

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ClipboardList, CheckCircle2, Clock, ChevronRight, Loader2, Calendar, Lock } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, ChevronRight, Loader2, Calendar, Lock, ChevronDown, ChevronUp } from 'lucide-react';
 import DoSurveyModal from './DoSurveyModal';
 
 export interface Section {
@@ -44,6 +44,29 @@ interface Props {
     full_name: string;
   };
   onRefreshCount?: () => void;
+}
+
+function ExpandableDescription({ text }: { text: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLong = text.length > 160 || text.split('\n').length > 3;
+
+  return (
+    <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100">
+      <p className={`text-xs sm:text-sm font-normal text-slate-700 leading-relaxed whitespace-pre-wrap transition-all ${!isExpanded && isLong ? 'line-clamp-3' : ''}`}>
+        {text}
+      </p>
+      {isLong && (
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="mt-2 text-xs font-bold text-[#0054a5] hover:text-blue-700 flex items-center gap-1 border-none bg-transparent cursor-pointer p-0 transition-colors"
+        >
+          <span>{isExpanded ? 'Thu gọn mô tả' : 'Xem thêm mô tả...'}</span>
+          {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+        </button>
+      )}
+    </div>
+  );
 }
 
 export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
@@ -91,7 +114,6 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 text-black">
-      {/* HEADER DANH SÁCH */}
       <div className="flex items-center justify-between border-b border-gray-200 pb-3">
         <h3 className="flex items-center gap-2 text-lg font-bold text-gray-800">
           <ClipboardList className="text-[#0054a5]" size={20} /> Danh sách phiếu khảo sát
@@ -118,7 +140,6 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
                 key={surveyId}
                 className="rounded-2xl border border-slate-200/80 bg-white p-5 sm:p-6 shadow-xs hover:border-[#0054a5]/50 hover:shadow-md transition-all space-y-4"
               >
-                {/* HÀNG TOP: TIÊU ĐỀ, TRẠNG THÁI & NÚT THAO TÁC */}
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 pb-3">
                   <div className="space-y-2 flex-1 pr-2">
                     <div className="flex items-center gap-2.5 flex-wrap">
@@ -155,16 +176,10 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
                   </button>
                 </div>
 
-                {/* NỘI DUNG MÔ TẢ PHIẾU (HIỂN THỊ CHUẨN XUỐNG DÒNG PARAGRAPH) */}
                 {survey.description && (
-                  <div className="bg-slate-50/80 p-4 rounded-xl border border-slate-100">
-                    <p className="text-xs sm:text-sm font-normal text-slate-700 leading-relaxed whitespace-pre-wrap">
-                      {survey.description}
-                    </p>
-                  </div>
+                  <ExpandableDescription text={survey.description} />
                 )}
 
-                {/* FOOTER THÔNG TIN NGÀY TẠO & SỐ CÂU HỎI */}
                 <div className="flex items-center justify-between text-xs text-slate-400 font-semibold pt-1">
                   <div className="flex items-center gap-1.5">
                     <Calendar size={14} className="text-[#0054a5]" />

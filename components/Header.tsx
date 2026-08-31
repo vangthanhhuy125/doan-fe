@@ -1,9 +1,10 @@
+// Header.tsx
 'use client';
 
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { 
-  LogOut, User, UserCircle, KeyRound, X, Eye, EyeOff, Check, Lock, Loader2, ClipboardList 
+  LogOut, User, UserCircle, KeyRound, X, Eye, EyeOff, Check, Lock, Loader2, ClipboardList, CheckCircle2, AlertCircle 
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -27,6 +28,12 @@ export default function Header() {
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  const showToast = (text: string, type: 'success' | 'error' = 'success') => {
+    setToastMessage({ text, type });
+    setTimeout(() => setToastMessage(null), 3500);
+  };
 
   const hasMinLength = newPassword.length >= 8;
   const hasUpperCase = /[A-Z]/.test(newPassword);
@@ -129,7 +136,7 @@ export default function Header() {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Đổi mật khẩu thành công!");
+        showToast("Đổi mật khẩu thành công!", "success");
         resetPasswordModal();
       } else {
         setErrorMessage(data.message || "Đổi mật khẩu thất bại, vui lòng kiểm tra lại!");
@@ -142,10 +149,19 @@ export default function Header() {
   };
 
   return (
-    <header className="h-16 bg-white flex items-center justify-between px-6 shadow-sm relative z-30">
-      <div className="flex items-center gap-3">
-        <Image src="/truong-doan-khoa.png" alt="Logo" width={120} height={120} />
-        <span className="font-semibold text-[#0054a5] hidden md:block text-[16px] leading-tight">
+    <header className="h-16 bg-white flex items-center justify-between px-4 sm:px-6 shadow-sm relative z-30">
+      {toastMessage && (
+        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[10000] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold animate-in slide-in-from-top-4 duration-300 text-white ${
+          toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
+        }`}>
+          {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span>{toastMessage.text}</span>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 pl-11 lg:pl-0">
+        <Image src="/truong-doan-khoa.png" alt="Logo" width={120} height={120} className="w-auto h-9 sm:h-10 object-contain" />
+        <span className="font-semibold text-[#0054a5] hidden md:block text-[15px] leading-tight">
           Đoàn khoa Công nghệ Phần mềm, <br/> Đoàn trường Đại học Công nghệ Thông tin - ĐHQG-HCM   
         </span>
       </div>
@@ -187,7 +203,6 @@ export default function Header() {
                   <span>Trang cá nhân</span>
                 </button>
 
-                {/* 🟢 ĐIỀU HƯỚNG TỚI APP/SURVEY */}
                 <button
                   onClick={() => {
                     setIsOpen(false);
@@ -224,7 +239,6 @@ export default function Header() {
         </div>
       </div>
 
-      {/* MODAL ĐỔI MẬT KHẨU */}
       {showPasswordModal && mounted && createPortal(
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in zoom-in duration-200 text-black">
           <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden border border-white/20 flex flex-col">

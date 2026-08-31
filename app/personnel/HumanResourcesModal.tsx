@@ -1,3 +1,4 @@
+// HumanResourcesModal.tsx
 'use client';
 
 import { useState, useRef } from "react";
@@ -7,6 +8,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
   const isView = mode === 'view';
   const isAdd = mode === 'add';
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dateInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(data?.image_url || null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -23,6 +25,20 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
     }
   };
 
+  const handleOpenDatePicker = () => {
+    if (dateInputRef.current && !isView) {
+      if ('showPicker' in HTMLInputElement.prototype) {
+        try {
+          dateInputRef.current.showPicker();
+        } catch (e) {
+          dateInputRef.current.focus();
+        }
+      } else {
+        dateInputRef.current.focus();
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isView || isSubmitting) return;
@@ -35,7 +51,9 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
       const payload = {
         ...data,
         name: formData.get("name"),
+        full_name: formData.get("name"),
         mssv: currentMssv,
+        student_id: currentMssv,
         class: formData.get("class"),
         phone: formData.get("phone"),
         birthday: formData.get("birthday"),
@@ -72,14 +90,14 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
             <button 
               type="button"
               onClick={onClose} 
-              className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[11px] tracking-widest border-none outline-none"
+              className="flex-1 py-3 px-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-200 transition-all uppercase text-[11px] tracking-widest border-none outline-none cursor-pointer"
             >
               Hủy bỏ
             </button>
             <button 
               type="button"
               onClick={() => { onConfirmDelete(data._id || data.id); onClose(); }} 
-              className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-200 hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none"
+              className="flex-1 py-3 px-4 bg-red-600 text-white rounded-2xl font-bold shadow-lg shadow-red-200 hover:bg-red-700 transition-all uppercase text-[11px] tracking-widest flex items-center justify-center gap-2 border-none outline-none cursor-pointer"
             >
               Xóa
             </button>
@@ -105,7 +123,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
               {isView ? 'Thông tin nhân sự' : isAdd ? 'Thêm nhân sự mới' : 'Cập nhật nhân sự'}
             </h3>
           </div>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white"><X size={20} /></button>
+          <button type="button" onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white cursor-pointer"><X size={20} /></button>
         </div>
         
         <form ref={formRef} className="p-8 space-y-6 overflow-y-auto max-h-[85vh] text-black" onSubmit={handleSubmit}>
@@ -122,7 +140,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
                 <button 
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 p-2 bg-[#f59e0b] text-white rounded-full shadow-lg hover:bg-[#d97706] transition-all transform hover:scale-110"
+                  className="absolute bottom-0 right-0 p-2 bg-[#f59e0b] text-white rounded-full shadow-lg hover:bg-[#d97706] transition-all transform hover:scale-110 cursor-pointer border-none"
                 >
                   <Camera size={18} />
                 </button>
@@ -142,7 +160,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Họ và tên</label>
               <div className="relative">
-                <input name="name" disabled={isView} defaultValue={data?.full_name || data?.name} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập họ và tên..." />
+                <input name="name" disabled={isView} defaultValue={data?.full_name || data?.name} required className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70 font-bold`} placeholder="Nhập họ và tên..." />
                 <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -155,7 +173,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
                   value={mssvInput} 
                   onChange={(e) => setMssvInput(e.target.value)} 
                   required 
-                  className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} 
+                  className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70 font-bold`} 
                   placeholder="Nhập MSSV..." 
                 />
                 <GraduationCap size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -166,12 +184,12 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Chi đoàn</label>
-              <input name="class" disabled={isView} defaultValue={data?.class} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="VD: PMCL2023" />
+              <input name="class" disabled={isView} defaultValue={data?.class} className={`w-full p-4 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70 font-semibold`} placeholder="VD: PMCL2023" />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Số điện thoại</label>
               <div className="relative">
-                <input name="phone" disabled={isView} defaultValue={data?.phone} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} placeholder="Nhập SĐT..." />
+                <input name="phone" disabled={isView} defaultValue={data?.phone} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70 font-semibold`} placeholder="Nhập SĐT..." />
                 <Phone size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -180,15 +198,25 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Ngày sinh</label>
-              <div className="relative">
-                <input name="birthday" type="date" disabled={isView} defaultValue={data?.birthday} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} />
-                <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+              <div 
+                onClick={handleOpenDatePicker}
+                className="relative cursor-pointer"
+              >
+                <input 
+                  ref={dateInputRef}
+                  name="birthday" 
+                  type="date" 
+                  disabled={isView} 
+                  defaultValue={data?.birthday} 
+                  className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70 cursor-pointer font-semibold`} 
+                />
+                <Calendar size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
               </div>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Email sinh viên</label>
               <div className="relative">
-                <input disabled value={mssvInput ? `${mssvInput}@gm.uit.edu.vn` : ""} className="w-full p-4 pl-12 bg-slate-100 rounded-2xl border-none text-sm text-slate-500 outline-none" placeholder="mssv@gm.uit.edu.vn" />
+                <input disabled value={mssvInput ? `${mssvInput}@gm.uit.edu.vn` : ""} className="w-full p-4 pl-12 bg-slate-100 rounded-2xl border-none text-sm text-slate-500 outline-none font-semibold" placeholder="mssv@gm.uit.edu.vn" />
                 <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
             </div>
@@ -198,7 +226,7 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
             <div className="space-y-2">
               <label className="text-[10px] font-bold uppercase text-gray-400 ml-1">Email cá nhân</label>
               <div className="relative">
-                <input name="personal_email" disabled={isView} defaultValue={data?.personal_email} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70`} />
+                <input name="personal_email" disabled={isView} defaultValue={data?.personal_email} className={`w-full p-4 pl-12 bg-gray-50 rounded-2xl border border-transparent focus:bg-white transition-all outline-none text-sm ${ringColor} disabled:opacity-70 font-semibold`} />
                 <AtSign size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
               </div>
             </div>
@@ -206,8 +234,8 @@ export default function NhanSuModal({ mode, data, onClose, onConfirmDelete, onSa
 
           {!isView && (
             <div className="pt-6 flex justify-end gap-3 border-t border-gray-100">
-              <button type="button" disabled={isSubmitting} onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none disabled:opacity-50">Hủy bỏ</button>
-              <button type="submit" disabled={isSubmitting} className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none disabled:opacity-50 disabled:cursor-not-allowed`}>
+              <button type="button" disabled={isSubmitting} onClick={onClose} className="px-6 py-3 rounded-2xl font-bold text-gray-400 hover:bg-gray-100 transition-all text-xs tracking-widest uppercase border-none outline-none disabled:opacity-50 cursor-pointer">Hủy bỏ</button>
+              <button type="submit" disabled={isSubmitting} className={`px-10 py-3 ${btnBg} text-white rounded-2xl font-bold shadow-lg transition-all text-xs tracking-widest uppercase flex items-center justify-center gap-2 border-none outline-none disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}>
                 {isSubmitting ? (
                   <>
                     <svg className="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

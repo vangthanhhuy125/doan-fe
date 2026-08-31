@@ -1,8 +1,24 @@
+// app/personnel/page.tsx
 'use client';
 
 import { useState, useEffect } from "react";
 import SectionNhanSu from "./SectionHuman Resources";
 import NhanSuModal from "./HumanResourcesModal";
+
+let memoryCachedNhanSu: any[] | null = null;
+
+const sortPersonnel = (list: any[]) => {
+  return [...list].sort((a, b) => {
+    const classA = a.class || a.chi_doan || '';
+    const classB = b.class || b.chi_doan || '';
+    const classCompare = classA.localeCompare(classB, 'vi', { numeric: true });
+    if (classCompare !== 0) return classCompare;
+
+    const nameA = a.full_name || a.name || '';
+    const nameB = b.full_name || b.name || '';
+    return nameA.localeCompare(nameB, 'vi');
+  });
+};
 
 export default function NhanSuPage() {
   const [nhanSuList, setNhanSuList] = useState<any[]>([]);
@@ -12,13 +28,37 @@ export default function NhanSuPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`);
       const data = await res.json();
-      setNhanSuList(Array.isArray(data) ? data : []);
+      if (Array.isArray(data)) {
+        const sorted = sortPersonnel(data);
+        memoryCachedNhanSu = sorted;
+        setNhanSuList(sorted);
+        try {
+          sessionStorage.setItem('cached_nhan_su', JSON.stringify(sorted));
+        } catch (e) {}
+      } else {
+        setNhanSuList([]);
+      }
     } catch (error) {
-      setNhanSuList([]);
+      if (!memoryCachedNhanSu) {
+        setNhanSuList([]);
+      }
     }
   };
 
   useEffect(() => {
+    if (memoryCachedNhanSu && memoryCachedNhanSu.length > 0) {
+      setNhanSuList(memoryCachedNhanSu);
+    } else {
+      try {
+        const local = sessionStorage.getItem('cached_nhan_su');
+        if (local) {
+          const parsed = JSON.parse(local);
+          memoryCachedNhanSu = parsed;
+          setNhanSuList(parsed);
+        }
+      } catch (e) {}
+    }
+
     fetchNhanSu();
   }, []);
 
@@ -35,7 +75,7 @@ export default function NhanSuPage() {
     const isAdd = modal.mode === 'add';
     const url = isAdd 
       ? `${process.env.NEXT_PUBLIC_API_URL}/nhan-su` 
-      : `${process.env.NEXT_PUBLIC_API_URL}/nhan-su/${payload._id}`;
+      : `${process.env.NEXT_PUBLIC_API_URL}/nhan-su/${payload._id || payload.id}`;
       
     return new Promise<void>(async (resolve, reject) => {
       try {

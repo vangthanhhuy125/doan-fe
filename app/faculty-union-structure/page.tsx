@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from "react";
-import { Flag, Award } from "lucide-react";
+import { Flag, Award, FileSpreadsheet, Loader2 } from "lucide-react";
 import SectionBanChapHanh from "./FacultyYEC/SectionFacultyYEC";
 import SectionChiDoan from "./BranchYEC/SectionBranchYEC";
 import SectionFacultyLCH from "./FacultyLCH/SectionFacultyLCH";
@@ -9,6 +9,7 @@ import SectionChiHoi from "./BranchLCH/SectionBranchLCH";
 
 export default function FacultyUnionStructurePage() {
   const [activeTab, setActiveTab] = useState<'DOAN' | 'HOI'>('DOAN');
+  const [isExporting, setIsExporting] = useState(false);
 
   const getRoleStylesDoan = (index: number) => {
     if (index === 0) return { text: "text-rose-700", bg: "bg-rose-50", border: "border-rose-200", circle: "bg-gradient-to-br from-rose-500 to-rose-600" };
@@ -21,6 +22,29 @@ export default function FacultyUnionStructurePage() {
     if (index === 0) return { text: "text-sky-800", bg: "bg-sky-50", border: "border-sky-300", circle: "bg-gradient-to-br from-sky-600 to-sky-700" };
     if (index < 3) return { text: "text-teal-700", bg: "bg-teal-50", border: "border-teal-200", circle: "bg-gradient-to-br from-teal-500 to-teal-600" };
     return { text: "text-cyan-700", bg: "bg-cyan-50", border: "border-cyan-200", circle: "bg-gradient-to-br from-cyan-600 to-blue-500" };
+  };
+
+  const handleExportExcel = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/youth-union/export-excel?scope=${activeTab}`);
+      if (!res.ok) throw new Error("Xuất file thất bại");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = activeTab === 'DOAN' ? 'Thong_tin_Doan_Khoa.xlsx' : 'Thong_tin_LCH_Khoa.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error(error);
+      alert("Xuất dữ liệu Excel thất bại, vui lòng kiểm tra lại server!");
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -52,9 +76,26 @@ export default function FacultyUnionStructurePage() {
             <span>Tổ chức Liên Chi hội</span>
           </button>
         </div>
-        <span className="text-[11px] font-bold text-slate-400 hidden sm:inline-block">
-          Cơ cấu: <span className="text-slate-700 font-extrabold">{activeTab === 'DOAN' ? 'Đoàn TNCS Hồ Chí Minh' : 'Hội Sinh viên Việt Nam'}</span>
-        </span>
+
+        <div className="flex items-center justify-between sm:justify-end gap-3">
+          <span className="text-[11px] font-bold text-slate-400 hidden lg:inline-block">
+            Cơ cấu: <span className="text-slate-700 font-extrabold">{activeTab === 'DOAN' ? 'Đoàn TNCS Hồ Chí Minh' : 'Hội Sinh viên Việt Nam'}</span>
+          </span>
+
+          <button
+            type="button"
+            disabled={isExporting}
+            onClick={handleExportExcel}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs uppercase tracking-wider text-white shadow-md transition-all active:scale-95 disabled:opacity-60 border-none cursor-pointer ${
+              activeTab === 'DOAN'
+                ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
+                : 'bg-sky-600 hover:bg-sky-700 shadow-sky-500/20'
+            }`}
+          >
+            {isExporting ? <Loader2 size={15} className="animate-spin" /> : <FileSpreadsheet size={15} />}
+            <span>{isExporting ? "Đang xuất..." : `Xuất Excel`}</span>
+          </button>
+        </div>
       </div>
 
       {activeTab === 'DOAN' ? (

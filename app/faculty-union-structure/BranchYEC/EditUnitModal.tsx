@@ -14,21 +14,25 @@ let cachedUsersForEditUnit: any[] | null = null;
 export default function EditUnitModal({ unit, onClose, onSave }: Props) {
   const [userList, setUserList] = useState<any[]>([]);
   const [availableClasses, setAvailableClasses] = useState<string[]>([]);
-  const [formData, setFormData] = useState({ 
-    ...unit, 
+  const [formData, setFormData] = useState({
+    ...unit,
     ten: unit.ten || unit.group_name || "",
     member: Array.isArray(unit.member) ? unit.member : [],
     uvbch: Array.isArray(unit.uvbch) ? unit.uvbch : [],
     biThu: unit.biThu || "",
     phoBiThu: unit.phoBiThu || "",
+    chiHoiTruong: unit.chiHoiTruong || "",
+    chiHoiPho: unit.chiHoiPho || "",
     truongBan: unit.truongBan || "",
     phoBan1: unit.phoBan1 || "",
     phoBan2: unit.phoBan2 || ""
   });
 
+  const isHoi = formData.scope === 'HOI';
   const isCLB = formData.ten?.toUpperCase().includes("CLB") || formData.unitType === 'TAPTHE';
   const isBan = formData.ten?.toUpperCase().includes("BAN");
-  const isChiDoan = !isCLB && !isBan;
+  const isLop = !isCLB && !isBan;
+
   const [hasThreeUV, setHasThreeUV] = useState(formData.uvbch?.length > 1 || !!unit.uvBch1);
 
   useEffect(() => {
@@ -39,7 +43,6 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
         .sort() as string[];
       setAvailableClasses(uniqueClasses);
     }
-
     const fetchUsers = async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`);
@@ -47,7 +50,6 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
         const users = Array.isArray(data) ? data : [];
         cachedUsersForEditUnit = users;
         setUserList(users);
-        
         const uniqueClasses = Array.from(new Set(users.map((u: any) => u.class)))
           .filter(Boolean)
           .sort() as string[];
@@ -67,7 +69,14 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
   const getLabels = () => {
     if (isCLB) return ["Chủ nhiệm", "Phó Chủ nhiệm 1", "Phó Chủ nhiệm 2"];
     if (isBan) return ["Trưởng ban", "Phó ban 1", "Phó ban 2"];
-    return hasThreeUV ? ["Bí thư", "Phó Bí thư", "UV BCH 1", "UV BCH 2", "UV BCH 3"] : ["Bí thư", "Phó Bí thư", "UV BCH"];
+    if (isHoi) {
+      return hasThreeUV 
+        ? ["Chi hội trưởng", "Chi hội phó", "UV BCH Chi hội 1", "UV BCH Chi hội 2", "UV BCH Chi hội 3"]
+        : ["Chi hội trưởng", "Chi hội phó", "UV BCH Chi hội"];
+    }
+    return hasThreeUV 
+      ? ["Bí thư", "Phó Bí thư", "UV BCH 1", "UV BCH 2", "UV BCH 3"] 
+      : ["Bí thư", "Phó Bí thư", "UV BCH"];
   };
 
   const labels = getLabels();
@@ -84,7 +93,6 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
         return;
       }
     }
-
     if (field.startsWith('uvBch')) {
       const uvIndexMap: Record<string, number> = { "uvBch": 0, "uvBch1": 0, "uvBch2": 1, "uvBch3": 2 };
       const idx = uvIndexMap[field];
@@ -93,7 +101,6 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
       setFormData({ ...formData, uvbch: newUv, [field]: value });
       return;
     }
-
     setFormData({ ...formData, [field]: value });
   };
 
@@ -106,29 +113,28 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
               <School size={18} />
             </div>
             <h3 className="font-extrabold uppercase tracking-wide text-xs sm:text-sm">
-              Cập nhật thông tin đơn vị
+              Cập nhật thông tin
             </h3>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="p-1.5 hover:bg-white/15 rounded-full text-white transition-colors border-none bg-transparent cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
-
         <form onSubmit={(e) => { e.preventDefault(); onSave({...formData, group_name: formData.ten}); }} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
           <div className="space-y-1.5">
-            <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Tên Chi đoàn / Tập thể</label>
-            {isChiDoan ? (
+            <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Tên đơn vị</label>
+            {isLop ? (
               <div className="relative">
                 <select
                   required
                   value={formData.ten}
-                  onChange={(e) => setFormData({...formData, ten: e.target.value, biThu: "", phoBiThu: "", uvbch: []})}
+                  onChange={(e) => setFormData({...formData, ten: e.target.value, biThu: "", phoBiThu: "", chiHoiTruong: "", chiHoiPho: "", uvbch: []})}
                   className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm font-bold text-slate-800 appearance-none cursor-pointer pr-8"
                 >
-                  <option value="" disabled>-- Chọn Chi đoàn --</option>
+                  <option value="" disabled>-- Chọn lớp học --</option>
                   {availableClasses.map((c) => (
                     <option key={c} value={c}>{c}</option>
                   ))}
@@ -136,41 +142,40 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
                 <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             ) : (
-              <input 
-                required 
-                value={formData.ten} 
-                onChange={(e) => setFormData({...formData, ten: e.target.value})} 
-                className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm font-bold text-slate-800" 
+              <input
+                required
+                value={formData.ten}
+                onChange={(e) => setFormData({...formData, ten: e.target.value})}
+                className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm font-bold text-slate-800"
               />
             )}
           </div>
-
-          {isChiDoan && (
+          {isLop && (
             <div className="flex items-center gap-2 px-1">
-              <input 
-                type="checkbox" 
-                id="threeUV" 
-                checked={hasThreeUV} 
-                onChange={(e) => setHasThreeUV(e.target.checked)} 
-                className="w-4 h-4 accent-[#0054a5] cursor-pointer" 
+              <input
+                type="checkbox"
+                id="threeUV"
+                checked={hasThreeUV}
+                onChange={(e) => setHasThreeUV(e.target.checked)}
+                className="w-4 h-4 accent-[#0054a5] cursor-pointer"
               />
               <label htmlFor="threeUV" className="text-[11px] font-bold text-slate-600 cursor-pointer select-none">
-                Chi đoàn có 3 Ủy viên BCH
+                Có 3 Ủy viên BCH
               </label>
             </div>
           )}
-
           <div className="grid grid-cols-1 gap-3 pt-1 border-t border-slate-100">
             {labels.map((label, idx) => {
               const fieldMap: Record<string, string> = {
                 "Chủ nhiệm": "chuNhiem", "Phó Chủ nhiệm 1": "phoChuNhiem1", "Phó Chủ nhiệm 2": "phoChuNhiem2",
                 "Trưởng ban": "truongBan", "Phó ban 1": "phoBan1", "Phó ban 2": "phoBan2",
-                "Bí thư": "biThu", "Phó Bí thư": "phoBiThu", "UV BCH": "uvBch",
-                "UV BCH 1": "uvBch1", "UV BCH 2": "uvBch2", "UV BCH 3": "uvBch3"
+                "Bí thư": "biThu", "Phó Bí thư": "phoBiThu",
+                "Chi hội trưởng": "chiHoiTruong", "Chi hội phó": "chiHoiPho",
+                "UV BCH": "uvBch", "UV BCH 1": "uvBch1", "UV BCH 2": "uvBch2", "UV BCH 3": "uvBch3",
+                "UV BCH Chi hội": "uvBch", "UV BCH Chi hội 1": "uvBch1", "UV BCH Chi hội 2": "uvBch2", "UV BCH Chi hội 3": "uvBch3"
               };
               const field = fieldMap[label];
               let val = formData[field] || "";
-              
               if (isCLB && ["chuNhiem", "phoChuNhiem1", "phoChuNhiem2"].includes(field)) {
                 const i = ({ "chuNhiem": 0, "phoChuNhiem1": 1, "phoChuNhiem2": 2 } as Record<string, number>)[field];
                 val = formData.member[i]?.name || "";
@@ -179,11 +184,10 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
                 const i = ({ "uvBch": 0, "uvBch1": 0, "uvBch2": 1, "uvBch3": 2 } as Record<string, number>)[field];
                 val = formData.uvbch[i] || "";
               }
-
               return (
                 <div key={idx} className="space-y-1">
                   <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">{label}</label>
-                  {isChiDoan ? (
+                  {isLop ? (
                     <div className="relative">
                       <select
                         value={val}
@@ -198,27 +202,26 @@ export default function EditUnitModal({ unit, onClose, onSave }: Props) {
                       <ChevronDown size={15} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
                   ) : (
-                    <input 
-                      value={val} 
-                      onChange={(e) => handleInputChange(field, e.target.value)} 
-                      className="w-full p-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs font-bold text-slate-800" 
+                    <input
+                      value={val}
+                      onChange={(e) => handleInputChange(field, e.target.value)}
+                      className="w-full p-2.5 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs font-bold text-slate-800"
                     />
                   )}
                 </div>
               );
             })}
           </div>
-
           <div className="pt-4 flex gap-3 border-t border-slate-100 shrink-0">
-            <button 
-              type="button" 
-              onClick={onClose} 
+            <button
+              type="button"
+              onClick={onClose}
               className="flex-1 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-xs uppercase tracking-wider border-none cursor-pointer"
             >
               Hủy
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="flex-1 py-2.5 bg-[#0054a5] text-white hover:bg-blue-700 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 border-none cursor-pointer active:scale-95"
             >
               Cập nhật

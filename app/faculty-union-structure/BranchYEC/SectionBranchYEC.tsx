@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { School, LayoutGrid, UserCircle, Edit, Trash2, Plus, Search, Filter, RotateCcw, Users } from "lucide-react";
+import { School, LayoutGrid, UserCircle, Edit, Trash2, Plus, Search, RotateCcw, Users } from "lucide-react";
 import EditUnitModal from "./EditUnitModal";
 import DeleteUnitConfirm from "./DeleteUnitConfirm";
 import AddUnitModal from "./AddUnitModal";
@@ -17,24 +17,23 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
   const [editingUnit, setEditingUnit] = useState<any>(null);
   const [deletingUnit, setDeletingUnit] = useState<any>(null);
   const [isAddOpen, setIsAddOpen] = useState(false);
-
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("ALL");
 
   const fetchUnits = async () => {
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/organizations`);
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/organizations?scope=DOAN`);
       const data = await res.json();
-      
-      const sortedData = Array.isArray(data) ? data.sort((a, b) => {
+      const doanOnly = Array.isArray(data) 
+        ? data.filter((u: any) => u.scope === 'DOAN' || (!u.scope && !u.chiHoiTruong))
+        : [];
+      const sortedData = doanOnly.sort((a, b) => {
         if (a.unitType === 'CHIDOAN' && b.unitType !== 'CHIDOAN') return -1;
         if (a.unitType !== 'CHIDOAN' && b.unitType === 'CHIDOAN') return 1;
-        
         const nameA = a.ten || a.group_name || "";
         const nameB = b.ten || b.group_name || "";
         return nameA.localeCompare(nameB, 'vi', { numeric: true });
-      }) : [];
-      
+      });
       memoryCachedUnits = sortedData;
       setUnits(sortedData);
       try {
@@ -58,7 +57,6 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
         }
       } catch (e) {}
     }
-
     fetchUnits();
   }, []);
 
@@ -111,17 +109,14 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
   const filteredUnits = units.filter((u) => {
     const unitName = (u.ten || u.group_name || "").toLowerCase();
     const search = searchTerm.toLowerCase();
-
     const membersStr = JSON.stringify(u).toLowerCase();
     const matchesSearch = unitName.includes(search) || membersStr.includes(search);
-
     let matchesFilter = true;
     if (filterType === 'CHIDOAN') {
       matchesFilter = u.unitType === 'CHIDOAN';
     } else if (filterType === 'TAPTHE') {
       matchesFilter = u.unitType !== 'CHIDOAN';
     }
-
     return matchesSearch && matchesFilter;
   });
 
@@ -129,7 +124,6 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
     const isCLB = unit.ten?.toUpperCase().includes("CLB") || unit.unitType === 'TAPTHE';
     const isBan = unit.ten?.toUpperCase().includes("BAN");
     let members: any[] = [];
-
     if (isCLB || unit.unitType === 'TAPTHE') {
       const sourceMembers = unit.member || [];
       members = [
@@ -148,7 +142,6 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
         { role: "Bí thư", name: unit.biThu, color: "bg-rose-50/70 border-rose-200 text-rose-700" },
         { role: "Phó Bí thư", name: unit.phoBiThu, color: "bg-amber-50/70 border-amber-200 text-amber-700" },
       ];
-      
       const uvList = unit.uvbch || [];
       if (uvList.length > 0) {
         uvList.forEach((uv: string) => {
@@ -160,9 +153,7 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
         if (unit.uvBch3) members.push({ role: "Ủy viên BCH", name: unit.uvBch3, color: "bg-blue-50/70 border-blue-200 text-[#0054a5]" });
       }
     }
-
     const validMembers = members.filter(m => m.name && m.name.trim() !== "");
-
     return (
       <div className="p-5 sm:p-6 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 bg-white text-black">
         {validMembers.length > 0 ? (
@@ -179,7 +170,7 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
           ))
         ) : (
           <div className="col-span-full py-4 text-center text-xs text-slate-400 italic">
-            Chưa cập nhật danh sách cán bộ quản lý
+            Chưa cập nhật danh sách cán bộ
           </div>
         )}
       </div>
@@ -195,15 +186,14 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
           </div>
           <div>
             <h2 className="text-xl sm:text-2xl font-black uppercase text-[#0054a5] tracking-tight">
-              Chi đoàn & Tập thể trực thuộc
+              Chi đoàn & Tập thể trực thuộc Đoàn
             </h2>
             <p className="text-xs text-slate-400 font-semibold hidden sm:block">
-              Quản lý danh sách Chi đoàn các khóa và Câu lạc bộ, Đội, Nhóm
+              Quản lý danh sách Chi đoàn các khóa & CLB/Đội trực thuộc
             </p>
           </div>
         </div>
-
-        <button 
+        <button
           onClick={() => setIsAddOpen(true)}
           className="flex items-center gap-2 bg-[#0054a5] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
         >
@@ -214,15 +204,14 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center gap-3 shadow-xs">
         <div className="relative flex-1 w-full">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Tìm theo tên Chi đoàn, CLB hoặc tên cán bộ..." 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
-            className="w-full pl-11 pr-4 py-2.5 bg-white rounded-xl text-xs sm:text-sm font-bold border border-slate-200 outline-none focus:border-[#0054a5] focus:ring-2 ring-blue-100 transition-all" 
+          <input
+            type="text"
+            placeholder="Tìm theo tên Chi đoàn, CLB hoặc cán bộ..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-4 py-2.5 bg-white rounded-xl text-xs sm:text-sm font-bold border border-slate-200 outline-none focus:border-[#0054a5] focus:ring-2 ring-blue-100 transition-all"
           />
         </div>
-
         <div className="flex items-center gap-1.5 bg-slate-200/70 p-1 rounded-xl w-full sm:w-auto shrink-0">
           <button
             type="button"
@@ -252,9 +241,8 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
             CLB / Đội
           </button>
         </div>
-
         {(searchTerm || filterType !== 'ALL') && (
-          <button 
+          <button
             onClick={() => {
               setSearchTerm("");
               setFilterType("ALL");
@@ -271,10 +259,9 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
         {filteredUnits.length > 0 ? (
           filteredUnits.map((unit, index) => {
             const isChiDoan = unit.unitType === 'CHIDOAN';
-
             return (
-              <div 
-                key={unit._id || index} 
+              <div
+                key={unit._id || index}
                 className="bg-white rounded-3xl border border-slate-200/80 overflow-hidden shadow-xs hover:border-[#0054a5]/40 hover:shadow-lg transition-all duration-300 group"
               >
                 <div className="bg-gradient-to-r from-slate-50 to-blue-50/40 px-6 py-4 border-b border-slate-100 flex items-center justify-between">
@@ -293,56 +280,52 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
                       )}
                     </div>
                   </div>
-
                   <div className="flex items-center gap-1.5">
-                    <button 
-                      onClick={() => setEditingUnit(unit)} 
+                    <button
+                      onClick={() => setEditingUnit(unit)}
                       className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
                       title="Chỉnh sửa"
                     >
                       <Edit size={16} />
                     </button>
-                    <button 
-                      onClick={() => setDeletingUnit(unit)} 
+                    <button
+                      onClick={() => setDeletingUnit(unit)}
                       className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
-                      title="Xóa đơn vị"
+                      title="Xóa"
                     >
                       <Trash2 size={16} />
                     </button>
                   </div>
                 </div>
-
                 {renderPersonnel(unit)}
               </div>
             );
           })
         ) : (
           <div className="p-12 text-center text-xs font-bold text-slate-400 italic bg-white rounded-3xl border border-slate-200">
-            Không tìm thấy đơn vị nào phù hợp...
+            Không tìm thấy đơn vị phù hợp...
           </div>
         )}
       </div>
 
       {isAddOpen && (
-        <AddUnitModal 
-          onClose={() => setIsAddOpen(false)} 
-          onSave={handleAddUnit} 
+        <AddUnitModal
+          onClose={() => setIsAddOpen(false)}
+          onSave={handleAddUnit}
         />
       )}
-
       {editingUnit && (
-        <EditUnitModal 
-          unit={editingUnit} 
-          onClose={() => setEditingUnit(null)} 
-          onSave={handleSaveEdit} 
+        <EditUnitModal
+          unit={editingUnit}
+          onClose={() => setEditingUnit(null)}
+          onSave={handleSaveEdit}
         />
       )}
-
       {deletingUnit && (
-        <DeleteUnitConfirm 
-          unitName={deletingUnit.ten || deletingUnit.group_name} 
-          onClose={() => setDeletingUnit(null)} 
-          onConfirm={handleConfirmDelete} 
+        <DeleteUnitConfirm
+          unitName={deletingUnit.ten || deletingUnit.group_name}
+          onClose={() => setDeletingUnit(null)}
+          onConfirm={handleConfirmDelete}
         />
       )}
     </section>

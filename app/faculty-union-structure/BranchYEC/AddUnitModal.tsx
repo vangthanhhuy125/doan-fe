@@ -40,7 +40,6 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
         .sort() as string[];
       setAvailableClasses(uniqueClasses);
     }
-
     const fetchUsers = async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`);
@@ -48,7 +47,6 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
         const users = Array.isArray(data) ? data : [];
         cachedUsersForAddUnit = users;
         setUserList(users);
-        
         const uniqueClasses = Array.from(new Set(users.map((u: any) => u.class)))
           .filter(Boolean)
           .sort() as string[];
@@ -67,11 +65,12 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { 
-      ...formData, 
-      unitType: type, 
+    const payload = {
+      ...formData,
+      scope: 'DOAN',
+      unitType: type,
       group_name: formData.ten,
-      intake: formData.khoa 
+      intake: formData.khoa
     };
     onSave(payload);
   };
@@ -94,16 +93,15 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
               Thêm đơn vị trực thuộc
             </h3>
           </div>
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="p-1.5 hover:bg-white/15 rounded-full text-white transition-colors border-none bg-transparent cursor-pointer"
           >
             <X size={20} />
           </button>
         </div>
-
         <div className="flex p-1.5 bg-slate-100 m-5 mb-0 rounded-2xl shrink-0">
-          <button 
+          <button
             type="button"
             onClick={() => setType('CHIDOAN')}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all border-none cursor-pointer ${
@@ -112,7 +110,7 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
           >
             <School size={16} /> Chi đoàn
           </button>
-          <button 
+          <button
             type="button"
             onClick={() => setType('TAPTHE')}
             className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl font-bold text-xs transition-all border-none cursor-pointer ${
@@ -122,7 +120,6 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
             <Users size={16} /> CLB / Đội / Ban
           </button>
         </div>
-
         <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 overflow-y-auto flex-1">
           {type === 'CHIDOAN' ? (
             <div className="space-y-4">
@@ -144,19 +141,17 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Khóa</label>
-                  <input 
-                    required 
-                    placeholder="VD: 2023" 
-                    value={formData.khoa} 
-                    onChange={(e) => setFormData({...formData, khoa: e.target.value})} 
-                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm text-slate-800 font-bold" 
+                  <input
+                    required
+                    placeholder="VD: 2023"
+                    value={formData.khoa}
+                    onChange={(e) => setFormData({...formData, khoa: e.target.value})}
+                    className="w-full p-3 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm text-slate-800 font-bold"
                   />
                 </div>
               </div>
-              
               <div className="grid grid-cols-2 gap-3 border-t border-slate-100 pt-3">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase text-rose-600 ml-1">Bí thư</label>
@@ -176,7 +171,6 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
                     <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                   </div>
                 </div>
-
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold uppercase text-amber-600 ml-1">Phó Bí thư</label>
                   <div className="relative">
@@ -196,10 +190,8 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
                   </div>
                 </div>
               </div>
-
               <div className="space-y-2.5 border-t border-slate-100 pt-3">
                 <label className="text-[10px] font-bold uppercase text-[#0054a5] ml-1">Ủy viên Ban Chấp hành Chi đoàn</label>
-                
                 {[0, 1, 2].map((idx) => (
                   <div key={idx} className="relative">
                     <select
@@ -226,23 +218,22 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Tên CLB / Ban / Đội</label>
-                <input 
-                  required 
-                  placeholder="VD: CLB GameApp" 
-                  value={formData.ten} 
-                  onChange={(e) => setFormData({...formData, ten: e.target.value})} 
-                  className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm font-bold text-slate-800" 
+                <input
+                  required
+                  placeholder="VD: CLB GameApp"
+                  value={formData.ten}
+                  onChange={(e) => setFormData({...formData, ten: e.target.value})}
+                  className="w-full p-3.5 bg-slate-50 rounded-xl border border-slate-200 focus:bg-white focus:border-[#0054a5] outline-none text-xs sm:text-sm font-bold text-slate-800"
                 />
               </div>
-
               <div className="space-y-3 border-t border-slate-100 pt-3">
-                <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Ban điều hành / Trưởng ban</label>
+                <label className="text-[10px] font-bold uppercase text-slate-500 ml-1">Ban Điều hành / Ban Chủ nhiệm</label>
                 {formData.member.map((member: any, index: number) => (
                   <div key={index} className="grid grid-cols-2 gap-2.5 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
                     <div className="relative">
-                      <select 
-                        required 
-                        value={member.role} 
+                      <select
+                        required
+                        value={member.role}
                         onChange={(e) => updateMember(index, 'role', e.target.value)}
                         className="w-full p-2 bg-white rounded-lg border border-slate-200 text-xs font-bold outline-none focus:border-[#0054a5] appearance-none pr-7 cursor-pointer"
                       >
@@ -253,11 +244,10 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
                       </select>
                       <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                     </div>
-
-                    <input 
-                      required 
-                      placeholder="Họ và tên..." 
-                      value={member.name} 
+                    <input
+                      required
+                      placeholder="Họ và tên..."
+                      value={member.name}
                       onChange={(e) => updateMember(index, 'name', e.target.value)}
                       className="p-2 bg-white rounded-lg border border-slate-200 text-xs font-bold outline-none focus:border-[#0054a5]"
                     />
@@ -266,17 +256,16 @@ export default function AddUnitModal({ onClose, onSave }: AddUnitModalProps) {
               </div>
             </div>
           )}
-
           <div className="pt-4 flex gap-3 border-t border-slate-100 shrink-0">
-            <button 
-              type="button" 
-              onClick={onClose} 
+            <button
+              type="button"
+              onClick={onClose}
               className="flex-1 py-2.5 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-all text-xs uppercase tracking-wider border-none cursor-pointer"
             >
               Hủy
             </button>
-            <button 
-              type="submit" 
+            <button
+              type="submit"
               className="flex-1 py-2.5 bg-[#0054a5] text-white hover:bg-blue-700 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all text-xs uppercase tracking-wider flex items-center justify-center gap-2 border-none cursor-pointer active:scale-95"
             >
               Lưu đơn vị

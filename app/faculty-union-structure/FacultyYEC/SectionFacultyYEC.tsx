@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Users, UserCircle, Edit, ShieldCheck, Sparkles, Award } from "lucide-react";
+import { Users, UserCircle, Edit } from "lucide-react";
 import UpdateBCHModal from "./UpdateFacultyYECModal";
 import Image from "next/image";
 
@@ -47,7 +47,6 @@ export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: P
         }
       } catch (e) {}
     }
-
     fetchBCH();
   }, []);
 
@@ -66,12 +65,11 @@ export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: P
               Ban Chấp hành Đoàn khoa
             </h2>
             <p className="text-xs text-slate-400 font-semibold hidden sm:block">
-              Cơ cấu tổ chức nhân sự Ban Thường vụ & Ban Chấp hành Đoàn khoa
+              Cơ cấu nhân sự Ban Thường vụ & Ban Chấp hành Đoàn khoa
             </p>
           </div>
         </div>
-
-        <button 
+        <button
           onClick={() => setIsUpdateOpen(true)}
           className="flex items-center gap-2 bg-[#0054a5] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
         >
@@ -86,37 +84,33 @@ export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: P
             1. Ban Thường vụ Đoàn khoa
           </h3>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-5">
           {banThuongVu.map((person, index) => {
             const styles = getRoleStyles(index);
             const avatarUrl = person.avatar || person.image_url;
-
             return (
-              <div 
-                key={person._id || index} 
+              <div
+                key={person._id || index}
                 className="bg-white p-6 rounded-3xl border border-slate-200/80 shadow-xs hover:border-[#0054a5]/40 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 text-center group flex flex-col justify-between"
               >
                 <div>
                   <div className={`w-20 h-20 rounded-full mx-auto mb-4 flex items-center justify-center font-black text-2xl shadow-md ${styles.circle} text-white group-hover:scale-105 transition-transform duration-300 relative overflow-hidden ring-4 ring-white`}>
                     {avatarUrl ? (
-                      <Image 
-                        src={avatarUrl} 
-                        alt={person.full_name || person.name} 
-                        fill 
-                        className="object-cover" 
-                        unoptimized 
+                      <Image
+                        src={avatarUrl}
+                        alt={person.full_name || person.name}
+                        fill
+                        className="object-cover"
+                        unoptimized
                       />
                     ) : (
                       <span>{(person.full_name || person.name || "").split(' ').pop()?.charAt(0) || "U"}</span>
                     )}
                   </div>
-
                   <h4 className="font-extrabold text-sm sm:text-base text-slate-800 tracking-tight leading-snug line-clamp-2">
                     {person.full_name || person.name || "Chưa cập nhật"}
                   </h4>
                 </div>
-
                 <div className="pt-3">
                   <span className={`${styles.text} ${styles.bg} text-[10px] font-black px-3.5 py-1.5 rounded-full inline-block border ${styles.border} tracking-wide uppercase shadow-2xs`}>
                     {person.role}
@@ -135,30 +129,27 @@ export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: P
             2. Ủy viên Ban Chấp hành Đoàn khoa
           </h3>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
           {uvBCH.map((person, index) => {
             const avatarUrl = person.avatar || person.image_url;
-
             return (
-              <div 
-                key={person._id || index} 
+              <div
+                key={person._id || index}
                 className="flex items-center gap-3.5 p-3.5 sm:p-4 bg-white border border-slate-200/80 rounded-2xl shadow-xs hover:border-[#0054a5]/40 hover:shadow-md transition-all duration-200"
               >
                 <div className="w-11 h-11 bg-blue-50 text-[#0054a5] border border-blue-100 rounded-xl flex items-center justify-center font-bold text-sm shadow-2xs relative overflow-hidden shrink-0">
                   {avatarUrl ? (
-                    <Image 
-                      src={avatarUrl} 
-                      alt={person.full_name || person.name} 
-                      fill 
-                      className="object-cover" 
-                      unoptimized 
+                    <Image
+                      src={avatarUrl}
+                      alt={person.full_name || person.name}
+                      fill
+                      className="object-cover"
+                      unoptimized
                     />
                   ) : (
                     <span>{(person.full_name || person.name || "").split(' ').pop()?.charAt(0) || <UserCircle size={22} />}</span>
                   )}
                 </div>
-
                 <div className="min-w-0 flex-1">
                   <p className="font-extrabold text-slate-800 text-xs sm:text-sm leading-snug truncate">
                     {person.full_name || person.name || "Chưa phân bổ"}
@@ -174,13 +165,13 @@ export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: P
       </div>
 
       {isUpdateOpen && (
-        <UpdateBCHModal 
+        <UpdateBCHModal
           onClose={() => {
             setIsUpdateOpen(false);
             fetchBCH();
-          }} 
-          allMembers={allMembers} 
-          currentBCH={bchList} 
+          }}
+          allMembers={allMembers}
+          currentBCH={bchList}
         />
       )}
     </section>

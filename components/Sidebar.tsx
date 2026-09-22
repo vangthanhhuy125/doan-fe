@@ -1,4 +1,3 @@
-// Sidebar.tsx
 'use client';
 
 import { useState, useEffect } from "react";
@@ -14,7 +13,7 @@ const menuItems = [
   { id: "chuong-trinh-nam", name: "Chương trình năm", href: "/annual-programs", icon: CalendarDays },
   { id: "cong-tac-doan", name: "Công tác Đoàn - Đảng", href: "/union-party-affairs", icon: Flag },
   { id: "thi-dua", name: "Thi đua", href: "/emulation-awards", icon: Trophy },
-  { id: "to-chuc-doan", name: "Tổ chức Đoàn khoa", href: "/faculty-union-structure", icon: Users },
+  { id: "to-chuc-doan", name: "Tổ chức Đoàn - Hội", href: "/faculty-union-structure", icon: Users },
   { id: "nhan-su", name: "Nhân sự", href: "/personnel", icon: UserSquare2 },
   { id: "mo-hinh-clb", name: "Mô hình CLPI", href: "/clpi-models", icon: LayoutGrid },
   { id: "cai-dat", name: "Cài đặt", href: "/settings", icon: Settings },
@@ -22,30 +21,52 @@ const menuItems = [
 
 export default function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
-  const [allowedMenuItems, setAllowedMenuItems] = useState(menuItems);
+  const [allowedMenuItems, setAllowedMenuItems] = useState<typeof menuItems>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const pathname = usePathname();
 
   useEffect(() => {
     const fetchUserPermissions = async () => {
       try {
         const userStr = localStorage.getItem('user');
-        if (!userStr) return;
+        if (!userStr) {
+          setAllowedMenuItems([]);
+          setIsLoading(false);
+          return;
+        }
 
         const user = JSON.parse(userStr);
+        if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.isAdmin) {
+          setAllowedMenuItems(menuItems);
+          setIsLoading(false);
+          return;
+        }
+
         const groupId = user.group_id || user.groupId || user.permission_id;
-        if (!groupId) return;
+        if (!groupId) {
+          setAllowedMenuItems([]);
+          setIsLoading(false);
+          return;
+        }
 
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/permissions/${groupId}`);
         if (res.ok) {
           const groupData = await res.json();
-          const permissions: string[] = groupData.permissions || [];
-          if (Array.isArray(permissions) && permissions.length > 0) {
+          const permissions: string[] = groupData.permissions || groupData.menu_permissions || [];
+          if (Array.isArray(permissions)) {
             const filtered = menuItems.filter(item => permissions.includes(item.id));
             setAllowedMenuItems(filtered);
+          } else {
+            setAllowedMenuItems([]);
           }
+        } else {
+          setAllowedMenuItems([]);
         }
       } catch (error) {
-        console.error("Lỗi tải phân quyền Sidebar:", error);
+        console.error(error);
+        setAllowedMenuItems([]);
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -79,42 +100,48 @@ export default function Sidebar() {
           HỆ THỐNG NGHIỆP VỤ <br /> CÔNG TÁC ĐOÀN
         </div>
         <div className="text-center">
-          <div className="inline-block px-6 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-xl
-                          transition-all duration-300 ease-out
-                          hover:scale-110 hover:shadow-2xl">
+          <div className="inline-block px-6 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-xl transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl">
             <p className="text-sm font-bold text-white tracking-[0.2em] drop-shadow-md">
               SE-UIT-VNUHCM
             </p>
           </div>
         </div>      
         <nav className="flex-1 mt-6 overflow-y-auto px-3">
-          {allowedMenuItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link 
-                key={item.href} 
-                href={item.href}
-                onClick={() => setIsOpen(false)}
-                className={`
-                  flex items-center gap-3 px-4 py-3 mb-1 rounded-xl transition-all duration-300 group
-                  ${isActive 
-                    ? "bg-white/15 border border-white/30 shadow-lg translate-x-1" 
-                    : "hover:bg-white/10 border border-transparent"}
-                `}
-              >
-                <item.icon 
-                  size={20} 
-                  className={`transition-colors ${isActive ? "text-white" : "text-white/60 group-hover:text-white"}`} 
-                />
-                <span className={`text-sm transition-all ${isActive ? "font-bold text-white" : "text-white/80 group-hover:text-white"}`}>
-                  {item.name}
-                </span>
-                {isActive && (
-                   <div className="ml-auto w-1.5 h-5 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
-                )}
-              </Link>
-            );
-          })}
+          {isLoading ? (
+            <div className="space-y-2 px-1">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-11 bg-white/10 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            allowedMenuItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <Link 
+                  key={item.href} 
+                  href={item.href}
+                  onClick={() => setIsOpen(false)}
+                  className={`
+                    flex items-center gap-3 px-4 py-3 mb-1 rounded-xl transition-all duration-300 group
+                    ${isActive 
+                      ? "bg-white/15 border border-white/30 shadow-lg translate-x-1" 
+                      : "hover:bg-white/10 border border-transparent"}
+                  `}
+                >
+                  <item.icon 
+                    size={20} 
+                    className={`transition-colors ${isActive ? "text-white" : "text-white/60 group-hover:text-white"}`} 
+                  />
+                  <span className={`text-sm transition-all ${isActive ? "font-bold text-white" : "text-white/80 group-hover:text-white"}`}>
+                    {item.name}
+                  </span>
+                  {isActive && (
+                    <div className="ml-auto w-1.5 h-5 bg-white rounded-full shadow-[0_0_8px_rgba(255,255,255,0.6)]" />
+                  )}
+                </Link>
+              );
+            })
+          )}
         </nav>
       </aside>
     </>

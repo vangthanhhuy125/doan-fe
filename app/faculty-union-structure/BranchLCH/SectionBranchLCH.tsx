@@ -19,7 +19,17 @@ export default function SectionChiHoi() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/organizations?scope=HOI`);
       const data = await res.json();
       const hoiOnly = Array.isArray(data) ? data.filter((u: any) => u.scope === 'HOI') : [];
-      setUnits(hoiOnly);
+      const sorted = hoiOnly.sort((a: any, b: any) => {
+        const isClassA = a.unitType === 'CHIDOAN' || a.unitType === 'CHIHOI';
+        const isClassB = b.unitType === 'CHIDOAN' || b.unitType === 'CHIHOI';
+        if (isClassA && !isClassB) return -1;
+        if (!isClassA && isClassB) return 1;
+
+        const nameA = a.ten || a.group_name || '';
+        const nameB = b.ten || b.group_name || '';
+        return nameA.localeCompare(nameB, 'vi', { numeric: true });
+      });
+      setUnits(sorted);
     } catch {
       setUnits([]);
     }

@@ -20,6 +20,33 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("ALL");
 
+  const getIntake = (u: any) => {
+    const val = u.khoa || u.intake;
+    if (val !== undefined && val !== null && String(val).trim() !== "") {
+      const num = parseInt(String(val).trim(), 10);
+      if (!isNaN(num) && num >= 1900 && num <= 2100) return num;
+    }
+    const match = (u.ten || u.group_name || '').match(/\d{4}/);
+    return match ? parseInt(match[0], 10) : 9999;
+  };
+
+  const compareUnits = (a: any, b: any) => {
+    const isClassA = a.unitType === 'CHIDOAN';
+    const isClassB = b.unitType === 'CHIDOAN';
+    if (isClassA && !isClassB) return -1;
+    if (!isClassA && isClassB) return 1;
+
+    if (isClassA && isClassB) {
+      const intakeA = getIntake(a);
+      const intakeB = getIntake(b);
+      if (intakeA !== intakeB) return intakeA - intakeB;
+    }
+
+    const nameA = a.ten || a.group_name || "";
+    const nameB = b.ten || b.group_name || "";
+    return nameA.localeCompare(nameB, 'vi', { numeric: true });
+  };
+
   const fetchUnits = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/organizations?scope=DOAN`);
@@ -27,13 +54,7 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
       const doanOnly = Array.isArray(data) 
         ? data.filter((u: any) => u.scope === 'DOAN' || (!u.scope && !u.chiHoiTruong))
         : [];
-      const sortedData = doanOnly.sort((a, b) => {
-        if (a.unitType === 'CHIDOAN' && b.unitType !== 'CHIDOAN') return -1;
-        if (a.unitType !== 'CHIDOAN' && b.unitType === 'CHIDOAN') return 1;
-        const nameA = a.ten || a.group_name || "";
-        const nameB = b.ten || b.group_name || "";
-        return nameA.localeCompare(nameB, 'vi', { numeric: true });
-      });
+      const sortedData = doanOnly.sort(compareUnits);
       memoryCachedUnits = sortedData;
       setUnits(sortedData);
       try {
@@ -52,8 +73,9 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
         const local = sessionStorage.getItem('cached_units_list');
         if (local) {
           const parsed = JSON.parse(local);
-          memoryCachedUnits = parsed;
-          setUnits(parsed);
+          const sorted = Array.isArray(parsed) ? parsed.sort(compareUnits) : [];
+          memoryCachedUnits = sorted;
+          setUnits(sorted);
         }
       } catch (e) {}
     }

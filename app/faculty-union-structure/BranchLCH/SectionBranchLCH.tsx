@@ -14,21 +14,39 @@ export default function SectionChiHoi() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<string>("ALL");
 
+  const getIntake = (u: any) => {
+    const val = u.khoa || u.intake;
+    if (val !== undefined && val !== null && String(val).trim() !== "") {
+      const num = parseInt(String(val).trim(), 10);
+      if (!isNaN(num) && num >= 1900 && num <= 2100) return num;
+    }
+    const match = (u.ten || u.group_name || '').match(/\d{4}/);
+    return match ? parseInt(match[0], 10) : 9999;
+  };
+
+  const compareUnits = (a: any, b: any) => {
+    const isClassA = a.unitType === 'CHIDOAN' || a.unitType === 'CHIHOI';
+    const isClassB = b.unitType === 'CHIDOAN' || b.unitType === 'CHIHOI';
+    if (isClassA && !isClassB) return -1;
+    if (!isClassA && isClassB) return 1;
+
+    if (isClassA && isClassB) {
+      const intakeA = getIntake(a);
+      const intakeB = getIntake(b);
+      if (intakeA !== intakeB) return intakeA - intakeB;
+    }
+
+    const nameA = a.ten || a.group_name || '';
+    const nameB = b.ten || b.group_name || '';
+    return nameA.localeCompare(nameB, 'vi', { numeric: true });
+  };
+
   const fetchUnits = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/organizations?scope=HOI`);
       const data = await res.json();
       const hoiOnly = Array.isArray(data) ? data.filter((u: any) => u.scope === 'HOI') : [];
-      const sorted = hoiOnly.sort((a: any, b: any) => {
-        const isClassA = a.unitType === 'CHIDOAN' || a.unitType === 'CHIHOI';
-        const isClassB = b.unitType === 'CHIDOAN' || b.unitType === 'CHIHOI';
-        if (isClassA && !isClassB) return -1;
-        if (!isClassA && isClassB) return 1;
-
-        const nameA = a.ten || a.group_name || '';
-        const nameB = b.ten || b.group_name || '';
-        return nameA.localeCompare(nameB, 'vi', { numeric: true });
-      });
+      const sorted = hoiOnly.sort(compareUnits);
       setUnits(sorted);
     } catch {
       setUnits([]);

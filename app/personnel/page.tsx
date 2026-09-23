@@ -1,4 +1,3 @@
-// app/personnel/page.tsx
 'use client';
 
 import { useState, useEffect } from "react";
@@ -7,12 +6,31 @@ import NhanSuModal from "./HumanResourcesModal";
 
 let memoryCachedNhanSu: any[] | null = null;
 
+const getIntakeFromClass = (u: any) => {
+  const val = u.class || u.chi_doan || '';
+  const match = String(val).match(/\d{4}/);
+  if (match) {
+    const year = parseInt(match[0], 10);
+    if (year >= 1900 && year <= 2100) return year;
+  }
+  return 9999;
+};
+
 const sortPersonnel = (list: any[]) => {
   return [...list].sort((a, b) => {
+    const intakeA = getIntakeFromClass(a);
+    const intakeB = getIntakeFromClass(b);
+    if (intakeA !== intakeB) return intakeA - intakeB;
+
     const classA = a.class || a.chi_doan || '';
     const classB = b.class || b.chi_doan || '';
     const classCompare = classA.localeCompare(classB, 'vi', { numeric: true });
     if (classCompare !== 0) return classCompare;
+
+    const mssvA = a.student_id || a.mssv || '';
+    const mssvB = b.student_id || b.mssv || '';
+    const mssvCompare = mssvA.localeCompare(mssvB, undefined, { numeric: true });
+    if (mssvCompare !== 0) return mssvCompare;
 
     const nameA = a.full_name || a.name || '';
     const nameB = b.full_name || b.name || '';
@@ -53,8 +71,9 @@ export default function NhanSuPage() {
         const local = sessionStorage.getItem('cached_nhan_su');
         if (local) {
           const parsed = JSON.parse(local);
-          memoryCachedNhanSu = parsed;
-          setNhanSuList(parsed);
+          const sorted = Array.isArray(parsed) ? sortPersonnel(parsed) : [];
+          memoryCachedNhanSu = sorted;
+          setNhanSuList(sorted);
         }
       } catch (e) {}
     }

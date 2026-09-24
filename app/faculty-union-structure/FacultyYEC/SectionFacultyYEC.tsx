@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Users, UserCircle, Edit } from "lucide-react";
 import UpdateBCHModal from "./UpdateFacultyYECModal";
 import Image from "next/image";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Props {
   getRoleStyles: (index: number) => any;
@@ -13,6 +14,8 @@ interface Props {
 let memoryCachedBCH: any[] | null = null;
 
 export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: Props) {
+  const { canEdit } = usePermissions('to-chuc-doan');
+
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [bchList, setBchList] = useState<any[]>([]);
 
@@ -69,12 +72,16 @@ export default function SectionBanChapHanh({ getRoleStyles, allMembers = [] }: P
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setIsUpdateOpen(true)}
-          className="flex items-center gap-2 bg-[#0054a5] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
-        >
-          <Edit size={15} /> <span>Cập nhật nhân sự</span>
-        </button>
+
+        {/* 🟢 Chỉ hiển thị nút Cập nhật nhân sự khi có quyền Sửa */}
+        {canEdit && (
+          <button
+            onClick={() => setIsUpdateOpen(true)}
+            className="flex items-center gap-2 bg-[#0054a5] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
+          >
+            <Edit size={15} /> <span>Cập nhật nhân sự</span>
+          </button>
+        )}
       </div>
 
       <div className="space-y-5">

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Users, Sliders } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Sliders, ShieldCheck } from "lucide-react";
 import GroupsModal from "./GroupsModal";
 import GroupPermissionsModal, { SIDEBAR_MENU_ITEMS } from "./GroupPermissionsModal";
 
@@ -27,7 +27,6 @@ export default function GroupsTab() {
       if (res.ok) {
         const data = await res.json();
         const groupList = Array.isArray(data) ? data : [];
-        // Sắp xếp tăng dần theo Thứ tự hiển thị (order)
         groupList.sort((a: any, b: any) => (a.order ?? 99) - (b.order ?? 99));
         setGroups(groupList);
       } else {
@@ -129,7 +128,11 @@ export default function GroupsTab() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {groups.map((group) => {
-            const permCount = group.permissions?.length || 0;
+            const rawPerms: string[] = group.permissions || [];
+            const activeModulesCount = SIDEBAR_MENU_ITEMS.filter(item => 
+              rawPerms.includes(item.id) || rawPerms.includes(`${item.id}:view`)
+            ).length;
+
             return (
               <div key={group._id || group.id} className="bg-white p-5 rounded-3xl border border-gray-200 shadow-sm space-y-4 hover:border-[#0054a5]/40 transition-all flex flex-col justify-between">
                 <div className="space-y-3">
@@ -155,7 +158,7 @@ export default function GroupsTab() {
                       </button>
                       <button 
                         onClick={() => setGroupModal({ open: true, mode: 'delete', data: group })}
-                        className="p-1.5 text-red-600 hover:bg-red-50 rounded-lg border-none bg-transparent cursor-pointer" 
+                        className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg border-none bg-transparent cursor-pointer" 
                         title="Xóa nhóm"
                       >
                         <Trash2 size={14} />
@@ -168,9 +171,11 @@ export default function GroupsTab() {
                   </p>
 
                   <div className="text-[11px] text-gray-500 font-semibold flex items-center justify-between bg-gray-50 p-2.5 rounded-xl">
-                    <span>Quyền truy cập Sidebar:</span>
+                    <span className="flex items-center gap-1.5">
+                      <ShieldCheck size={14} className="text-[#0054a5]" /> Quyền truy cập:
+                    </span>
                     <span className="text-[#0054a5] font-bold bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">
-                      {permCount} / {SIDEBAR_MENU_ITEMS.length} mục
+                      {activeModulesCount} / {SIDEBAR_MENU_ITEMS.length} chức năng
                     </span>
                   </div>
                 </div>
@@ -196,7 +201,6 @@ export default function GroupsTab() {
         </div>
       )}
 
-      {/* MODAL QUẢN LÝ NHÓM */}
       {groupModal.open && (
         <GroupsModal
           mode={groupModal.mode}
@@ -207,7 +211,6 @@ export default function GroupsTab() {
         />
       )}
 
-      {/* MODAL CẤU HÌNH PHÂN QUYỀN SIDEBAR */}
       {permissionModal.open && (
         <GroupPermissionsModal
           group={permissionModal.group}

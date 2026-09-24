@@ -20,20 +20,21 @@ export default function AuthPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
-
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
       });
-
       const data = await res.json();
-
       if (res.ok) {
-        localStorage.setItem("user", JSON.stringify(data));
-        if (data.token) {
-          localStorage.setItem("token", data.token);
+        // Lưu thông tin user chứa mảng permissions
+        const userProfile = data.user || data;
+        localStorage.setItem("user", JSON.stringify(userProfile));
+
+        const token = data.access_token || data.token;
+        if (token) {
+          localStorage.setItem("token", token);
         }
         
         router.push("/about"); 

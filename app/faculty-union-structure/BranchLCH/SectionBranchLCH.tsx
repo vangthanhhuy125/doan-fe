@@ -5,8 +5,11 @@ import { School, LayoutGrid, UserCircle, Edit, Trash2, Plus, Search, RotateCcw, 
 import AddBranchLCHModal from "./AddBranchLCHModal";
 import EditUnitModal from "../BranchYEC/EditUnitModal";
 import DeleteUnitConfirm from "../BranchYEC/DeleteUnitConfirm";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function SectionChiHoi() {
+  const { canCreate, canEdit, canDelete } = usePermissions('to-chuc-doan');
+
   const [units, setUnits] = useState<any[]>([]);
   const [editingUnit, setEditingUnit] = useState<any>(null);
   const [deletingUnit, setDeletingUnit] = useState<any>(null);
@@ -178,12 +181,16 @@ export default function SectionChiHoi() {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setIsAddOpen(true)}
-          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-sky-500/20 transition-all text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
-        >
-          <Plus size={16} /> <span>Thêm đơn vị</span>
-        </button>
+
+        {/* 🟢 Chỉ hiển thị nút Thêm đơn vị khi có quyền Thêm */}
+        {canCreate && (
+          <button
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-sky-500/20 transition-all text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
+          >
+            <Plus size={16} /> <span>Thêm đơn vị</span>
+          </button>
+        )}
       </div>
 
       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center gap-3 shadow-xs">
@@ -261,14 +268,22 @@ export default function SectionChiHoi() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <button onClick={() => setEditingUnit(unit)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl border-none bg-transparent cursor-pointer">
-                      <Edit size={16} />
-                    </button>
-                    <button onClick={() => setDeletingUnit(unit)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl border-none bg-transparent cursor-pointer">
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+
+                  {/* 🟢 Chỉ hiển thị nút Sửa / Xóa khi có quyền tương ứng */}
+                  {(canEdit || canDelete) && (
+                    <div className="flex items-center gap-1.5">
+                      {canEdit && (
+                        <button onClick={() => setEditingUnit(unit)} className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl border-none bg-transparent cursor-pointer" title="Chỉnh sửa">
+                          <Edit size={16} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button onClick={() => setDeletingUnit(unit)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl border-none bg-transparent cursor-pointer" title="Xóa">
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {renderPersonnel(unit)}
               </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Users, Plus, Eye, Edit, Trash2, Search, Filter, RotateCcw, Phone, Mail, Calendar, FileSpreadsheet, Loader2 } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Props {
   nhanSuList: any[];
@@ -9,6 +10,9 @@ interface Props {
 }
 
 export default function SectionNhanSu({ nhanSuList = [], onOpenModal }: Props) {
+  const { canCreate, canView, canEdit, canDelete } = usePermissions('nhan-su');
+  const hasAnyAction = canView || canEdit || canDelete;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClass, setFilterClass] = useState("");
   const [filterMonth, setFilterMonth] = useState("");
@@ -280,13 +284,16 @@ export default function SectionNhanSu({ nhanSuList = [], onOpenModal }: Props) {
             <span>{isExporting ? "Đang xuất..." : "Xuất Excel"}</span>
           </button>
 
-          <button 
-            type="button"
-            onClick={() => onOpenModal('add')} 
-            className="flex-1 sm:flex-none bg-[#0054a5] text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider active:scale-95 border-none outline-none cursor-pointer"
-          >
-            <Plus size={16} /> <span>Thêm nhân sự</span>
-          </button>
+          {/* 🟢 Chỉ hiển thị nút Thêm nhân sự khi có quyền Create */}
+          {canCreate && (
+            <button 
+              type="button"
+              onClick={() => onOpenModal('add')} 
+              className="flex-1 sm:flex-none bg-[#0054a5] text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20 hover:bg-blue-700 transition-all flex items-center justify-center gap-2 text-xs uppercase tracking-wider active:scale-95 border-none outline-none cursor-pointer"
+            >
+              <Plus size={16} /> <span>Thêm nhân sự</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -367,7 +374,10 @@ export default function SectionNhanSu({ nhanSuList = [], onOpenModal }: Props) {
                 <th className="px-4 py-4 text-center">Chi đoàn</th>
                 <th className="px-5 py-4 text-left">SĐT / Email</th>
                 <th className="px-4 py-4 text-center">Ngày sinh</th>
-                <th className="px-4 py-4 text-center w-36">Thao tác</th>
+                {/* 🟢 Ẩn header Thao tác nếu không có quyền xem, sửa hoặc xóa */}
+                {hasAnyAction && (
+                  <th className="px-4 py-4 text-center w-36">Thao tác</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -395,24 +405,34 @@ export default function SectionNhanSu({ nhanSuList = [], onOpenModal }: Props) {
                     <td className="px-4 py-3.5 text-center font-semibold text-slate-600 text-xs">
                       {formatDisplayBirthday(item.birthday)}
                     </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button onClick={() => onOpenModal('view', item)} className="p-2 text-[#0054a5] hover:bg-blue-100 rounded-xl transition-all border-none bg-transparent cursor-pointer" title="Xem chi tiết">
-                          <Eye size={16} />
-                        </button>
-                        <button onClick={() => onOpenModal('edit', item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all border-none bg-transparent cursor-pointer" title="Chỉnh sửa">
-                          <Edit size={16} />
-                        </button>
-                        <button onClick={() => onOpenModal('delete', item)} className="p-2 text-rose-600 hover:bg-rose-100 rounded-xl transition-all border-none bg-transparent cursor-pointer" title="Xóa">
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    
+                    {/* 🟢 Ẩn / hiện icon tương ứng từng quyền */}
+                    {hasAnyAction && (
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center justify-center gap-1.5">
+                          {canView && (
+                            <button onClick={() => onOpenModal('view', item)} className="p-2 text-[#0054a5] hover:bg-blue-100 rounded-xl transition-all border-none bg-transparent cursor-pointer" title="Xem chi tiết">
+                              <Eye size={16} />
+                            </button>
+                          )}
+                          {canEdit && (
+                            <button onClick={() => onOpenModal('edit', item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all border-none bg-transparent cursor-pointer" title="Chỉnh sửa">
+                              <Edit size={16} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button onClick={() => onOpenModal('delete', item)} className="p-2 text-rose-600 hover:bg-rose-100 rounded-xl transition-all border-none bg-transparent cursor-pointer" title="Xóa">
+                              <Trash2 size={16} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={7} className="px-6 py-14 text-center italic text-slate-400 font-bold">
+                  <td colSpan={hasAnyAction ? 7 : 6} className="px-6 py-14 text-center italic text-slate-400 font-bold">
                     Không có nhân sự nào phù hợp...
                   </td>
                 </tr>
@@ -422,6 +442,7 @@ export default function SectionNhanSu({ nhanSuList = [], onOpenModal }: Props) {
         </div>
       </div>
 
+      {/* GIAO DIỆN MOBILE */}
       <div className="grid grid-cols-1 gap-3.5 md:hidden">
         {filteredList.length > 0 ? (
           filteredList.map((item: any, index: number) => (
@@ -464,26 +485,35 @@ export default function SectionNhanSu({ nhanSuList = [], onOpenModal }: Props) {
                 </div>
               </div>
 
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-                <button 
-                  onClick={() => onOpenModal('view', item)} 
-                  className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-[#0054a5] rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border-none cursor-pointer"
-                >
-                  <Eye size={14} /> <span>Xem</span>
-                </button>
-                <button 
-                  onClick={() => onOpenModal('edit', item)} 
-                  className="flex-1 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border-none cursor-pointer"
-                >
-                  <Edit size={14} /> <span>Sửa</span>
-                </button>
-                <button 
-                  onClick={() => onOpenModal('delete', item)} 
-                  className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold text-xs flex items-center justify-center border-none cursor-pointer"
-                >
-                  <Trash2 size={15} />
-                </button>
-              </div>
+              {/* 🟢 Mobile: Ẩn/hiện các nút theo quyền */}
+              {hasAnyAction && (
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                  {canView && (
+                    <button 
+                      onClick={() => onOpenModal('view', item)} 
+                      className="flex-1 py-2 bg-blue-50 hover:bg-blue-100 text-[#0054a5] rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border-none cursor-pointer"
+                    >
+                      <Eye size={14} /> <span>Xem</span>
+                    </button>
+                  )}
+                  {canEdit && (
+                    <button 
+                      onClick={() => onOpenModal('edit', item)} 
+                      className="flex-1 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 border-none cursor-pointer"
+                    >
+                      <Edit size={14} /> <span>Sửa</span>
+                    </button>
+                  )}
+                  {canDelete && (
+                    <button 
+                      onClick={() => onOpenModal('delete', item)} 
+                      className="p-2 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-xl font-bold text-xs flex items-center justify-center border-none cursor-pointer"
+                    >
+                      <Trash2 size={15} />
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           ))
         ) : (

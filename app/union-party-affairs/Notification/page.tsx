@@ -4,8 +4,12 @@ import { useState, useEffect } from "react";
 import { Bell, Eye, Edit, Trash2, Plus, Calendar, X, Search, RotateCcw, FileText } from "lucide-react";
 import NoticeForm from "./NoticeForm";
 import ConfirmNoticeDelete from "./ConfirmNoticeDelete";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function NotificationPage() {
+  const { canCreate, canView, canEdit, canDelete } = usePermissions('cong-tac-doan');
+  const hasAnyAction = canView || canEdit || canDelete;
+
   const [notices, setNotices] = useState<any[]>([]);
   const [selectedNotice, setSelectedNotice] = useState<any>(null);
   const [formMode, setFormMode] = useState<{ open: boolean, data: any }>({ open: false, data: null });
@@ -14,25 +18,24 @@ export default function NotificationPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
-  const fetchNotices = async () => {     
-  try {       
-    const token = localStorage.getItem('token');
-    const userStr = localStorage.getItem('user');
-    const localUser = userStr ? JSON.parse(userStr) : null;
-    const userId = localUser?._id || localUser?.user_id || '';
-
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/announcements?manage=true&userId=${userId}`, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'x-user-id': userId,
-      }
-    });       
-    const data = await res.json();       
-    setNotices(Array.isArray(data) ? data : []);     
-  } catch (error) {       
-    console.error(error);     
-  }   
-};
+  const fetchNotices = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+      const localUser = userStr ? JSON.parse(userStr) : null;
+      const userId = localUser?._id || localUser?.user_id || '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/announcements?manage=true&userId=${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'x-user-id': userId,
+        }
+      });
+      const data = await res.json();
+      setNotices(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error(error);
+    }
+  };
 
   useEffect(() => {
     fetchNotices();
@@ -43,7 +46,6 @@ export default function NotificationPage() {
     const url = isEdit
       ? `${process.env.NEXT_PUBLIC_API_URL}/announcements/${item._id}`
       : `${process.env.NEXT_PUBLIC_API_URL}/announcements`;
-
     return new Promise<void>(async (resolve, reject) => {
       try {
         const formData = new FormData();
@@ -51,11 +53,9 @@ export default function NotificationPage() {
         formData.append('content', item.content);
         formData.append('sendEmail', String(item.sendEmail));
         formData.append('emailTarget', item.emailTarget || 'ALL');
-
         if (item.posted_at) {
           formData.append('posted_at', item.posted_at);
         }
-
         if (item.receiverIds && item.receiverIds.length > 0) {
           formData.append('receiverIds', JSON.stringify(item.receiverIds));
         }
@@ -66,7 +66,6 @@ export default function NotificationPage() {
           method: isEdit ? 'PUT' : 'POST',
           body: formData,
         });
-
         if (res.ok) {
           await fetchNotices();
           setFormMode({ open: false, data: null });
@@ -78,7 +77,7 @@ export default function NotificationPage() {
         reject(error);
       }
     });
-  }; // Bổ sung dấu đóng hàm handleSave bị khuyết trong code cũ
+  };
 
   const confirmDelete = async () => {
     try {
@@ -101,7 +100,6 @@ export default function NotificationPage() {
   };
 
   const isFiltering = searchTerm !== "" || startDate !== "" || endDate !== "";
-
   const filteredNotices = notices.filter(item => {
     const matchesSearch = (item.title || "").toLowerCase().includes(searchTerm.toLowerCase());
     const itemDate = new Date(item.posted_at);
@@ -117,17 +115,24 @@ export default function NotificationPage() {
       <div className="flex items-center justify-between border-b-2 border-[#0054a5] pb-3">
         <div className="flex items-center gap-2">
           <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100 transition-transform hover:scale-105">
-             <Bell size={24} />
+            <Bell size={24} />
           </div>
-          <h2 className="font-black text-[#0054a5] tracking-tight uppercase text-2xl">Thông báo - Triển khai - Triệu tập</h2>
+          <h2 className="font-black text-[#0054a5] tracking-tight uppercase text-2xl">
+            Thông báo - Triển khai
+          </h2>
         </div>
-        <button
-          onClick={() => setFormMode({ open: true, data: null })}
-          className="flex items-center gap-2 bg-[#0054a5] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-[10px] uppercase tracking-widest border-none outline-none"
-        >
-          <Plus size={16} /> Soạn thông báo mới
-        </button>
+
+        {/* 🟢 Chỉ hiển thị nút Soạn thông báo khi có quyền Thêm */}
+        {canCreate && (
+          <button
+            onClick={() => setFormMode({ open: true, data: null })}
+            className="flex items-center gap-2 bg-[#0054a5] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-[10px] uppercase tracking-widest border-none outline-none cursor-pointer"
+          >
+            <Plus size={16} /> <span>Soạn thông báo</span>
+          </button>
+        )}
       </div>
+
       <div className="bg-white p-5 rounded-3xl border border-gray-100 shadow-sm space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="relative col-span-1 md:col-span-1">
@@ -162,7 +167,7 @@ export default function NotificationPage() {
             {isFiltering && (
               <button
                 onClick={resetFilters}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500 border-none bg-transparent outline-none"
+                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition-all active:rotate-180 duration-500 border-none bg-transparent outline-none cursor-pointer"
               >
                 <RotateCcw size={20} />
               </button>
@@ -170,6 +175,7 @@ export default function NotificationPage() {
           </div>
         </div>
       </div>
+
       <div className="overflow-x-auto rounded-3xl border border-gray-100 shadow-xl bg-white">
         <table className="w-full text-sm text-left border-collapse">
           <thead className="bg-[#0054a5] text-white font-bold text-[13px] tracking-widest">
@@ -177,7 +183,10 @@ export default function NotificationPage() {
               <th className="px-6 py-5 text-center uppercase w-16">STT</th>
               <th className="px-6 py-5 text-center">Nội dung thông báo</th>
               <th className="px-6 py-5 text-center w-40">Ngày đăng</th>
-              <th className="px-6 py-5 text-center w-40"></th>
+              {/* 🟢 Ẩn header Thao tác nếu không có bất kỳ quyền thao tác nào */}
+              {hasAnyAction && (
+                <th className="px-6 py-5 text-center w-40">Thao tác</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
@@ -187,29 +196,48 @@ export default function NotificationPage() {
                   <td className="px-6 py-5 text-center font-bold text-gray-400 group-hover:text-[#0054a5] transition-colors">{index + 1}</td>
                   <td className="px-6 py-5 font-bold text-slate-700 group-hover:text-[#0054a5] transition-colors truncate max-w-md">{item.title}</td>
                   <td className="px-6 py-5 text-center text-gray-500 text-xs font-medium italic">{new Date(item.posted_at).toLocaleDateString('vi-VN')}</td>
-                  <td className="px-6 py-5 text-center">
-                    <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => setSelectedNotice(item)} className="p-2 text-[#0054a5] hover:bg-blue-100 rounded-xl transition-all border-none outline-none"><Eye size={18} /></button>
-                      <button onClick={() => setFormMode({ open: true, data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all border-none outline-none"><Edit size={18} /></button>
-                      <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all border-none outline-none"><Trash2 size={18} /></button>
-                    </div>
-                  </td>
+                  
+                  {/* 🟢 Ẩn/hiện từng icon thao tác */}
+                  {hasAnyAction && (
+                    <td className="px-6 py-5 text-center">
+                      <div className="flex items-center justify-center gap-2">
+                        {canView && (
+                          <button onClick={() => setSelectedNotice(item)} className="p-2 text-[#0054a5] hover:bg-blue-100 rounded-xl transition-all border-none outline-none cursor-pointer" title="Xem chi tiết">
+                            <Eye size={18} />
+                          </button>
+                        )}
+                        {canEdit && (
+                          <button onClick={() => setFormMode({ open: true, data: item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-xl transition-all border-none outline-none cursor-pointer" title="Chỉnh sửa">
+                            <Edit size={18} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-xl transition-all border-none outline-none cursor-pointer" title="Xóa">
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={4} className="px-6 py-10 text-center text-gray-400 italic font-bold">Không tìm thấy thông báo phù hợp.</td>
+                <td colSpan={hasAnyAction ? 4 : 3} className="px-6 py-10 text-center text-gray-400 italic font-bold">
+                  Không tìm thấy thông báo phù hợp.
+                </td>
               </tr>
             )}
           </tbody>
         </table>
       </div>
+
       {selectedNotice && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-2xl rounded-[2.5rem] shadow-2xl overflow-hidden border border-white/20 max-h-[85vh] flex flex-col">
             <div className="bg-[#0054a5] p-6 flex items-center justify-between text-white shrink-0">
               <h3 className="font-bold uppercase tracking-widest text-sm">Nội dung chi tiết</h3>
-              <button onClick={() => setSelectedNotice(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white outline-none"><X size={20}/></button>
+              <button onClick={() => setSelectedNotice(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors border-none bg-transparent text-white outline-none cursor-pointer"><X size={20}/></button>
             </div>
             <div className="flex-1 overflow-y-auto p-6 sm:p-10 space-y-6 text-black custom-scrollbar">
               <div className="flex items-center gap-2 text-slate-400 font-bold text-[10px] uppercase">
@@ -219,7 +247,6 @@ export default function NotificationPage() {
               <div className="p-6 sm:p-8 bg-slate-50 rounded-[2rem] border border-slate-100 text-slate-700 leading-relaxed whitespace-pre-wrap italic shadow-inner font-medium">
                 {selectedNotice.content}
               </div>
-              
               {selectedNotice.file && (
                 <div className="p-4 bg-blue-50/50 rounded-2xl border border-blue-100 flex items-center justify-between animate-in fade-in duration-300">
                   <div className="flex items-center gap-3 min-w-0">
@@ -235,8 +262,8 @@ export default function NotificationPage() {
                     type="button"
                     onClick={() => {
                       if (selectedNotice.file.buffer) {
-                        const base64Data = typeof selectedNotice.file.buffer === 'string' 
-                          ? selectedNotice.file.buffer 
+                        const base64Data = typeof selectedNotice.file.buffer === 'string'
+                          ? selectedNotice.file.buffer
                           : selectedNotice.file.buffer.data || '';
                         if (base64Data) {
                           const link = document.createElement('a');
@@ -246,7 +273,7 @@ export default function NotificationPage() {
                         }
                       }
                     }}
-                    className="text-xs font-black text-[#0054a5] hover:underline shrink-0 pl-2"
+                    className="text-xs font-black text-[#0054a5] hover:underline shrink-0 pl-2 cursor-pointer border-none bg-transparent"
                   >
                     Tải tài liệu
                   </button>
@@ -256,6 +283,7 @@ export default function NotificationPage() {
           </div>
         </div>
       )}
+
       {formMode.open && (
         <NoticeForm
           data={formMode.data}

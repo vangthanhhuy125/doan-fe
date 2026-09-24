@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Lightbulb, Plus, Eye, Edit, Trash2, Search, Filter, RotateCcw } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Props {
   mhgpList: any[];
@@ -9,11 +10,13 @@ interface Props {
 }
 
 export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
+  const { canCreate, canView, canEdit, canDelete } = usePermissions('thi-dua');
+  const hasAnyAction = canView || canEdit || canDelete;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterYear, setFilterYear] = useState("");
 
   const years = Array.from(new Set(mhgpList.map(item => item.academic_year))).sort().reverse();
-
   const filteredList = mhgpList.filter(item => {
     const matchesName = (item.solution_model_name || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesYear = filterYear === "" || item.academic_year === filterYear;
@@ -27,7 +30,6 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
 
   return (
     <section className="space-y-4 sm:space-y-6 text-black">
-      {/* Tiêu đề & Nút thêm - Tự động bẻ dòng trên điện thoại */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b-2 border-blue-600 pb-3 gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-100">
@@ -35,27 +37,28 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
           </div>
           <h2 className="text-xl sm:text-2xl font-black uppercase text-blue-600 tracking-tight">Mô hình giải pháp</h2>
         </div>
-        <button 
-          onClick={() => onOpenModal('add')}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 sm:py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-xs uppercase tracking-wider"
-        >
-          <Plus size={16} /> Thêm MHGP
-        </button>
+
+        {canCreate && (
+          <button 
+            onClick={() => onOpenModal('add')}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-4 py-2.5 sm:py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
+          >
+            <Plus size={16} /> <span>Thêm MHGP</span>
+          </button>
+        )}
       </div>
 
-      {/* Thanh tìm kiếm và bộ lọc - Linh hoạt chuyển đổi từ cột dọc (Mobile) sang hàng ngang (Desktop) */}
       <div className="bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-100 flex flex-col md:flex-row items-stretch md:items-center gap-3 sm:gap-4 shadow-sm">
         <div className="relative flex-1 min-w-0 md:min-w-[250px] group">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
           <input 
             type="text"
-            placeholder="Tìm kiếm tên mô hình giải pháp"
+            placeholder="Tìm kiếm mô hình giải pháp..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-2.5 sm:py-3 bg-white rounded-xl text-xs sm:text-sm border border-slate-200 focus:border-blue-400 outline-none transition-all shadow-sm"
+            className="w-full pl-12 pr-4 py-2.5 sm:py-3 bg-white rounded-xl text-xs sm:text-sm border border-slate-200 focus:border-blue-400 outline-none transition-all shadow-sm font-medium"
           />
         </div>
-
         <div className="flex items-center gap-2 sm:gap-3 w-full md:w-auto">
           <div className="relative group flex-1 md:flex-initial">
             <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
@@ -69,16 +72,16 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
                 <option key={year} value={year}>{year}</option>
               ))}
             </select>
-            {/* Thêm biểu tượng mũi tên tùy chỉnh cho thẻ select để tránh mất dấu khi dùng appearance-none */}
             <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
           </div>
-
           {(searchTerm || filterYear) && (
             <button 
               onClick={resetFilters}
-              className="p-2.5 sm:p-3 bg-white text-red-500 rounded-xl border border-red-100 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm flex-shrink-0"
+              className="p-2.5 sm:p-3 bg-white text-red-500 rounded-xl border border-red-100 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm flex-shrink-0 cursor-pointer"
               title="Đặt lại bộ lọc"
             >
               <RotateCcw size={18} />
@@ -87,16 +90,17 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
         </div>
       </div>
 
-      {/* Bọc bảng dữ liệu bằng khối div overflow-x-auto giúp xem dữ liệu dạng cuộn ngang, chống vỡ layout trên mobile */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xl overflow-hidden">
         <div className="w-full overflow-x-auto">
           <table className="w-full text-xs sm:text-sm text-left text-black table-auto min-w-[600px] sm:min-w-0">
             <thead className="bg-blue-600 text-white font-bold text-[11px] sm:text-[13px]">
               <tr>
                 <th className="px-3 sm:px-4 py-4 sm:py-5 text-center w-12 sm:w-16">STT</th>
-                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center">Tên Mô hình - Giải pháp</th>
+                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center">Tên mô hình - Giải pháp</th>
                 <th className="px-4 sm:px-6 py-4 sm:py-5 text-center w-28 sm:w-32">Năm học</th>
-                <th className="px-4 sm:px-6 py-4 sm:py-5 text-center w-36 sm:w-40"></th>
+                {hasAnyAction && (
+                  <th className="px-4 sm:px-6 py-4 sm:py-5 text-center w-36 sm:w-40">Thao tác</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -112,28 +116,37 @@ export default function SectionMHGP({ mhgpList, onOpenModal }: Props) {
                     <td className="px-4 sm:px-6 py-3 sm:py-5 text-center font-bold text-slate-400 group-hover:text-blue-600 whitespace-nowrap">
                       {item.academic_year}
                     </td>
-                    <td className="px-4 sm:px-6 py-3 sm:py-5 text-center">
-                      <div className="flex items-center justify-center gap-1 sm:gap-2">
-                        <button onClick={() => onOpenModal('view', item)} className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-blue-200 bg-transparent outline-none">
-                          <Eye size={17} />
-                        </button>
-                        <button onClick={() => onOpenModal('edit', item)} className="p-1.5 sm:p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-amber-200 bg-transparent outline-none">
-                          <Edit size={17} />
-                        </button>
-                        <button onClick={() => onOpenModal('delete', item)} className="p-1.5 sm:p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-red-200 bg-transparent outline-none">
-                          <Trash2 size={17} />
-                        </button>
-                      </div>
-                    </td>
+
+                    {hasAnyAction && (
+                      <td className="px-4 sm:px-6 py-3 sm:py-5 text-center">
+                        <div className="flex items-center justify-center gap-1 sm:gap-2">
+                          {canView && (
+                            <button onClick={() => onOpenModal('view', item)} className="p-1.5 sm:p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-blue-200 bg-transparent outline-none cursor-pointer" title="Xem chi tiết">
+                              <Eye size={17} />
+                            </button>
+                          )}
+                          {canEdit && (
+                            <button onClick={() => onOpenModal('edit', item)} className="p-1.5 sm:p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-amber-200 bg-transparent outline-none cursor-pointer" title="Chỉnh sửa">
+                              <Edit size={17} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button onClick={() => onOpenModal('delete', item)} className="p-1.5 sm:p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-red-200 bg-transparent outline-none cursor-pointer" title="Xóa">
+                              <Trash2 size={17} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={4} className="px-6 py-12 sm:py-16 text-center">
-                     <div className="flex flex-col items-center gap-3 text-slate-400">
-                        <Search size={36} className="opacity-20" />
-                        <p className="font-bold italic text-xs sm:text-sm">Không tìm thấy kết quả nào phù hợp với bộ lọc...</p>
-                     </div>
+                  <td colSpan={hasAnyAction ? 4 : 3} className="px-6 py-12 sm:py-16 text-center">
+                    <div className="flex flex-col items-center gap-3 text-slate-400">
+                      <Search size={36} className="opacity-20" />
+                      <p className="font-bold italic text-xs sm:text-sm">Không tìm thấy kết quả nào phù hợp...</p>
+                    </div>
                   </td>
                 </tr>
               )}

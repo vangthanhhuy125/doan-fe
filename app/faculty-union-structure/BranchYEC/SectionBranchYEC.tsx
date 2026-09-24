@@ -5,6 +5,7 @@ import { School, LayoutGrid, UserCircle, Edit, Trash2, Plus, Search, RotateCcw, 
 import EditUnitModal from "./EditUnitModal";
 import DeleteUnitConfirm from "./DeleteUnitConfirm";
 import AddUnitModal from "./AddUnitModal";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Props {
   chiDoanTruocThuoc: any[];
@@ -13,6 +14,8 @@ interface Props {
 let memoryCachedUnits: any[] | null = null;
 
 export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props) {
+  const { canCreate, canEdit, canDelete } = usePermissions('to-chuc-doan');
+
   const [units, setUnits] = useState<any[]>([]);
   const [editingUnit, setEditingUnit] = useState<any>(null);
   const [deletingUnit, setDeletingUnit] = useState<any>(null);
@@ -215,12 +218,16 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setIsAddOpen(true)}
-          className="flex items-center gap-2 bg-[#0054a5] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
-        >
-          <Plus size={16} /> <span>Thêm đơn vị</span>
-        </button>
+
+        {/* 🟢 Chỉ hiển thị nút Thêm đơn vị khi có quyền Thêm */}
+        {canCreate && (
+          <button
+            onClick={() => setIsAddOpen(true)}
+            className="flex items-center gap-2 bg-[#0054a5] hover:bg-blue-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-blue-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
+          >
+            <Plus size={16} /> <span>Thêm đơn vị</span>
+          </button>
+        )}
       </div>
 
       <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 flex flex-col sm:flex-row items-center gap-3 shadow-xs">
@@ -302,22 +309,30 @@ export default function SectionChiDoan({ chiDoanTruocThuoc: initialData }: Props
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      onClick={() => setEditingUnit(unit)}
-                      className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
-                      title="Chỉnh sửa"
-                    >
-                      <Edit size={16} />
-                    </button>
-                    <button
-                      onClick={() => setDeletingUnit(unit)}
-                      className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
-                      title="Xóa"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+
+                  {/* 🟢 Chỉ hiển thị nút Sửa / Xóa khi có quyền tương ứng */}
+                  {(canEdit || canDelete) && (
+                    <div className="flex items-center gap-1.5">
+                      {canEdit && (
+                        <button
+                          onClick={() => setEditingUnit(unit)}
+                          className="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+                          title="Chỉnh sửa"
+                        >
+                          <Edit size={16} />
+                        </button>
+                      )}
+                      {canDelete && (
+                        <button
+                          onClick={() => setDeletingUnit(unit)}
+                          className="p-2 text-rose-600 hover:bg-rose-50 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+                          title="Xóa"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {renderPersonnel(unit)}
               </div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Award, Plus, Eye, Edit, Trash2, Search, Link as LinkIcon, RotateCcw, Filter, FileText } from "lucide-react";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Props {
   activities: any[];
@@ -9,11 +10,13 @@ interface Props {
 }
 
 export default function SectionBangDiem({ activities, onOpenModal }: Props) {
+  const { canCreate, canView, canEdit, canDelete } = usePermissions('thi-dua');
+  const hasAnyAction = canView || canEdit || canDelete;
+
   const [searchTerm, setSearchTerm] = useState("");
   const [filterYear, setFilterYear] = useState("");
 
   const years = Array.from(new Set(activities.map(item => item.academic_year))).sort().reverse();
-
   const filteredActivities = activities.filter(item => {
     const matchesSearch = (item.activity_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (item.plan_url || "").toLowerCase().includes(searchTerm.toLowerCase());
@@ -35,12 +38,15 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
           </div>
           <h2 className="text-2xl font-black uppercase text-emerald-600 tracking-tight">Bảng điểm thi đua</h2>
         </div>
-        <button 
-          onClick={() => onOpenModal('add')}
-          className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-emerald-700 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none"
-        >
-          <Plus size={16} /> Thêm minh chứng
-        </button>
+
+        {canCreate && (
+          <button 
+            onClick={() => onOpenModal('add')}
+            className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-emerald-700 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
+          >
+            <Plus size={16} /> <span>Thêm minh chứng</span>
+          </button>
+        )}
       </div>
 
       <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 flex flex-wrap items-center gap-4 shadow-sm">
@@ -48,13 +54,12 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
           <input 
             type="text"
-            placeholder="Tìm kiếm tên hoạt động hoặc số hiệu kế hoạch"
+            placeholder="Tìm kiếm tên hoạt động hoặc kế hoạch..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-3 bg-white rounded-xl text-sm border border-slate-200 focus:border-emerald-400 outline-none transition-all shadow-sm"
+            className="w-full pl-12 pr-4 py-3 bg-white rounded-xl text-sm border border-slate-200 focus:border-emerald-400 outline-none transition-all shadow-sm font-medium"
           />
         </div>
-
         <div className="flex items-center gap-3">
           <div className="relative group">
             <Filter size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
@@ -69,11 +74,10 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
               ))}
             </select>
           </div>
-
           {(searchTerm || filterYear) && (
             <button 
               onClick={resetFilters}
-              className="p-3 bg-white text-red-500 rounded-xl border border-red-100 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm"
+              className="p-3 bg-white text-red-500 rounded-xl border border-red-100 hover:border-red-300 hover:bg-red-50 transition-all shadow-sm cursor-pointer"
               title="Đặt lại bộ lọc"
             >
               <RotateCcw size={18} />
@@ -91,7 +95,9 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
               <th className="px-6 py-5 text-center">Kế hoạch</th>
               <th className="px-6 py-5 text-center w-32">Năm học</th>
               <th className="px-6 py-5 text-center">Minh chứng</th>
-              <th className="px-6 py-5 w-40"></th>
+              {hasAnyAction && (
+                <th className="px-6 py-5 w-40 text-center">Thao tác</th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
@@ -101,32 +107,47 @@ export default function SectionBangDiem({ activities, onOpenModal }: Props) {
                   <td className="px-4 py-4 text-center font-bold text-slate-400 group-hover:text-emerald-600">{index + 1}</td>
                   <td className="px-6 py-4 font-bold text-slate-700 leading-relaxed">{item.activity_name}</td>
                   <td className="px-6 py-4 text-center">
-                    <a href={item.plan_url} target="_blank" className="inline-flex items-center gap-1 text-emerald-600 hover:underline font-bold text-xs bg-emerald-50 px-3 py-1 rounded-full no-underline">
+                    <a href={item.plan_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-emerald-600 hover:underline font-bold text-xs bg-emerald-50 px-3 py-1 rounded-full no-underline">
                       <FileText size={12} /> Kế hoạch
                     </a>
                   </td>
                   <td className="px-6 py-4 text-center font-bold text-slate-400 group-hover:text-emerald-600">{item.academic_year}</td>
                   <td className="px-6 py-4 text-center">
-                    <a href={item.evidence_url} target="_blank" className="inline-flex items-center gap-1 text-blue-600 hover:underline font-bold text-xs bg-blue-50 px-3 py-1 rounded-full no-underline">
-                      <LinkIcon size={12} /> Bài đăng
+                    <a href={item.evidence_url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-blue-600 hover:underline font-bold text-xs bg-blue-50 px-3 py-1 rounded-full no-underline">
+                      <LinkIcon size={12} /> Bảng điểm
                     </a>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button onClick={() => onOpenModal('view', item)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-emerald-200 bg-transparent outline-none"><Eye size={18} /></button>
-                      <button onClick={() => onOpenModal('edit', item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-amber-200 bg-transparent outline-none"><Edit size={18} /></button>
-                      <button onClick={() => onOpenModal('delete', item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-red-200 bg-transparent outline-none"><Trash2 size={18} /></button>
-                    </div>
-                  </td>
+
+                  {hasAnyAction && (
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        {canView && (
+                          <button onClick={() => onOpenModal('view', item)} className="p-2 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-emerald-200 bg-transparent outline-none cursor-pointer" title="Xem chi tiết">
+                            <Eye size={18} />
+                          </button>
+                        )}
+                        {canEdit && (
+                          <button onClick={() => onOpenModal('edit', item)} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-amber-200 bg-transparent outline-none cursor-pointer" title="Chỉnh sửa">
+                            <Edit size={18} />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => onOpenModal('delete', item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-all shadow-sm border border-transparent hover:border-red-200 bg-transparent outline-none cursor-pointer" title="Xóa">
+                            <Trash2 size={18} />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="px-6 py-16 text-center">
-                   <div className="flex flex-col items-center gap-2 text-slate-400">
-                      <Search size={40} className="opacity-20" />
-                      <p className="font-bold italic">Không tìm thấy hoạt động nào...</p>
-                   </div>
+                <td colSpan={hasAnyAction ? 6 : 5} className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center gap-2 text-slate-400">
+                    <Search size={40} className="opacity-20" />
+                    <p className="font-bold italic">Không tìm thấy hoạt động nào...</p>
+                  </div>
                 </td>
               </tr>
             )}

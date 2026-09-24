@@ -4,12 +4,15 @@ import { useState, useEffect } from "react";
 import { Award, UserCircle, Edit } from "lucide-react";
 import UpdateFacultyLCHModal from "./UpdateFacultyLCHModal";
 import Image from "next/image";
+import { usePermissions } from "@/hooks/usePermissions";
 
 interface Props {
   getRoleStyles: (index: number) => any;
 }
 
 export default function SectionFacultyLCH({ getRoleStyles }: Props) {
+  const { canEdit } = usePermissions('to-chuc-doan');
+
   const [isUpdateOpen, setIsUpdateOpen] = useState(false);
   const [lchList, setLchList] = useState<any[]>([]);
 
@@ -50,12 +53,16 @@ export default function SectionFacultyLCH({ getRoleStyles }: Props) {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setIsUpdateOpen(true)}
-          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-sky-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
-        >
-          <Edit size={15} /> <span>Cập nhật nhân sự</span>
-        </button>
+
+        {/* 🟢 Chỉ hiển thị nút Cập nhật nhân sự khi có quyền Sửa */}
+        {canEdit && (
+          <button
+            onClick={() => setIsUpdateOpen(true)}
+            className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl font-bold shadow-md shadow-sky-500/20 transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
+          >
+            <Edit size={15} /> <span>Cập nhật nhân sự</span>
+          </button>
+        )}
       </div>
 
       <div className="space-y-5">

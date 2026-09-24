@@ -10,8 +10,11 @@ import ConfirmDelete from "./ConfirmDelete";
 import RegistrationManager from "./registration-forms/RegistrationManager";
 import CreateFormModal from "./registration-forms/CreateFormModal";
 import { RegistrationForm } from "./registration-forms/types";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export default function ToChucPage() {   
+  const { canCreate, canView, canEdit, canDelete } = usePermissions('chuong-trinh-nam');
+
   const [data, setData] = useState<any[]>([]);   
   const [formModal, setFormModal] = useState<{ open: boolean; mode: 'add' | 'edit' | 'view'; item: any }>({     
     open: false,     
@@ -32,14 +35,12 @@ export default function ToChucPage() {
   const [filterMonth, setFilterMonth] = useState("");   
   const [filterYear, setFilterYear] = useState("");   
 
-  // Quản lý phiếu đăng ký
   const [viewMode, setViewMode] = useState<'programs' | 'registrations'>('programs');
   const [selectedProgramIds, setSelectedProgramIds] = useState<string[]>([]);
   const [showCreateFormModal, setShowCreateFormModal] = useState(false);
   const [createdRegistrationForms, setCreatedRegistrationForms] = useState<RegistrationForm[]>([]);
   const [canCreateForm, setCanCreateForm] = useState(false);
 
-  // 📌 1. Fetch danh sách chương trình hoạt động
   const fetchPrograms = async () => {     
     try {       
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/programs`);       
@@ -50,7 +51,6 @@ export default function ToChucPage() {
     }   
   };   
 
-  // 📌 2. Fetch danh sách cấu hình hệ thống
   const fetchSystemConfig = async () => {     
     try {       
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/system-config`);       
@@ -68,7 +68,6 @@ export default function ToChucPage() {
     }   
   };   
 
-  // 📌 3. Kiểm tra quyền tạo & quản lý phiếu của người dùng hiện tại
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const userStr = localStorage.getItem('user');
@@ -77,8 +76,6 @@ export default function ToChucPage() {
           const user = JSON.parse(userStr);
           const currentUserId = String(user._id || user.user_id || user.id || '');
           const managers = systemConfig.formManagers || [];
-
-          // CHỈ hiện các nút và cột chọn phiếu nếu tài khoản nằm trong danh sách Mục 7 (formManagers)
           const isManager = managers.some((m: any) => String(m.user_id || m._id) === currentUserId);
           setCanCreateForm(isManager);
         } catch (err) {
@@ -88,7 +85,6 @@ export default function ToChucPage() {
     }
   }, [systemConfig]);
 
-  // 📌 4. Fetch danh sách phiếu đăng ký từ Backend API
   const fetchRegistrationForms = async () => {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms`);
@@ -179,7 +175,6 @@ export default function ToChucPage() {
     }
   };
 
-  // 📌 5. Tạo mới phiếu đăng ký qua API
   const handleCreateRegistrationFormSave = async (newFormPayload: RegistrationForm) => {
     try {
       let currentUserId = '';
@@ -228,6 +223,16 @@ export default function ToChucPage() {
     return typeof item._id === 'object' && item._id.$oid ? item._id.$oid : String(item._id);
   };
 
+  const hasAnyAction = canView || canEdit || canDelete;
+
+  const getColSpan = () => {
+    let count = 2; // STT + Tên chương trình
+    if (canCreateForm) count += 1;
+    count += 1; // Thời gian
+    if (hasAnyAction) count += 1;
+    return count;
+  };
+
   if (viewMode === 'registrations') {
     return (
       <RegistrationManager
@@ -251,7 +256,6 @@ export default function ToChucPage() {
         </div>         
 
         <div className="flex flex-wrap items-center gap-2">
-          {/* CHỈ HIỂN THỊ NÚT QUẢN LÝ PHIẾU VÀ TẠO PHIẾU KHI CÓ QUYỀN Ở MỤC 7 */}
           {canCreateForm && (
             <>
               <button
@@ -277,12 +281,15 @@ export default function ToChucPage() {
             </>
           )}
 
-          <button            
-            onClick={() => setFormModal({ open: true, mode: 'add', item: null })}           
-            className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"         
-          >           
-            <Plus size={20} /> Thêm chương trình         
-          </button>       
+          {/* 🟢 CHỈ HIỂN THỊ NÚT THÊM CHƯƠNG TRÌNH KHI CÓ QUYỀN CREATE */}
+          {canCreate && (
+            <button            
+              onClick={() => setFormModal({ open: true, mode: 'add', item: null })}           
+              className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"         
+            >           
+              <Plus size={20} /> Thêm chương trình         
+            </button>
+          )}
         </div>
       </div>       
 
@@ -377,7 +384,6 @@ export default function ToChucPage() {
         <table className="w-full text-sm text-left border-collapse">           
           <thead className="bg-[#0054a5] text-white text-[14px] font-bold">             
             <tr>               
-              {/* 🟢 CHỈ HIỂN THỊ CỘT CHECKBOX HEADER KHI CÓ QUYỀN TẠO PHIẾU */}
               {canCreateForm && (
                 <th className="px-4 py-4 text-center uppercase w-10">
                   <button type="button" onClick={handleToggleSelectAll} className="p-1 text-white hover:opacity-80 border-none bg-transparent outline-none cursor-pointer">
@@ -392,7 +398,11 @@ export default function ToChucPage() {
               <th className="px-4 py-4 text-center uppercase w-12">STT</th>               
               <th className="px-4 py-4 text-center">Tên chương trình</th>               
               <th className="px-4 py-4 text-center">Thời gian</th>               
-              <th className="px-4 py-4 text-center w-32"></th>             
+              
+              {/* 🟢 ẨN CỘT THAO TÁC NẾU KHÔNG CÓ QUYỀN XEM, SỬA HOẶC XÓA */}
+              {hasAnyAction && (
+                <th className="px-4 py-4 text-center w-32">Thao tác</th>
+              )}
             </tr>           
           </thead>           
           <tbody className="divide-y divide-gray-200">             
@@ -402,7 +412,6 @@ export default function ToChucPage() {
                 const isChecked = selectedProgramIds.includes(progId);
                 return (                 
                   <tr key={progId} className={`hover:bg-blue-50/40 transition-colors ${isChecked ? 'bg-blue-50/30' : ''}`}>                   
-                    {/* 🟢 CHỈ HIỂN THỊ CỘT CHECKBOX ROW KHI CÓ QUYỀN TẠO PHIẾU */}
                     {canCreateForm && (
                       <td className="px-4 py-4 text-center">
                         <button type="button" onClick={() => handleToggleSelectProgram(progId)} className="text-[#0054a5] border-none bg-transparent outline-none cursor-pointer">
@@ -415,20 +424,47 @@ export default function ToChucPage() {
                     <td className="px-4 py-4 text-center text-gray-600 font-medium whitespace-nowrap">                     
                       {item.month}/{item.year} - {item.semester} - {item.academic_year}                   
                     </td>                   
-                    <td className="px-4 py-4 text-center">                     
-                      <div className="flex items-center justify-center gap-2">                       
-                        <button onClick={() => setFormModal({ open: true, mode: 'view', item })} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border-none bg-transparent outline-none cursor-pointer"><Eye size={18} /></button>                       
-                        <button onClick={() => setFormModal({ open: true, mode: 'edit', item })} className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors border-none bg-transparent outline-none cursor-pointer"><Edit size={18} /></button>                       
-                        <button onClick={() => setDeleteItem(item)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors border-none bg-transparent outline-none cursor-pointer"><Trash2 size={18} /></button>                     
-                      </div>                   
-                    </td>                 
+
+                    {/* 🟢 ẨN / HIỆN TỪNG ICON THAO TÁC THEO QUYỀN */}
+                    {hasAnyAction && (
+                      <td className="px-4 py-4 text-center">                     
+                        <div className="flex items-center justify-center gap-2">                       
+                          {canView && (
+                            <button 
+                              onClick={() => setFormModal({ open: true, mode: 'view', item })} 
+                              className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg transition-colors border-none bg-transparent outline-none cursor-pointer"
+                              title="Xem chi tiết"
+                            >
+                              <Eye size={18} />
+                            </button>
+                          )}
+                          {canEdit && (
+                            <button 
+                              onClick={() => setFormModal({ open: true, mode: 'edit', item })} 
+                              className="p-2 text-amber-600 hover:bg-amber-100 rounded-lg transition-colors border-none bg-transparent outline-none cursor-pointer"
+                              title="Chỉnh sửa"
+                            >
+                              <Edit size={18} />
+                            </button>
+                          )}
+                          {canDelete && (
+                            <button 
+                              onClick={() => setDeleteItem(item)} 
+                              className="p-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors border-none bg-transparent outline-none cursor-pointer"
+                              title="Xóa"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                        </div>                   
+                      </td>
+                    )}
                   </tr>               
                 );
               })             
             ) : (               
               <tr>                 
-                {/* 🟢 TỰ ĐỘNG ĐIỀU CHỈNH COLSPAN (5 hoặc 4) KHI ẨN CỘT CHECKBOX */}
-                <td colSpan={canCreateForm ? 5 : 4} className="p-10 text-center text-gray-400 italic">                   
+                <td colSpan={getColSpan()} className="p-10 text-center text-gray-400 italic">                   
                   Không tìm thấy hoạt động nào phù hợp.                 
                 </td>               
               </tr>             

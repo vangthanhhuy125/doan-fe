@@ -176,7 +176,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
           </div>
 
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
-            {/* NÚT CHIA SẺ (CHỈ DÀNH CHO NGƯỜI TẠO) */}
             {isCreator && (
               <button
                 onClick={() => onOpenShareModal(form)}
@@ -186,7 +185,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
               </button>
             )}
 
-            {/* NÚT XUẤT EXCEL */}
             {canExport && (
               <button
                 onClick={() => exportRegistrationToExcel(form)}
@@ -196,7 +194,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
               </button>
             )}
 
-            {/* NÚT KHÓA */}
             {canLock && (
               <button
                 onClick={handleToggleLock}
@@ -209,7 +206,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
               </button>
             )}
 
-            {/* NÚT SỬA */}
             {canEdit && (
               <button
                 onClick={() => onEditForm(form)}
@@ -219,7 +215,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
               </button>
             )}
 
-            {/* NÚT XÓA */}
             {canDelete && (
               <button
                 onClick={handleDelete}
@@ -268,36 +263,48 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
           Thống kê lượt đăng ký từng Ban theo chương trình
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {form.programs.map((prog) => (
-            <div key={prog.program_id} className="bg-white p-5 rounded-3xl border border-gray-200 shadow-sm space-y-3">
-              <div className="border-b border-gray-100 pb-2">
-                <h5 className="font-black text-slate-800 text-sm">{prog.program_name}</h5>
-                {prog.description && <p className="text-[11px] text-gray-500 italic truncate">{prog.description}</p>}
-              </div>
-              <div className="space-y-2">
-                {prog.departments.map((dept) => {
-                  const count = getDepartmentStats(prog.program_id, dept);
-                  const percent = form.submissions.length > 0 
-                    ? Math.round((count / form.submissions.length) * 100) 
-                    : 0;
-                  return (
-                    <div key={dept} className="space-y-1">
-                      <div className="flex justify-between text-xs font-bold">
-                        <span className="text-gray-700">{dept}</span>
-                        <span className="text-[#0054a5]">{count} người ({percent}%)</span>
+          {form.programs.map((prog) => {
+            const totalInProgram = prog.departments.reduce(
+              (sum, dept) => sum + getDepartmentStats(prog.program_id, dept),
+              0
+            );
+
+            return (
+              <div key={prog.program_id} className="bg-white p-5 rounded-3xl border border-gray-200 shadow-sm space-y-3">
+                <div className="border-b border-gray-100 pb-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h5 className="font-black text-slate-800 text-sm">{prog.program_name}</h5>
+                    <span className="text-[11px] font-bold text-[#0054a5] shrink-0 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
+                      {totalInProgram} lượt đăng ký
+                    </span>
+                  </div>
+                  {prog.description && <p className="text-[11px] text-gray-500 italic truncate mt-0.5">{prog.description}</p>}
+                </div>
+                <div className="space-y-2">
+                  {prog.departments.map((dept) => {
+                    const count = getDepartmentStats(prog.program_id, dept);
+                    const percent = totalInProgram > 0 
+                      ? Math.round((count / totalInProgram) * 100) 
+                      : 0;
+                    return (
+                      <div key={dept} className="space-y-1">
+                        <div className="flex justify-between text-xs font-bold">
+                          <span className="text-gray-700">{dept}</span>
+                          <span className="text-[#0054a5]">{count} người ({percent}%)</span>
+                        </div>
+                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                          <div 
+                            className="bg-[#1d92ff] h-2 rounded-full transition-all"
+                            style={{ width: `${percent}%` }}
+                          />
+                        </div>
                       </div>
-                      <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div 
-                          className="bg-[#1d92ff] h-2 rounded-full transition-all"
-                          style={{ width: `${percent}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

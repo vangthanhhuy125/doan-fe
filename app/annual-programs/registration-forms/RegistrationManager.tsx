@@ -84,7 +84,6 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
         body: JSON.stringify({
           title: updatedForm.title,
           description: updatedForm.description,
-          target_intakes: updatedForm.target_intakes || [],
           programs: updatedForm.programs,
           user_id: currentUserId,
           created_by: (updatedForm as any).created_by,
@@ -93,8 +92,10 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
 
       if (res.ok) {
         await onRefresh();
+        const updatedData = await res.json();
+        const finalForm = updatedData && updatedData._id ? updatedData : updatedForm;
         if (selectedForm && getFormId(selectedForm._id) === formId) {
-          setSelectedForm(prev => (prev ? { ...prev, ...updatedForm } : null));
+          setSelectedForm(finalForm);
         }
         setEditTargetForm(null);
       } else {

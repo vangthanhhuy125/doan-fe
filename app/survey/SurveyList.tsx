@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit, Trash2, FileSpreadsheet, Lock, Unlock, Calendar, Clock, HelpCircle, Users } from 'lucide-react';
+import { Edit, Trash2, FileSpreadsheet, Lock, Unlock, Calendar, Clock, HelpCircle, Users, GraduationCap, UserCheck } from 'lucide-react';
 import { SurveyForm } from './types';
 
 interface Props {
@@ -27,21 +27,21 @@ export default function SurveyList({ surveys, onOpenBuilder, onToggleLock, onDel
         const questionCount = item.questions?.length || 0;
         const responseCount = item.responses?.length || 0;
 
+        const targetIntakes = Array.isArray(item.target_intakes) ? item.target_intakes : [];
+        const targetUsers = Array.isArray(item.target_users) ? item.target_users : [];
+
         return (
           <div
             key={item._id}
             className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3 hover:border-[#0054a5]/40 transition-all text-black"
           >
-            {/* HÀNG DƯỚI/TRÊN: TIÊU ĐỀ, MÔ TẢ & CỤM NÚT THAO TÁC */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-3">
               <div className="space-y-1.5 flex-1">
                 <div className="flex items-center gap-2.5 flex-wrap">
-                  {/* Mã phiếu voucherNo */}
                   <span className="bg-blue-50 text-[#0054a5] font-black text-xs px-2.5 py-0.5 rounded-md border border-blue-200">
                     {item.voucherNo || 'KS-2026'}
                   </span>
 
-                  {/* Tiêu đề phiếu */}
                   <h3
                     onClick={() => onOpenBuilder(item)}
                     className="font-bold text-gray-800 text-base hover:text-[#0054a5] cursor-pointer transition-colors"
@@ -49,7 +49,6 @@ export default function SurveyList({ surveys, onOpenBuilder, onToggleLock, onDel
                     {item.title}
                   </h3>
 
-                  {/* Badge Trạng thái */}
                   {isLocked ? (
                     <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-rose-200">
                       <Lock size={12} /> Đã khóa
@@ -59,9 +58,26 @@ export default function SurveyList({ surveys, onOpenBuilder, onToggleLock, onDel
                       <Clock size={12} /> Đang mở
                     </span>
                   )}
+
+                  {targetIntakes.length > 0 && (
+                    <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-sky-200">
+                      <GraduationCap size={12} /> Khóa: {targetIntakes.map(k => `K${k}`).join(', ')}
+                    </span>
+                  )}
+
+                  {targetUsers.length > 0 && (
+                    <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-amber-200">
+                      <UserCheck size={12} /> {targetUsers.length} người chỉ định
+                    </span>
+                  )}
+
+                  {targetIntakes.length === 0 && targetUsers.length === 0 && (
+                    <span className="inline-flex items-center gap-1 bg-slate-50 text-slate-600 px-2.5 py-0.5 rounded-full text-xs font-bold border border-slate-200">
+                      Tất cả sinh viên
+                    </span>
+                  )}
                 </div>
 
-                {/* Mô tả phiếu */}
                 {item.description && (
                   <p className="text-xs font-medium text-gray-500 line-clamp-2 leading-relaxed">
                     {item.description}
@@ -69,7 +85,6 @@ export default function SurveyList({ surveys, onOpenBuilder, onToggleLock, onDel
                 )}
               </div>
 
-              {/* CỤM NÚT THAO TÁC TRỰC QUAN */}
               <div className="flex items-center gap-2 shrink-0 self-start md:self-auto flex-wrap">
                 <button
                   type="button"
@@ -115,7 +130,6 @@ export default function SurveyList({ surveys, onOpenBuilder, onToggleLock, onDel
               </div>
             </div>
 
-            {/* HÀNG DƯỚI: THÔNG TIN PHỤ (THỜI GIAN & SỐ LƯỢNG) */}
             <div className="flex flex-wrap items-center justify-between text-xs text-gray-400 font-medium pt-0.5 gap-2">
               <div className="flex items-center gap-1.5">
                 <Calendar size={14} className="text-[#0054a5]" />
@@ -124,7 +138,7 @@ export default function SurveyList({ surveys, onOpenBuilder, onToggleLock, onDel
 
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-1">
-                  <HelpCircle size={14} className="text-gray-400" />
+                  <HelpCircle size={14} />
                   <span><strong>{questionCount}</strong> câu hỏi</span>
                 </div>
                 <div className="flex items-center gap-1">

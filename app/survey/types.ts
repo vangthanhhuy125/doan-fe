@@ -11,8 +11,8 @@ export interface Question {
   type: QuestionType;
   required: boolean;
   options?: QuestionOption[];
-  image_url?: string; // 🖼️ Ảnh đính kèm câu hỏi
-  section_id?: string; // 📑 ID Phần/Trang chứa câu hỏi này
+  image_url?: string;
+  section_id?: string;
 }
 
 export interface Section {
@@ -42,7 +42,9 @@ export interface SurveyForm {
   created_by: string;
   created_at: string;
   is_locked?: boolean;
-  sections?: Section[]; // 📑 Danh sách các phần/trang
+  target_intakes?: string[];
+  target_users?: string[];
+  sections?: Section[];
   questions: Question[];
   responses: SurveyResponse[];
 }

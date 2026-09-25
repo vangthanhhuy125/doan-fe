@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, FileCheck2, User, Send, UserCheck, Check, Loader2, Lock, AlertCircle, CheckCircle2, GraduationCap } from 'lucide-react';
+import { X, FileCheck2, User, Send, UserCheck, Check, Loader2, Lock, CheckCircle2, AlertCircle, GraduationCap, Ban } from 'lucide-react';
 import { RegistrationForm, ProgramConfig } from '../annual-programs/registration-forms/types';
 
 interface Props {
@@ -39,10 +39,6 @@ export default function SubmitRegistrationModal({
 }: Props) {
   const isLocked = !!form.is_locked;
   const userIntake = extractIntake(userInfo);
-  const targetIntakes = form.target_intakes || [];
-  const isEligible = targetIntakes.length === 0 || !userIntake || targetIntakes.includes(userIntake);
-
-  const isDisabled = isLocked || (!isEligible && !existingSubmission);
 
   const [choices, setChoices] = useState<Record<string, string>>(
     existingSubmission?.choices || {}
@@ -86,7 +82,14 @@ export default function SubmitRegistrationModal({
   };
 
   const handleSelectDepartment = (programId: string, deptName: string) => {
-    if (isDisabled) return;
+    if (isLocked) return;
+
+    const prog = form.programs.find(p => p.program_id === programId);
+    const progIntakes = prog?.target_intakes || [];
+    if (progIntakes.length > 0 && userIntake && !progIntakes.includes(userIntake)) {
+      showToast(`Chương trình này chỉ dành cho sinh viên khóa [${progIntakes.map(k => `K${k}`).join(', ')}]. Bạn thuộc khóa [K${userIntake}]!`, 'error');
+      return;
+    }
 
     setChoices(prev => {
       const updated = { ...prev };
@@ -114,7 +117,14 @@ export default function SubmitRegistrationModal({
   };
 
   const handleSelectLeadership = (programId: string, option: string) => {
-    if (isDisabled) return;
+    if (isLocked) return;
+
+    const prog = form.programs.find(p => p.program_id === programId);
+    const progIntakes = prog?.target_intakes || [];
+    if (progIntakes.length > 0 && userIntake && !progIntakes.includes(userIntake)) {
+      showToast(`Chương trình này chỉ dành cho sinh viên khóa [${progIntakes.map(k => `K${k}`).join(', ')}]!`, 'error');
+      return;
+    }
 
     const selectedDept = choices[programId];
     const isAllowed = isLeadershipOptionAllowed(selectedDept, option);
@@ -144,12 +154,7 @@ export default function SubmitRegistrationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isDisabled) return;
-    
-    if (!isEligible && !existingSubmission) {
-      showToast('Bạn không thuộc khóa được phân bổ để đăng ký chương trình này!', 'error');
-      return;
-    }
+    if (isLocked) return;
 
     if (Object.keys(choices).length === 0 && Object.keys(leadershipChoices).length === 0) {
       showToast('Vui lòng chọn ít nhất 1 Ban tham gia hoặc 1 vị trí ứng cử!', 'error');
@@ -185,7 +190,7 @@ export default function SubmitRegistrationModal({
         showToast(err.message || 'Gửi phiếu thất bại, vui lòng thử lại!', 'error');
       }
     } catch (error) {
-      console.error('Lỗi nộp phiếu:', error);
+      console.error(error);
       showToast('Không thể kết nối đến máy chủ!', 'error');
     } finally {
       setSubmitting(false);
@@ -208,7 +213,7 @@ export default function SubmitRegistrationModal({
           <div className="flex items-center gap-2">
             <FileCheck2 size={20} />
             <h3 className="font-bold uppercase tracking-widest text-sm">
-              {isLocked ? 'Chi tiết nguyện vọng đã khóa' : !isEligible && !existingSubmission ? 'Xem thông tin phiếu đăng ký' : existingSubmission ? 'Chỉnh sửa nguyện vọng đăng ký' : 'Điền phiếu đăng ký chương trình'}
+              {isLocked ? 'Chi tiết nguyện vọng đã khóa' : existingSubmission ? 'Chỉnh sửa nguyện vọng đăng ký' : 'Điền phiếu đăng ký chương trình'}
             </h3>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full text-white border-none bg-transparent cursor-pointer">
@@ -224,24 +229,8 @@ export default function SubmitRegistrationModal({
             </div>
           )}
 
-          {!isEligible && !existingSubmission && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 text-xs font-bold">
-              <AlertCircle size={18} className="shrink-0 text-amber-600" />
-              <span>
-                Phiếu đăng ký này chỉ dành cho sinh viên khóa {targetIntakes.map(k => `K${k}`).join(', ')}. 
-                Bạn thuộc {userIntake ? `khóa K${userIntake}` : 'khóa khác'} nên chỉ có thể xem thông tin, không thể đăng ký!
-              </span>
-            </div>
-          )}
-
           <div className="space-y-2 border-b border-gray-100 pb-4">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="text-lg font-black text-[#0054a5]">{form.title}</h2>
-              <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-sky-200">
-                <GraduationCap size={13} />
-                {targetIntakes.length > 0 ? `Khóa: ${targetIntakes.map(k => `K${k}`).join(', ')}` : 'Mọi khóa sinh viên'}
-              </span>
-            </div>
+            <h2 className="text-lg font-black text-[#0054a5]">{form.title}</h2>
             <p className="text-xs text-gray-600 font-medium leading-relaxed">{form.description}</p>
           </div>
 
@@ -261,7 +250,7 @@ export default function SubmitRegistrationModal({
               <h4 className="text-xs font-black uppercase text-gray-400 tracking-wider">
                 Chọn Ban tham gia (Không bắt buộc chọn tất cả)
               </h4>
-              {!isDisabled && (
+              {!isLocked && (
                 <span className="text-[11px] text-amber-600 font-semibold italic">
                   * Nhấp lại vào Ban đã chọn để hủy chọn
                 </span>
@@ -272,16 +261,41 @@ export default function SubmitRegistrationModal({
               const selectedDept = choices[prog.program_id];
               const selectedLeaderships = leadershipChoices[prog.program_id] || [];
 
+              const progIntakes = prog.target_intakes || [];
+              const isEligible = progIntakes.length === 0 || !userIntake || progIntakes.includes(userIntake);
+              const isProgDisabled = isLocked || (!isEligible && !selectedDept);
+
               return (
-                <div key={prog.program_id} className="p-5 bg-white rounded-2xl border border-gray-200 shadow-sm space-y-4">
-                  <div className="border-b border-gray-100 pb-2">
-                    <h5 className="font-black text-slate-800 text-sm">
-                      {idx + 1}. {prog.program_name}
-                    </h5>
-                    {prog.description && (
-                      <p className="text-xs text-gray-500 font-medium mt-0.5">{prog.description}</p>
+                <div key={prog.program_id} className={`p-5 bg-white rounded-2xl border shadow-sm space-y-4 transition-all ${
+                  !isEligible ? 'border-amber-200 bg-amber-50/20' : 'border-gray-200'
+                }`}>
+                  <div className="border-b border-gray-100 pb-2 flex items-start justify-between gap-2 flex-wrap">
+                    <div>
+                      <h5 className="font-black text-slate-800 text-sm">
+                        {idx + 1}. {prog.program_name}
+                      </h5>
+                      {prog.description && (
+                        <p className="text-xs text-gray-500 font-medium mt-0.5">{prog.description}</p>
+                      )}
+                    </div>
+
+                    {progIntakes.length > 0 && (
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
+                        isEligible 
+                          ? 'bg-sky-50 text-sky-700 border-sky-200' 
+                          : 'bg-amber-100 text-amber-800 border-amber-300'
+                      }`}>
+                        {isEligible ? <GraduationCap size={12} /> : <Ban size={12} />}
+                        {isEligible ? `Khóa: ${progIntakes.map(k => `K${k}`).join(', ')}` : `Chỉ dành cho K${progIntakes.join(', K')}`}
+                      </span>
                     )}
                   </div>
+
+                  {!isEligible && (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] font-bold text-amber-800">
+                      Chương trình này chỉ dành cho sinh viên khóa {progIntakes.map(k => `K${k}`).join(', ')}. Bạn thuộc {userIntake ? `khóa K${userIntake}` : 'khóa khác'} nên không thể đăng ký hoạt động này.
+                    </div>
+                  )}
 
                   <div className="space-y-2 pt-1">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -292,7 +306,7 @@ export default function SubmitRegistrationModal({
                             key={dept}
                             onClick={() => handleSelectDepartment(prog.program_id, dept)}
                             className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                              isDisabled
+                              isProgDisabled
                                 ? isSelected
                                   ? 'bg-blue-50 border-[#0054a5] text-[#0054a5] font-bold opacity-80 cursor-not-allowed'
                                   : 'bg-gray-50/50 border-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
@@ -305,7 +319,7 @@ export default function SubmitRegistrationModal({
                               type="radio"
                               name={`prog_${prog.program_id}`}
                               checked={isSelected}
-                              disabled={isDisabled}
+                              disabled={isProgDisabled}
                               onChange={() => {}}
                               className="accent-[#0054a5] w-4 h-4"
                             />
@@ -325,19 +339,17 @@ export default function SubmitRegistrationModal({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {(prog.leadership_options || []).map((option: string) => {
                           const isChecked = selectedLeaderships.includes(option);
-                          const isAllowed = !isDisabled && isLeadershipOptionAllowed(selectedDept, option);
+                          const isAllowed = !isProgDisabled && isLeadershipOptionAllowed(selectedDept, option);
 
                           return (
                             <div
                               key={option}
                               onClick={() => handleSelectLeadership(prog.program_id, option)}
                               className={`flex items-center gap-3 p-3 rounded-xl border transition-all select-none ${
-                                isDisabled
+                                isProgDisabled || !isAllowed
                                   ? isChecked
                                     ? 'bg-amber-50 border-amber-500 ring-1 ring-amber-500 opacity-80 cursor-not-allowed'
                                     : 'bg-gray-100/50 border-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
-                                  : !isAllowed
-                                  ? 'bg-gray-100/60 border-gray-200 text-gray-400 cursor-not-allowed opacity-60'
                                   : isChecked
                                   ? 'bg-amber-50 border-amber-500 ring-1 ring-amber-500 cursor-pointer'
                                   : 'bg-gray-50 border-gray-200 text-gray-700 hover:bg-gray-100 cursor-pointer'
@@ -345,7 +357,7 @@ export default function SubmitRegistrationModal({
                             >
                               <div
                                 className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                                  isDisabled || !isAllowed
+                                  isProgDisabled || !isAllowed
                                     ? isChecked
                                       ? 'border-amber-600 bg-amber-600 text-white'
                                       : 'border-gray-300 bg-gray-200'
@@ -358,7 +370,7 @@ export default function SubmitRegistrationModal({
                               </div>
                               <span
                                 className={`text-xs font-bold ${
-                                  isDisabled || !isAllowed
+                                  isProgDisabled || !isAllowed
                                     ? isChecked
                                       ? 'text-amber-800'
                                       : 'text-gray-400'
@@ -386,9 +398,9 @@ export default function SubmitRegistrationModal({
               onClick={onClose}
               className="px-5 py-2.5 rounded-xl font-bold text-gray-400 hover:bg-gray-100 text-xs uppercase border-none bg-transparent cursor-pointer"
             >
-              {isDisabled ? 'Đóng' : 'Hủy'}
+              {isLocked ? 'Đóng' : 'Hủy'}
             </button>
-            {!isDisabled && (
+            {!isLocked && (
               <button
                 type="submit"
                 disabled={submitting}

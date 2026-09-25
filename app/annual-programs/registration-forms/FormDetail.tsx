@@ -22,7 +22,7 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
         const user = JSON.parse(userStr);
         setCurrentUserId(user._id || user.user_id || user.id || '');
       } catch (e) {
-        console.error('Lỗi đọc user:', e);
+        console.error(e);
       }
     }
   }, []);
@@ -46,7 +46,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
     return String(id || '');
   };
 
-  // 🟢 FIX BUG 1: Lọc chỉ lấy những sinh viên THỰC SỰ có đăng ký ban hoặc có ứng cử
   const validSubmissions = (form.submissions || []).filter(sub => {
     const hasDeptChoice = sub.choices && Object.values(sub.choices).some((v: any) => Boolean(v && String(v).trim()));
     const hasLeaderChoice = sub.leadership_choices && Object.values(sub.leadership_choices).some((arr: any) => Array.isArray(arr) && arr.length > 0);
@@ -90,7 +89,7 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
         alert(err.message || 'Thao tác thất bại!');
       }
     } catch (e) {
-      console.error('Lỗi toggle khóa:', e);
+      console.error(e);
     }
   };
 
@@ -123,7 +122,7 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
         alert(err.message || 'Xóa phiếu thất bại!');
       }
     } catch (e) {
-      console.error('Lỗi xóa phiếu:', e);
+      console.error(e);
     }
   };
 
@@ -151,8 +150,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
     }
   };
 
-  const allowedIntakes = form.target_intakes || [];
-
   return (
     <div className="space-y-6 text-black">
       <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
@@ -172,11 +169,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                   <Lock size={12} /> Đã khóa
                 </span>
               )}
-              {/* Badge hiển thị khóa phân bổ */}
-              <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-sky-200">
-                <GraduationCap size={13} />
-                {allowedIntakes.length > 0 ? `Khóa: ${allowedIntakes.map(k => `K${k}`).join(', ')}` : 'Mọi khóa sinh viên'}
-              </span>
             </div>
             <p className="text-xs text-gray-600 font-medium">{form.description}</p>
           </div>
@@ -240,7 +232,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-gray-500">Tổng lượt đăng ký</p>
-              {/* 🟢 Hiển thị số lượng đã lọc đúng thực tế */}
               <p className="text-xl font-black text-[#0054a5]">{validSubmissions.length} sinh viên</p>
             </div>
           </div>
@@ -279,8 +270,15 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
             return (
               <div key={prog.program_id} className="bg-white p-5 rounded-3xl border border-gray-200 shadow-sm space-y-3">
                 <div className="border-b border-gray-100 pb-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <h5 className="font-black text-slate-800 text-sm">{prog.program_name}</h5>
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <h5 className="font-black text-slate-800 text-sm">{prog.program_name}</h5>
+                      {prog.target_intakes && prog.target_intakes.length > 0 && (
+                        <span className="text-[10px] font-bold text-sky-700 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-200">
+                          Khóa: {prog.target_intakes.map(k => `K${k}`).join(', ')}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-[11px] font-bold text-[#0054a5] shrink-0 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
                       {totalInProgram} lượt đăng ký
                     </span>
@@ -316,7 +314,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
       </div>
 
       <div className="space-y-3">
-        {/* 🟢 Hiển thị đúng số lượng sau khi lọc */}
         <h4 className="text-sm font-black text-[#0054a5] uppercase tracking-wider">
           Danh sách chi tiết sinh viên đăng ký ({validSubmissions.length})
         </h4>

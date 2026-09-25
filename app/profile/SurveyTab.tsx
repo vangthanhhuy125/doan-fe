@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { ClipboardList, CheckCircle2, Clock, ChevronRight, Loader2, Calendar, Lock, ChevronDown, ChevronUp } from 'lucide-react';
+import { ClipboardList, CheckCircle2, Clock, ChevronRight, Loader2, Calendar, Lock, ChevronDown, ChevronUp, GraduationCap, UserCheck, Ban } from 'lucide-react';
 import DoSurveyModal from './DoSurveyModal';
 
 export interface Section {
@@ -33,6 +33,8 @@ export interface SurveyForm {
   created_by: string;
   created_at: string;
   is_locked?: boolean;
+  target_intakes?: string[];
+  target_users?: string[];
   sections?: Section[];
   questions: Question[];
   responses: any[];
@@ -42,9 +44,28 @@ interface Props {
   userInfo: {
     student_id: string;
     full_name: string;
+    class_name?: string;
   };
   onRefreshCount?: () => void;
 }
+
+const extractIntake = (user: { class_name?: string; student_id?: string }): string => {
+  if (!user) return '';
+  const classStr = user.class_name || '';
+  const match = String(classStr).match(/(?:19|20)\d{2}/);
+  if (match) {
+    const year = parseInt(match[0], 10);
+    if (year >= 1990 && year <= 2050) return String(year);
+  }
+  const sid = String(user.student_id || '').trim();
+  if (sid.length >= 2) {
+    const prefix = parseInt(sid.substring(0, 2), 10);
+    if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
+      return `20${prefix}`;
+    }
+  }
+  return '';
+};
 
 function ExpandableDescription({ text }: { text: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -83,7 +104,7 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
         setSurveys(Array.isArray(data) ? data : []);
       }
     } catch (e) {
-      console.error('Lỗi lấy danh sách phiếu khảo sát:', e);
+      console.error(e);
     } finally {
       setLoading(false);
     }
@@ -112,6 +133,8 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
     );
   }
 
+  const userIntake = extractIntake(userInfo);
+
   return (
     <div className="p-4 sm:p-6 space-y-6 text-black">
       <div className="flex items-center justify-between border-b border-gray-200 pb-3">
@@ -135,6 +158,16 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
             const isSubmitted = !!userResp;
             const isLocked = !!survey.is_locked;
 
+            const targetIntakes = Array.isArray(survey.target_intakes) ? survey.target_intakes : [];
+            const targetUsers = Array.isArray(survey.target_users) ? survey.target_users : [];
+
+            let isEligible = true;
+            if (targetIntakes.length > 0 || targetUsers.length > 0) {
+              const matchUser = targetUsers.some(u => String(u).trim() === userInfo.student_id);
+              const matchIntake = targetIntakes.length > 0 && userIntake && targetIntakes.includes(userIntake);
+              isEligible = matchUser || Boolean(matchIntake);
+            }
+
             return (
               <div
                 key={surveyId}
@@ -155,9 +188,25 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
                         <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-1 rounded-full text-xs font-bold border border-emerald-200/80">
                           <CheckCircle2 size={12} /> Đã thực hiện
                         </span>
+                      ) : !isEligible ? (
+                        <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full text-xs font-bold border border-slate-200">
+                          <Ban size={12} /> Không thuộc đối tượng
+                        </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-1 rounded-full text-xs font-bold border border-amber-200/80">
                           <Clock size={12} /> Đang mở khảo sát
+                        </span>
+                      )}
+
+                      {targetIntakes.length > 0 && (
+                        <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-sky-200">
+                          <GraduationCap size={12} /> Khóa: {targetIntakes.map(k => `K${k}`).join(', ')}
+                        </span>
+                      )}
+
+                      {targetUsers.length > 0 && (
+                        <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-amber-200">
+                          <UserCheck size={12} /> Chỉ định riêng
                         </span>
                       )}
                     </div>
@@ -166,12 +215,20 @@ export default function SurveyTab({ userInfo, onRefreshCount }: Props) {
                   <button
                     onClick={() => setSelectedSurvey(survey)}
                     className={`flex cursor-pointer items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold shadow-sm transition-all border-none active:scale-95 shrink-0 w-full sm:w-auto ${
-                      isSubmitted || isLocked
+                      isSubmitted || isLocked || !isEligible
                         ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
                         : 'bg-[#0054a5] text-white hover:bg-blue-700 shadow-blue-500/20'
                     }`}
                   >
-                    <span>{isSubmitted ? 'Xem / Chỉnh sửa khảo sát' : isLocked ? 'Xem câu hỏi (Khóa)' : 'Thực hiện khảo sát'}</span>
+                    <span>
+                      {isSubmitted 
+                        ? 'Xem / Chỉnh sửa khảo sát' 
+                        : isLocked 
+                        ? 'Xem câu hỏi (Khóa)' 
+                        : !isEligible 
+                        ? 'Xem câu hỏi (Không thuộc đối tượng)' 
+                        : 'Thực hiện khảo sát'}
+                    </span>
                     <ChevronRight size={15} />
                   </button>
                 </div>

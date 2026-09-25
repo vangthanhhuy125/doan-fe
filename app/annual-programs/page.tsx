@@ -47,7 +47,7 @@ export default function ToChucPage() {
       const result = await res.json();       
       setData(Array.isArray(result) ? result : []);     
     } catch (error) {       
-      console.error('Lỗi lấy danh sách chương trình:', error);     
+      console.error(error);     
     }   
   };   
 
@@ -64,7 +64,7 @@ export default function ToChucPage() {
         });       
       }     
     } catch (error) {       
-      console.error('Lỗi lấy cấu hình hệ thống:', error);     
+      console.error(error);     
     }   
   };   
 
@@ -75,15 +75,21 @@ export default function ToChucPage() {
         try {
           const user = JSON.parse(userStr);
           const currentUserId = String(user._id || user.user_id || user.id || '');
+          const isAdmin = user.role === 'admin' || user.username === 'admin';
+          
           const managers = systemConfig.formManagers || [];
-          const isManager = managers.some((m: any) => String(m.user_id || m._id) === currentUserId);
-          setCanCreateForm(isManager);
+          const isManager = managers.some((m: any) => {
+            const mId = String(m.user_id || m._id || m.id || m.student_id || '');
+            return mId && (mId === currentUserId || (user.student_id && mId === String(user.student_id)));
+          });
+
+          setCanCreateForm(isAdmin || Boolean(canCreate) || isManager || managers.length === 0);
         } catch (err) {
-          console.error('Lỗi đọc thông tin user:', err);
+          console.error(err);
         }
       }
     }
-  }, [systemConfig]);
+  }, [systemConfig, canCreate]);
 
   const fetchRegistrationForms = async () => {
     try {
@@ -93,7 +99,7 @@ export default function ToChucPage() {
         setCreatedRegistrationForms(Array.isArray(result) ? result : []);
       }
     } catch (error) {
-      console.error('Lỗi lấy danh sách phiếu đăng ký:', error);
+      console.error(error);
     }
   };
 
@@ -185,7 +191,7 @@ export default function ToChucPage() {
             const user = JSON.parse(userStr);
             currentUserId = user._id || user.user_id || user.id || '';
           } catch (err) {
-            console.error('Lỗi đọc user:', err);
+            console.error(err);
           }
         }
       }
@@ -200,7 +206,6 @@ export default function ToChucPage() {
           title: newFormPayload.title,
           description: newFormPayload.description,
           created_at: newFormPayload.created_at,
-          target_intakes: newFormPayload.target_intakes || [],
           programs: newFormPayload.programs,
           created_by: (newFormPayload as any).created_by || currentUserId,
         }),
@@ -215,7 +220,7 @@ export default function ToChucPage() {
         alert('Tạo phiếu đăng ký thất bại!');
       }
     } catch (error) {
-      console.error('Lỗi tạo phiếu đăng ký:', error);
+      console.error(error);
     }
   };
 
@@ -227,9 +232,9 @@ export default function ToChucPage() {
   const hasAnyAction = canView || canEdit || canDelete;
 
   const getColSpan = () => {
-    let count = 2; // STT + Tên chương trình
+    let count = 2;
     if (canCreateForm) count += 1;
-    count += 1; // Thời gian
+    count += 1;
     if (hasAnyAction) count += 1;
     return count;
   };
@@ -282,7 +287,6 @@ export default function ToChucPage() {
             </>
           )}
 
-          {/* 🟢 CHỈ HIỂN THỊ NÚT THÊM CHƯƠNG TRÌNH KHI CÓ QUYỀN CREATE */}
           {canCreate && (
             <button            
               onClick={() => setFormModal({ open: true, mode: 'add', item: null })}           
@@ -400,7 +404,6 @@ export default function ToChucPage() {
               <th className="px-4 py-4 text-center">Tên chương trình</th>               
               <th className="px-4 py-4 text-center">Thời gian</th>               
               
-              {/* 🟢 ẨN CỘT THAO TÁC NẾU KHÔNG CÓ QUYỀN XEM, SỬA HOẶC XÓA */}
               {hasAnyAction && (
                 <th className="px-4 py-4 text-center w-32">Thao tác</th>
               )}
@@ -426,7 +429,6 @@ export default function ToChucPage() {
                       {item.month}/{item.year} - {item.semester} - {item.academic_year}                   
                     </td>                   
 
-                    {/* 🟢 ẨN / HIỆN TỪNG ICON THAO TÁC THEO QUYỀN */}
                     {hasAnyAction && (
                       <td className="px-4 py-4 text-center">                     
                         <div className="flex items-center justify-center gap-2">                       

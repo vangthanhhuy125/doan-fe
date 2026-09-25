@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Edit3, UserCheck, Loader2, GraduationCap } from 'lucide-react';
 import { RegistrationForm, ProgramConfig } from './types';
 
@@ -51,7 +51,6 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
   const [title, setTitle] = useState(form.title);
   const [description, setDescription] = useState(form.description);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedIntakes, setSelectedIntakes] = useState<string[]>(form.target_intakes || []);
 
   const [programs, setPrograms] = useState<ProgramConfig[]>(() => {
     return (form.programs || []).map(p => {
@@ -73,6 +72,7 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
         ...p,
         description: p.description || "",
         departments: depts,
+        target_intakes: Array.isArray(p.target_intakes) ? p.target_intakes : [],
         enable_leadership_survey: p.enable_leadership_survey ?? false,
         leadership_title: p.leadership_title || "Đăng ký nguyện vọng ứng cử vị trí Trưởng / Phó Ban:",
         leadership_options: syncedOpts
@@ -80,12 +80,33 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
     });
   });
 
-  const toggleIntake = (intake: string) => {
-    if (selectedIntakes.includes(intake)) {
-      setSelectedIntakes(selectedIntakes.filter(i => i !== intake));
-    } else {
-      setSelectedIntakes([...selectedIntakes, intake]);
+  useEffect(() => {
+    if (form) {
+      setTitle(form.title || '');
+      setDescription(form.description || '');
+      setPrograms((form.programs || []).map(p => ({
+        ...p,
+        target_intakes: Array.isArray(p.target_intakes) ? p.target_intakes : []
+      })));
     }
+  }, [form]);
+
+  const handleToggleIntake = (pIdx: number, intake: string) => {
+    setPrograms(prev => prev.map((item, idx) => {
+      if (idx !== pIdx) return item;
+      const current = item.target_intakes || [];
+      const updated = current.includes(intake)
+        ? current.filter(i => i !== intake)
+        : [...current, intake];
+      return { ...item, target_intakes: updated };
+    }));
+  };
+
+  const handleResetIntakes = (pIdx: number) => {
+    setPrograms(prev => prev.map((item, idx) => {
+      if (idx !== pIdx) return item;
+      return { ...item, target_intakes: [] };
+    }));
   };
 
   const handleSave = async (e: React.FormEvent) => {
@@ -111,7 +132,6 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
         ...form,
         title,
         description,
-        target_intakes: selectedIntakes,
         created_by: (form as any).created_by || currentUserId,
         programs,
       } as any;
@@ -242,54 +262,11 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
                 className="w-full p-3 bg-white rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-amber-500 resize-none transition-all"
               />
             </div>
-
-            <div className="space-y-2 pt-2 border-t border-amber-200/80">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold uppercase text-amber-700 flex items-center gap-1.5">
-                  <GraduationCap size={14} /> Khóa phân bổ được phép đăng ký
-                </label>
-                <span className="text-[11px] text-slate-500 font-medium">
-                  {selectedIntakes.length === 0 ? "Mọi khóa đều được đăng ký" : `Đã giới hạn: ${selectedIntakes.length} khóa`}
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedIntakes([])}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                    selectedIntakes.length === 0
-                      ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  Tất cả các khóa
-                </button>
-
-                {POPULAR_INTAKES.map(intake => {
-                  const isChecked = selectedIntakes.includes(intake);
-                  return (
-                    <button
-                      key={intake}
-                      type="button"
-                      onClick={() => toggleIntake(intake)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                        isChecked
-                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {isChecked ? `✓ K${intake}` : `K${intake}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           <div className="space-y-4">
             <h4 className="font-bold text-amber-600 uppercase text-xs tracking-wider">
-              Các chương trình & Ban tuyển chọn
+              Các chương trình & Phân bổ khóa ({programs.length})
             </h4>
             {programs.map((config, idx) => (
               <div key={config.program_id} className="p-5 bg-white rounded-2xl border border-amber-100 space-y-4 shadow-sm">
@@ -305,6 +282,51 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
                     onChange={(e) => handleConfigChange(idx, 'description', e.target.value)}
                     className="w-full p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-amber-500 transition-all"
                   />
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-amber-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase text-amber-700 flex items-center gap-1.5">
+                      <GraduationCap size={14} /> Khóa phân bổ cho chương trình này
+                    </label>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {(!config.target_intakes || config.target_intakes.length === 0) 
+                        ? "Mọi khóa đều được đăng ký" 
+                        : `Giới hạn: ${config.target_intakes.length} khóa`}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleResetIntakes(idx)}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        (!config.target_intakes || config.target_intakes.length === 0)
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      Tất cả các khóa
+                    </button>
+
+                    {POPULAR_INTAKES.map(intake => {
+                      const isChecked = config.target_intakes?.includes(intake);
+                      return (
+                        <button
+                          key={intake}
+                          type="button"
+                          onClick={() => handleToggleIntake(idx, intake)}
+                          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                            isChecked
+                              ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {isChecked ? `✓ K${intake}` : `K${intake}`}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -369,7 +391,7 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
                         </div>
                         <input
                           type="text"
-                          placeholder="Nhập chức danh ứng cử (VD: Trưởng Ban Nội dung) và nhấn Enter..."
+                          placeholder="Nhập chức danh ứng cử và nhấn Enter..."
                           className="w-full p-2 bg-white border border-amber-200 rounded-lg text-xs font-medium outline-none focus:border-amber-500"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -399,7 +421,7 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs uppercase shadow-lg shadow-amber-100 border-none cursor-pointer transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl text-xs uppercase shadow-lg shadow-amber-100 border-none cursor-pointer transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? (
                 <>

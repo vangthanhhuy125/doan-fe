@@ -49,7 +49,7 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
         setForms(Array.isArray(data) ? data : []);
       }
     } catch (error) {
-      console.error('Lỗi lấy phiếu đăng ký:', error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -103,8 +103,10 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
             const isSubmitted = !!userSub;
             const isLocked = !!form.is_locked;
 
-            const targetIntakes = form.target_intakes || [];
-            const isEligible = targetIntakes.length === 0 || !userIntake || targetIntakes.includes(userIntake);
+            const isEligible = (form.programs || []).some((prog: ProgramConfig) => {
+              const pIntakes = prog.target_intakes || [];
+              return pIntakes.length === 0 || !userIntake || pIntakes.includes(userIntake);
+            });
 
             return (
               <div
@@ -115,11 +117,6 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
                   <div className="space-y-1">
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <h4 className="font-bold text-gray-800 text-base">{form.title}</h4>
-                      
-                      <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-sky-200">
-                        <GraduationCap size={13} />
-                        {targetIntakes.length > 0 ? `Khóa: ${targetIntakes.map(k => `K${k}`).join(', ')}` : 'Mọi khóa'}
-                      </span>
 
                       {isLocked ? (
                         <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-rose-200">
@@ -184,13 +181,36 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                     {form.programs.map((prog: ProgramConfig) => {
                       const selectedDept = userSub?.choices?.[prog.program_id];
+                      const progIntakes = prog.target_intakes || [];
+                      const isProgEligible = progIntakes.length === 0 || !userIntake || progIntakes.includes(userIntake);
+
                       return (
-                        <div key={prog.program_id} className="rounded-xl border border-gray-100 bg-gray-50/70 p-3 text-xs">
-                          <p className="font-bold text-gray-800">{prog.program_name}</p>
+                        <div 
+                          key={prog.program_id} 
+                          className={`rounded-xl border p-3 text-xs transition-all ${
+                            !isProgEligible 
+                              ? 'border-amber-200/80 bg-amber-50/20' 
+                              : 'border-gray-100 bg-gray-50/70'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-1 flex-wrap">
+                            <p className="font-bold text-gray-800">{prog.program_name}</p>
+                            {progIntakes.length > 0 && (
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded border ${
+                                isProgEligible 
+                                  ? 'bg-sky-50 text-sky-700 border-sky-200' 
+                                  : 'bg-amber-100 text-amber-800 border-amber-300'
+                              }`}>
+                                {isProgEligible ? `K${progIntakes.join(', K')}` : `Chỉ dành cho K${progIntakes.join(', K')}`}
+                              </span>
+                            )}
+                          </div>
                           {selectedDept ? (
                             <p className="text-emerald-600 font-bold mt-1">
                               ✓ Đã chọn: <span className="underline">{selectedDept}</span>
                             </p>
+                          ) : !isProgEligible ? (
+                            <p className="text-amber-600 font-medium mt-1">Không thuộc đối tượng khóa</p>
                           ) : (
                             <p className="text-gray-400 font-medium mt-1">Chưa chọn Ban</p>
                           )}

@@ -21,6 +21,7 @@ export interface ProgramConfig {
   enable_leadership_survey?: boolean;
   leadership_title?: string;
   leadership_options?: string[];
+  target_intakes?: string[];
 }
 
 export interface Submission {
@@ -50,7 +51,6 @@ export interface RegistrationForm {
   created_at: string;
   created_by?: string;
   is_locked?: boolean;
-  target_intakes?: string[]; // Mảng các khóa cho phép (VD: ["2023", "2024"]). Rỗng = Tất cả các khóa
   programs: ProgramConfig[];
   submissions: Submission[];
   shared_permissions?: FormPermission[];

@@ -1,4 +1,3 @@
-// Header.tsx
 'use client';
 
 import Image from "next/image";
@@ -42,19 +41,65 @@ export default function Header() {
   const isPasswordValid = hasMinLength && hasUpperCase && hasNumber && hasSpecialChar;
   const isConfirmMatch = confirmPassword.length > 0 && confirmPassword === newPassword;
 
+  const loadUserData = async () => {
+    if (typeof window === "undefined") return;
+    const userStr = localStorage.getItem("user");
+    const token = localStorage.getItem("token") || "";
+
+    if (!userStr) {
+      setUserName("Thành viên");
+      setUserAvatar(null);
+      return;
+    }
+
+    try {
+      const user = JSON.parse(userStr);
+      setUserName(user.full_name || user.displayName || user.username || "Thành viên");
+      if (user.image_url || user.avatar) {
+        setUserAvatar(user.image_url || user.avatar);
+      }
+
+      const userId = String(user._id || user.user_id || user.id || "");
+      if (!userId && !token) return;
+
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/users/profile`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          "x-user-id": userId,
+        },
+      });
+
+      if (res.ok) {
+        const profile = await res.json();
+        const avatarUrl = profile.image_url || profile.avatar || null;
+        if (avatarUrl) {
+          setUserAvatar(avatarUrl);
+        }
+        if (profile.full_name || profile.displayName) {
+          setUserName(profile.full_name || profile.displayName);
+        }
+        localStorage.setItem("user", JSON.stringify({ ...user, ...profile }));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
     setMounted(true);
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setUserName(user.full_name || user.displayName || user.username || "Thành viên");
-        setUserAvatar(user.image_url || null);
-      } catch (err) {
-        setUserName("Thành viên");
-        setUserAvatar(null);
-      }
-    }
+    loadUserData();
+
+    const handleSync = () => {
+      loadUserData();
+    };
+
+    window.addEventListener("storage", handleSync);
+    window.addEventListener("user_profile_updated", handleSync);
+
+    return () => {
+      window.removeEventListener("storage", handleSync);
+      window.removeEventListener("user_profile_updated", handleSync);
+    };
   }, []);
 
   useEffect(() => {
@@ -70,6 +115,8 @@ export default function Header() {
   const handleLogout = () => {
     localStorage.removeItem("user");
     localStorage.removeItem("token");
+    setUserAvatar(null);
+    setUserName("Khách");
     setIsOpen(false);
     router.push("/login");
   };

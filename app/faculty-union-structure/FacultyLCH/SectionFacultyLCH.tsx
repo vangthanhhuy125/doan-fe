@@ -69,7 +69,7 @@ export default function SectionFacultyLCH({ getRoleStyles }: Props) {
         <div className="flex items-center gap-2 ml-1">
           <span className="w-2.5 h-2.5 bg-sky-600 rounded-full animate-pulse"></span>
           <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">
-            1. Thường trực Liên Chi hội (03 đồng chí)
+            1. Thường trực Liên Chi hội
           </h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
@@ -108,7 +108,7 @@ export default function SectionFacultyLCH({ getRoleStyles }: Props) {
         <div className="flex items-center gap-2 ml-1">
           <span className="w-2.5 h-2.5 bg-cyan-600 rounded-full"></span>
           <h3 className="text-xs font-black uppercase text-slate-500 tracking-widest">
-            2. Ủy viên Ban Chấp hành Liên Chi hội (08 đồng chí)
+            2. Ủy viên Ban Chấp hành Liên Chi hội
           </h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

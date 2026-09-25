@@ -9,13 +9,30 @@ import { SurveyForm, Question } from './SurveyTab';
 
 interface Props {
   survey: SurveyForm;
-  userInfo: { student_id: string; full_name: string };
+  userInfo: { student_id: string; full_name: string; class_name?: string };
   existingResponse?: any;
   onClose: () => void;
   onSubmitSuccess: () => void;
 }
 
-// 🟢 COMPONENT Ô NHẬP LIỆU PHONG CÁCH NOTION (INTEGRATED TOOLBAR)
+const extractIntake = (user: { class_name?: string; student_id?: string }): string => {
+  if (!user) return '';
+  const classStr = user.class_name || '';
+  const match = String(classStr).match(/(?:19|20)\d{2}/);
+  if (match) {
+    const year = parseInt(match[0], 10);
+    if (year >= 1990 && year <= 2050) return String(year);
+  }
+  const sid = String(user.student_id || '').trim();
+  if (sid.length >= 2) {
+    const prefix = parseInt(sid.substring(0, 2), 10);
+    if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
+      return `20${prefix}`;
+    }
+  }
+  return '';
+};
+
 function FormattingTextarea({
   value,
   onChange,
@@ -152,6 +169,20 @@ function FormattingTextarea({
 export default function DoSurveyModal({ survey, userInfo, existingResponse, onClose, onSubmitSuccess }: Props) {
   const isSubmitted = !!existingResponse;
   const isLocked = !!survey.is_locked;
+
+  const targetIntakes = Array.isArray(survey.target_intakes) ? survey.target_intakes : [];
+  const targetUsers = Array.isArray(survey.target_users) ? survey.target_users : [];
+  const userIntake = extractIntake(userInfo);
+
+  let isEligible = true;
+  if (targetIntakes.length > 0 || targetUsers.length > 0) {
+    const matchUser = targetUsers.some(u => String(u).trim() === userInfo.student_id);
+    const matchIntake = targetIntakes.length > 0 && userIntake && targetIntakes.includes(userIntake);
+    isEligible = matchUser || Boolean(matchIntake);
+  }
+
+  const isBlocked = isLocked || (!isEligible && !isSubmitted);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -174,7 +205,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
     q => !q.section_id || q.section_id === currentSec.id || sections.length === 1
   );
 
-  // 🟢 1. KHỞI TẠO ĐÁP ÁN: ƯU TIÊN BẢN NHÁP TRƯỚC ĐÓ -> ĐÁP ÁN ĐÃ LƯU TRÊN SERVER
   const [answers, setAnswers] = useState<Record<string, any>>(() => {
     if (typeof window !== 'undefined') {
       const draft = localStorage.getItem(draftKey);
@@ -194,12 +224,11 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
     return initial;
   });
 
-  // 🟢 2. TỰ ĐỘNG LƯU NHÁP VÀO LOCALSTORAGE KHI CÓ THAY ĐỔI
   useEffect(() => {
-    if (Object.keys(answers).length > 0 && !isLocked) {
+    if (Object.keys(answers).length > 0 && !isBlocked) {
       localStorage.setItem(draftKey, JSON.stringify(answers));
     }
-  }, [answers, draftKey, isLocked]);
+  }, [answers, draftKey, isBlocked]);
 
   const handleTextChange = (qId: string, val: string) => {
     setAnswers((prev) => ({ ...prev, [qId]: val }));
@@ -243,7 +272,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLocked || isSubmitting) return;
+    if (isBlocked || isSubmitting) return;
 
     for (const q of survey.questions) {
       if (q.required) {
@@ -273,7 +302,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
       });
 
       if (res.ok) {
-        localStorage.removeItem(draftKey); // 🟢 Xóa bản nháp khi nộp thành công
+        localStorage.removeItem(draftKey);
         showToast(isSubmitted ? 'Cập nhật câu trả lời thành công!' : 'Nộp phiếu khảo sát thành công!', 'success');
         setTimeout(() => {
           onSubmitSuccess();
@@ -293,8 +322,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
 
   return (
     <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-2 sm:p-6 text-black animate-in fade-in duration-200">
-      
-      {/* TOAST THÔNG BÁO THAY THẾ ALERT */}
       {toastMessage && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold animate-in slide-in-from-top-4 duration-300 text-white ${
           toastMessage.type === 'success' ? 'bg-emerald-600' : toastMessage.type === 'error' ? 'bg-rose-600' : 'bg-[#0054a5]'
@@ -304,10 +331,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
         </div>
       )}
 
-      {/* KHUNG MODAL RỘNG 2/3 MÀN HÌNH (lg:w-2/3 max-w-5xl) */}
       <div className="bg-white w-full h-full sm:h-auto lg:w-2/3 max-w-5xl sm:rounded-3xl shadow-2xl overflow-hidden border border-slate-100 sm:max-h-[90vh] flex flex-col">
-        
-        {/* HEADER MODAL */}
         <div className="bg-gradient-to-r from-[#004282] to-[#0054a5] p-5 sm:p-6 text-white shrink-0 shadow-md">
           <div className="flex items-start justify-between gap-4">
             <div className="space-y-1.5 flex-1">
@@ -318,6 +342,10 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                 {isSubmitted ? (
                   <span className="bg-emerald-500/90 text-white px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1 shadow-xs">
                     <CheckCircle2 size={13} /> Đã thực hiện
+                  </span>
+                ) : !isEligible ? (
+                  <span className="bg-rose-500/90 text-white px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
+                    <AlertCircle size={13} /> Không thuộc đối tượng
                   </span>
                 ) : (
                   <span className="bg-white/15 text-blue-100 px-3 py-0.5 rounded-full text-xs font-bold flex items-center gap-1">
@@ -341,14 +369,13 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
               type="button"
               onClick={onClose}
               className="p-2 hover:bg-white/15 rounded-full text-white/80 hover:text-white transition-all border-none bg-transparent cursor-pointer shrink-0"
-              title="Đóng (Không mất nội dung đã điền)"
+              title="Đóng"
             >
               <X size={22} />
             </button>
           </div>
         </div>
 
-        {/* THÔNG BÁO ĐÃ NỘP BÀI */}
         {isSubmitted && (
           <div className="bg-emerald-50/80 p-3.5 px-6 border-b border-emerald-100 text-xs sm:text-sm text-emerald-800 font-semibold flex items-center justify-between shrink-0">
             <span className="flex items-center gap-2">
@@ -358,7 +385,13 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
           </div>
         )}
 
-        {/* NỘI DUNG CÂU HỎI */}
+        {!isEligible && !isSubmitted && (
+          <div className="bg-amber-50 p-3.5 px-6 border-b border-amber-200 text-xs sm:text-sm text-amber-800 font-semibold flex items-center gap-2 shrink-0">
+            <AlertCircle size={16} className="text-amber-600 shrink-0" />
+            <span>Bạn không thuộc đối tượng (khóa/danh sách chỉ định) tham gia khảo sát này, chỉ có thể xem nội dung.</span>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="p-5 sm:p-8 overflow-y-auto space-y-6 flex-1 text-left bg-slate-50/50">
           {currentQuestions.map((q: Question, idx: number) => {
             const val = answers[q.id];
@@ -383,7 +416,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                 {q.type === 'short_text' && (
                   <input
                     type="text"
-                    disabled={isLocked}
+                    disabled={isBlocked}
                     value={val || ''}
                     onChange={(e) => handleTextChange(q.id, e.target.value)}
                     placeholder="Câu trả lời của bạn..."
@@ -393,7 +426,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
 
                 {q.type === 'paragraph' && (
                   <FormattingTextarea
-                    disabled={isLocked}
+                    disabled={isBlocked}
                     value={val || ''}
                     onChange={(newVal) => handleTextChange(q.id, newVal)}
                     placeholder="Nhập câu trả lời chi tiết của bạn..."
@@ -414,7 +447,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                         <input
                           type="radio"
                           name={q.id}
-                          disabled={isLocked}
+                          disabled={isBlocked}
                           checked={val === opt.text}
                           onChange={() => handleTextChange(q.id, opt.text)}
                           className="w-4 h-4 accent-[#0054a5] disabled:cursor-not-allowed shrink-0"
@@ -440,7 +473,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                         >
                           <input
                             type="checkbox"
-                            disabled={isLocked}
+                            disabled={isBlocked}
                             checked={isChecked}
                             onChange={(e) => handleCheckboxChange(q.id, opt.text, e.target.checked)}
                             className="w-4 h-4 accent-[#0054a5] rounded-md disabled:cursor-not-allowed shrink-0"
@@ -454,7 +487,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
 
                 {q.type === 'dropdown' && (
                   <select
-                    disabled={isLocked}
+                    disabled={isBlocked}
                     value={val || ''}
                     onChange={(e) => handleTextChange(q.id, e.target.value)}
                     className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm font-bold outline-none focus:border-[#0054a5] focus:ring-4 focus:ring-[#0054a5]/10 cursor-pointer disabled:bg-slate-100 disabled:cursor-not-allowed shadow-xs"
@@ -491,7 +524,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                 <span>Tiếp tục</span> <ChevronRight size={16} />
               </button>
             ) : (
-              !isLocked && (
+              !isBlocked && (
                 <button
                   type="submit"
                   disabled={isSubmitting}

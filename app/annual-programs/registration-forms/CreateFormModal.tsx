@@ -18,7 +18,6 @@ const DEFAULT_LEADERSHIP_OPTIONS = [
   "Trưởng Ban Hậu cần"
 ];
 
-// Danh sách các khóa sinh viên trong trường
 const POPULAR_INTAKES = ["2021", "2022", "2023", "2024", "2025", "2026"];
 
 const BADGE_COLOR_PALETTES = [
@@ -65,9 +64,6 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
   const [title, setTitle] = useState(`PHIẾU ĐĂNG KÝ THAM GIA CHƯƠNG TRÌNH`);
   const [description, setDescription] = useState("Thông báo tuyển Ban chuyên môn, Sinh viên đăng ký tham gia các Ban phụ trách chương trình.");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // 🟢 Cấu hình Khóa phân bổ: Mặc định [] là cho phép tất cả các khóa
-  const [selectedIntakes, setSelectedIntakes] = useState<string[]>([]);
 
   const [configs, setConfigs] = useState<ProgramConfig[]>(
     selectedPrograms.map(p => ({
@@ -75,22 +71,33 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
       program_name: p.program_name || '',
       description: "",
       departments: [...DEFAULT_DEPARTMENTS],
+      target_intakes: [],
       enable_leadership_survey: false,
       leadership_title: "Đăng ký nguyện vọng ứng cử vị trí Trưởng / Phó Ban:",
       leadership_options: [...DEFAULT_LEADERSHIP_OPTIONS]
     }))
   );
 
-  const toggleIntake = (intake: string) => {
-    if (selectedIntakes.includes(intake)) {
-      setSelectedIntakes(selectedIntakes.filter(i => i !== intake));
-    } else {
-      setSelectedIntakes([...selectedIntakes, intake]);
-    }
-  };
-
   const handleConfigChange = (idx: number, field: string, value: any) => {
     setConfigs(prev => prev.map((item, pIdx) => pIdx === idx ? { ...item, [field]: value } : item));
+  };
+
+  const handleToggleIntake = (pIdx: number, intake: string) => {
+    setConfigs(prev => prev.map((item, idx) => {
+      if (idx !== pIdx) return item;
+      const current = item.target_intakes || [];
+      const updated = current.includes(intake)
+        ? current.filter(i => i !== intake)
+        : [...current, intake];
+      return { ...item, target_intakes: updated };
+    }));
+  };
+
+  const handleResetIntakes = (pIdx: number) => {
+    setConfigs(prev => prev.map((item, idx) => {
+      if (idx !== pIdx) return item;
+      return { ...item, target_intakes: [] };
+    }));
   };
 
   const handleAddDepartment = (idx: number, deptName: string) => {
@@ -182,7 +189,7 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
             const user = JSON.parse(userStr);
             currentUserId = user._id || user.user_id || user.id || '';
           } catch (err) {
-            console.error('Lỗi đọc user:', err);
+            console.error(err);
           }
         }
       }
@@ -193,14 +200,13 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
         description,
         created_at: new Date().toISOString(),
         created_by: currentUserId,
-        target_intakes: selectedIntakes, // 🟢 Đính kèm danh sách khóa được phép
         programs: configs,
         submissions: []
       } as any;
 
       await onSave(newForm);
     } catch (error) {
-      console.error('Lỗi khi tạo phiếu:', error);
+      console.error(error);
       setIsSubmitting(false);
     }
   };
@@ -244,55 +250,11 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
                 className="w-full p-3 bg-white rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-[#1d92ff] resize-none"
               />
             </div>
-
-            {/* 🟢 KHỐI CHỌN KHÓA PHÂN BỔ ĐƯỢC PHÉP ĐĂNG KÝ */}
-            <div className="space-y-2 pt-2 border-t border-slate-200/80">
-              <div className="flex items-center justify-between">
-                <label className="text-[10px] font-bold uppercase text-[#0054a5] flex items-center gap-1.5">
-                  <GraduationCap size={14} /> Khóa phân bổ được phép đăng ký
-                </label>
-                <span className="text-[11px] text-slate-500 font-medium">
-                  {selectedIntakes.length === 0 ? "Mọi khóa đều được đăng ký" : `Đã giới hạn: ${selectedIntakes.length} khóa`}
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setSelectedIntakes([])}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                    selectedIntakes.length === 0
-                      ? 'bg-[#0054a5] text-white border-[#0054a5] shadow-xs'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                  }`}
-                >
-                  Tất cả các khóa
-                </button>
-
-                {POPULAR_INTAKES.map(intake => {
-                  const isChecked = selectedIntakes.includes(intake);
-                  return (
-                    <button
-                      key={intake}
-                      type="button"
-                      onClick={() => toggleIntake(intake)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                        isChecked
-                          ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
-                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
-                      }`}
-                    >
-                      {isChecked ? `✓ K${intake}` : `K${intake}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
           </div>
 
           <div className="space-y-4">
             <h4 className="font-bold text-[#0054a5] uppercase text-xs tracking-wider">
-              Danh sách chương trình ({configs.length})
+              Danh sách chương trình & Phân bổ khóa ({configs.length})
             </h4>
             {configs.map((config, idx) => (
               <div key={config.program_id} className="p-5 bg-white rounded-2xl border border-slate-200 space-y-4 shadow-sm">
@@ -309,6 +271,51 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
                     onChange={(e) => handleConfigChange(idx, 'description', e.target.value)}
                     className="w-full p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-[#1d92ff]"
                   />
+                </div>
+
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold uppercase text-[#0054a5] flex items-center gap-1.5">
+                      <GraduationCap size={14} /> Khóa phân bổ cho chương trình này
+                    </label>
+                    <span className="text-[11px] text-slate-500 font-medium">
+                      {(!config.target_intakes || config.target_intakes.length === 0) 
+                        ? "Mọi khóa đều được đăng ký" 
+                        : `Giới hạn: ${config.target_intakes.length} khóa`}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleResetIntakes(idx)}
+                      className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        (!config.target_intakes || config.target_intakes.length === 0)
+                          ? 'bg-[#0054a5] text-white border-[#0054a5] shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      Tất cả các khóa
+                    </button>
+
+                    {POPULAR_INTAKES.map(intake => {
+                      const isChecked = config.target_intakes?.includes(intake);
+                      return (
+                        <button
+                          key={intake}
+                          type="button"
+                          onClick={() => handleToggleIntake(idx, intake)}
+                          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                            isChecked
+                              ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                          }`}
+                        >
+                          {isChecked ? `✓ K${intake}` : `K${intake}`}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -373,7 +380,7 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
                         </div>
                         <input
                           type="text"
-                          placeholder="Nhập chức danh ứng cử (VD: Trưởng Ban Nội dung) và nhấn Enter..."
+                          placeholder="Nhập chức danh ứng cử và nhấn Enter..."
                           className="w-full p-2 bg-white border border-blue-200 rounded-lg text-xs font-medium outline-none focus:border-[#0054a5]"
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
@@ -403,7 +410,7 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
             <button 
               type="submit" 
               disabled={isSubmitting}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase shadow-lg border-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase shadow-lg border-none cursor-pointer disabled:opacity-50 transition-all active:scale-95"
             >
               {isSubmitting ? (
                 <>

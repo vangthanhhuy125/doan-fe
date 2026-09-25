@@ -1,12 +1,11 @@
-// SurveyBuilderModal.tsx
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
 import { 
   X, Plus, Copy, Trash2, Save, Lock, Unlock, 
   Loader2, MessageSquareText, Image as ImageIcon, Split,
-  FileSpreadsheet, Users, User, Hash, CheckSquare, List,
-  AlertCircle, CheckCircle2
+  FileSpreadsheet, Users, GraduationCap, UserCheck, Search, UserPlus,
+  ChevronDown, Sparkles, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
 import { SurveyForm, Question, QuestionType, Section } from './types';
@@ -17,6 +16,8 @@ interface Props {
   onClose: () => void;
   onSaved: () => void;
 }
+
+const POPULAR_INTAKES = ["2021", "2022", "2023", "2024", "2025", "2026"];
 
 function AutoResizeTextarea({
   value,
@@ -103,6 +104,218 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
   const [isLocked, setIsLocked] = useState(!!survey?.is_locked);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
+  const [targetScope, setTargetScope] = useState<'intake' | 'specific'>(() => {
+    if (survey?.target_users && survey.target_users.length > 0) return 'specific';
+    return 'intake';
+  });
+
+  const [selectedIntakes, setSelectedIntakes] = useState<string[]>(
+    Array.isArray(survey?.target_intakes) ? survey!.target_intakes : []
+  );
+  const [selectedUsers, setSelectedUsers] = useState<string[]>(
+    Array.isArray(survey?.target_users) ? survey!.target_users : []
+  );
+
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [userSearchTerm, setUserSearchTerm] = useState('');
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const userDropdownRef = useRef<HTMLDivElement>(null);
+
+  const extractIntake = (cls: string, sid: string) => {
+    const match = String(cls || '').match(/(?:19|20)\d{2}/);
+    if (match) return `K${match[0]}`;
+    const s = String(sid || '').trim();
+    if (s.length >= 2) {
+      const prefix = parseInt(s.substring(0, 2), 10);
+      if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
+        return `K20${prefix}`;
+      }
+    }
+    return '';
+  };
+
+  useEffect(() => {
+    const fetchAllPersonnelAndAccounts = async () => {
+      try {
+        const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+        const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
+        const [personnelRes, accountsRes, usersRes] = await Promise.allSettled([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/personnel`, { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts`, { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, { headers })
+        ]);
+
+        let rawPersonnel: any[] = [];
+        let rawAccounts: any[] = [];
+        let rawUsers: any[] = [];
+
+        if (personnelRes.status === 'fulfilled' && personnelRes.value.ok) {
+          const data = await personnelRes.value.json();
+          if (Array.isArray(data)) rawPersonnel = data;
+        }
+
+        if (accountsRes.status === 'fulfilled' && accountsRes.value.ok) {
+          const data = await accountsRes.value.json();
+          if (Array.isArray(data)) rawAccounts = data;
+        }
+
+        if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
+          const data = await usersRes.value.json();
+          if (Array.isArray(data)) rawUsers = data;
+        }
+
+        const map = new Map<string, any>();
+
+        rawPersonnel.forEach((p: any) => {
+          const sid = String(p.student_id || p.mssv || p.studentId || p.code || '').trim();
+          const cls = String(p.class_name || p.class || p.className || p.lop || '').trim();
+          const name = String(p.full_name || p.fullName || p.name || p.displayName || '').trim();
+          const email = String(p.email || '').trim().toLowerCase();
+          const uid = String(p.user_id || p.account_id || p._id || '');
+
+          const key = sid || email || uid || name;
+          if (!key) return;
+
+          map.set(key, {
+            ...p,
+            student_id: sid,
+            class: cls,
+            full_name: name,
+            displayName: name,
+            email: email,
+            _id: String(p._id || uid),
+            intake: extractIntake(cls, sid),
+            identifiers: [sid, email, uid, String(p._id)].filter(Boolean)
+          });
+        });
+
+        rawUsers.forEach((u: any) => {
+          const sid = String(u.student_id || u.studentId || u.mssv || '').trim();
+          const cls = String(u.class || u.class_name || u.className || u.lop || '').trim();
+          const name = String(u.full_name || u.displayName || u.name || '').trim();
+          const email = String(u.email || u.personal_email || '').trim().toLowerCase();
+          const uid = String(u._id || u.user_id || u.account_id || '');
+
+          let existingKey: string | null = null;
+          for (const [k, v] of map.entries()) {
+            if (
+              (sid && v.student_id === sid) ||
+              (email && v.email === email) ||
+              (uid && v.identifiers?.includes(uid)) ||
+              (name && v.full_name?.toLowerCase() === name.toLowerCase())
+            ) {
+              existingKey = k;
+              break;
+            }
+          }
+
+          if (existingKey) {
+            const current = map.get(existingKey);
+            const combinedSid = current.student_id || sid;
+            const combinedCls = current.class || cls;
+            map.set(existingKey, {
+              ...current,
+              ...u,
+              student_id: combinedSid,
+              class: combinedCls,
+              full_name: current.full_name || name,
+              displayName: current.displayName || name,
+              intake: extractIntake(combinedCls, combinedSid),
+              identifiers: Array.from(new Set([...(current.identifiers || []), sid, email, uid, String(u._id)].filter(Boolean)))
+            });
+          } else {
+            const key = sid || email || uid || name;
+            map.set(key, {
+              ...u,
+              student_id: sid,
+              class: cls,
+              full_name: name,
+              displayName: name,
+              email: email,
+              _id: String(u._id || uid),
+              intake: extractIntake(cls, sid),
+              identifiers: [sid, email, uid, String(u._id)].filter(Boolean)
+            });
+          }
+        });
+
+        rawAccounts.forEach((acc: any) => {
+          const accUsername = String(acc.username || '').trim();
+          const accEmail = String(acc.email || '').trim().toLowerCase();
+          const accName = String(acc.displayName || acc.full_name || '').trim();
+          const accId = String(acc._id || acc.id || '');
+          const accSid = String(acc.student_id || '').trim();
+
+          let existingKey: string | null = null;
+          for (const [k, v] of map.entries()) {
+            if (
+              (accSid && v.student_id === accSid) ||
+              (accUsername && (v.student_id === accUsername || v.identifiers?.includes(accUsername))) ||
+              (accEmail && (v.email === accEmail || v.identifiers?.includes(accEmail))) ||
+              (accId && v.identifiers?.includes(accId)) ||
+              (accName && v.full_name?.toLowerCase() === accName.toLowerCase())
+            ) {
+              existingKey = k;
+              break;
+            }
+          }
+
+          if (existingKey) {
+            const current = map.get(existingKey);
+            map.set(existingKey, {
+              ...current,
+              username: accUsername,
+              identifiers: Array.from(new Set([...(current.identifiers || []), accId, accUsername, accEmail, accSid].filter(Boolean)))
+            });
+          } else {
+            let extractedSid = accSid;
+            if (!extractedSid && /^\d{7,10}$/.test(accUsername)) {
+              extractedSid = accUsername;
+            }
+            if (!extractedSid && /^\d{7,10}@/.test(accEmail)) {
+              extractedSid = accEmail.split('@')[0];
+            }
+
+            const key = extractedSid || accEmail || accUsername || accId;
+            map.set(key, {
+              ...acc,
+              student_id: extractedSid,
+              class: acc.class || '',
+              full_name: accName,
+              displayName: accName,
+              email: accEmail,
+              username: accUsername,
+              _id: accId,
+              intake: extractIntake(acc.class || '', extractedSid),
+              identifiers: [accId, accUsername, accEmail, extractedSid].filter(Boolean)
+            });
+          }
+        });
+
+        const list = Array.from(map.values()).sort((a, b) => 
+          (a.displayName || a.full_name || '').localeCompare(b.displayName || b.full_name || '', 'vi')
+        );
+
+        setAccounts(list);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchAllPersonnelAndAccounts();
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (userDropdownRef.current && !userDropdownRef.current.contains(e.target as Node)) {
+        setIsUserDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   const showToast = (text: string, type: 'success' | 'error' | 'info' = 'info') => {
     setToastMessage({ text, type });
     setTimeout(() => setToastMessage(null), 3500);
@@ -132,6 +345,90 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
   const [activeQuestionId, setActiveQuestionId] = useState<string | null>(questions[0]?.id || null);
   const responses = survey?.responses || [];
+
+  const handleSwitchScope = (scope: 'intake' | 'specific') => {
+    setTargetScope(scope);
+    if (scope === 'intake') {
+      setSelectedUsers([]);
+    } else {
+      setSelectedIntakes([]);
+    }
+  };
+
+  const toggleIntake = (intake: string) => {
+    if (selectedIntakes.includes(intake)) {
+      setSelectedIntakes(selectedIntakes.filter(i => i !== intake));
+    } else {
+      setSelectedIntakes([...selectedIntakes, intake]);
+    }
+  };
+
+  const handleAddUser = (acc: any) => {
+    const idKey = String(acc.student_id || acc._id);
+    if (!selectedUsers.includes(idKey)) {
+      setSelectedUsers([...selectedUsers, idKey]);
+    }
+    setUserSearchTerm('');
+    setIsUserDropdownOpen(false);
+  };
+
+  const handleRemoveUser = (idKey: string) => {
+    setSelectedUsers(selectedUsers.filter(u => u !== idKey));
+  };
+
+  const filteredAccounts = accounts.filter(acc => {
+    const sid = acc.student_id ? String(acc.student_id) : '';
+    const id = acc._id ? String(acc._id) : '';
+    const idList = acc.identifiers || [];
+
+    const isAlreadySelected = selectedUsers.some(selected => 
+      selected === sid || 
+      selected === id || 
+      idList.includes(selected)
+    );
+
+    if (isAlreadySelected) return false;
+
+    const s = userSearchTerm.toLowerCase().trim();
+    if (!s) return true;
+
+    return (
+      (acc.displayName || acc.full_name || '').toLowerCase().includes(s) ||
+      (acc.student_id || '').toLowerCase().includes(s) ||
+      (acc.class || '').toLowerCase().includes(s) ||
+      (acc.intake || '').toLowerCase().includes(s)
+    );
+  });
+
+  const getPersonDetailText = (person: any) => {
+    const parts: string[] = [];
+    if (person.student_id) parts.push(`MSSV: ${person.student_id}`);
+    if (person.class) parts.push(`Lớp: ${person.class}`);
+    if (person.intake) parts.push(`Khóa: ${person.intake}`);
+    if (parts.length === 0) return 'Chưa cập nhật thông tin học tập';
+    return parts.join(' — ');
+  };
+
+  const getPersonBadgeLabel = (idKey: string) => {
+    const matched = accounts.find(a => 
+      String(a.student_id) === String(idKey) || 
+      String(a._id) === String(idKey) ||
+      a.identifiers?.includes(String(idKey))
+    );
+
+    if (!matched) return idKey;
+
+    const name = matched.displayName || matched.full_name || idKey;
+    const subParts: string[] = [];
+    if (matched.student_id) subParts.push(matched.student_id);
+    if (matched.class) subParts.push(matched.class);
+    else if (matched.intake) subParts.push(matched.intake);
+
+    if (subParts.length > 0) {
+      return `${name} (${subParts.join(' — ')})`;
+    }
+    return name;
+  };
 
   const handleAddQuestion = (targetSectionId?: string) => {
     const secId = targetSectionId || sections[sections.length - 1].id;
@@ -266,6 +563,8 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
         title,
         description,
         is_locked: isLocked,
+        target_intakes: targetScope === 'intake' ? selectedIntakes : [],
+        target_users: targetScope === 'specific' ? selectedUsers : [],
         created_by: currentUserId,
         sections,
         questions
@@ -333,9 +632,9 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-[#f0f4f9] flex flex-col overflow-hidden text-black animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex flex-col overflow-hidden text-slate-800 animate-in fade-in duration-200">
       {toastMessage && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold animate-in slide-in-from-top-4 duration-300 text-white ${
+        <div className={`fixed top-5 left-1/2 -translate-x-1/2 z-[200] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold animate-in slide-in-from-top-4 duration-300 text-white ${
           toastMessage.type === 'success' ? 'bg-emerald-600' : toastMessage.type === 'error' ? 'bg-rose-600' : 'bg-[#0054a5]'
         }`}>
           {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
@@ -343,34 +642,35 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
         </div>
       )}
 
-      <header className="bg-white border-b border-gray-200 shadow-sm px-4 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 shrink-0">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-md">
+      <header className="bg-white border-b border-slate-200 px-4 sm:px-6 h-16 flex items-center justify-between gap-3 shrink-0 z-30 shadow-xs">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#0054a5] to-[#1d92ff] text-white flex items-center justify-center shrink-0 shadow-sm shadow-blue-500/20">
             <MessageSquareText size={20} />
           </div>
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <span className="bg-blue-100 text-[#0054a5] font-black text-[10px] px-2 py-0.5 rounded-md hidden sm:inline">
+              <span className="bg-blue-50 text-[#0054a5] border border-blue-200/80 font-bold text-[10px] px-2 py-0.5 rounded-md shrink-0">
                 {survey?.voucherNo || 'TẠO MỚI'}
               </span>
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="font-bold text-sm sm:text-base text-gray-800 bg-transparent border-b border-transparent hover:border-gray-300 focus:border-[#0054a5] outline-none px-1 py-0.5 transition-all truncate max-w-[150px] sm:max-w-md"
+                placeholder="Tiêu đề biểu mẫu"
+                className="font-bold text-sm sm:text-base text-slate-900 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-[#0054a5] outline-none px-1 py-0.5 transition-all truncate max-w-[130px] sm:max-w-xs md:max-w-md"
               />
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1 bg-gray-100 p-1 rounded-xl">
+        <div className="flex items-center bg-slate-100 p-1 rounded-xl shrink-0">
           <button
             type="button"
             onClick={() => setActiveTab('editor')}
-            className={`px-3 sm:px-5 py-1.5 rounded-lg font-bold text-xs uppercase transition-all border-none cursor-pointer ${
+            className={`px-3 sm:px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all border-none cursor-pointer ${
               activeTab === 'editor' 
-                ? 'bg-[#0054a5] text-white shadow-sm' 
-                : 'text-gray-500 hover:text-gray-800 bg-transparent'
+                ? 'bg-white text-[#0054a5] shadow-xs' 
+                : 'text-slate-500 hover:text-slate-800 bg-transparent'
             }`}
           >
             Câu hỏi
@@ -378,27 +678,27 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
           <button
             type="button"
             onClick={() => setActiveTab('responses')}
-            className={`px-3 sm:px-5 py-1.5 rounded-lg font-bold text-xs uppercase transition-all border-none cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 sm:px-4 py-1.5 rounded-lg font-bold text-xs uppercase tracking-wider transition-all border-none cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'responses' 
-                ? 'bg-[#0054a5] text-white shadow-sm' 
-                : 'text-gray-500 hover:text-gray-800 bg-transparent'
+                ? 'bg-white text-[#0054a5] shadow-xs' 
+                : 'text-slate-500 hover:text-slate-800 bg-transparent'
             }`}
           >
-            <span>Trả lời</span>
+            <span>Câu trả lời</span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
-              activeTab === 'responses' ? 'bg-white text-[#0054a5]' : 'bg-gray-200 text-gray-700'
+              activeTab === 'responses' ? 'bg-[#0054a5] text-white' : 'bg-slate-200 text-slate-700'
             }`}>
               {responses.length}
             </span>
           </button>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="flex items-center gap-2 px-3 sm:px-5 py-2 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-lg border-none cursor-pointer transition-all active:scale-95 disabled:opacity-50"
+            className="flex items-center gap-2 px-3.5 sm:px-5 py-2 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-xl text-xs uppercase tracking-wider shadow-sm transition-all active:scale-95 disabled:opacity-50 border-none cursor-pointer"
           >
             {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
             <span className="hidden sm:inline">Lưu biểu mẫu</span>
@@ -406,31 +706,203 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
           <button
             type="button"
             onClick={onClose}
-            className="p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-700 rounded-full transition-colors border-none bg-transparent cursor-pointer"
+            className="w-9 h-9 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-xl transition-all border-none bg-transparent cursor-pointer"
+            title="Đóng"
           >
-            <X size={22} />
+            <X size={20} />
           </button>
         </div>
       </header>
 
       {activeTab === 'editor' && (
-        <div className="flex-1 overflow-y-auto p-3 sm:p-6">
-          <div className="max-w-3xl mx-auto space-y-6 relative pb-24">
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden border-t-8 border-t-[#0054a5]">
-              <div className="p-4 sm:p-6 space-y-3">
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Tiêu đề biểu mẫu"
-                  className="w-full text-xl sm:text-2xl font-black text-gray-900 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none pb-1 transition-all"
-                />
-                <AutoResizeTextarea
-                  value={description}
-                  onChange={(val) => setDescription(val)}
-                  placeholder="Mô tả chi tiết biểu mẫu (Ấn Enter xuống dòng, Ctrl+B/I/U để định dạng)..."
-                  className="text-xs font-semibold text-gray-600 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] p-1"
-                />
+        <div className="flex-1 overflow-y-auto p-3 sm:p-6 lg:p-8">
+          <div className="max-w-3xl mx-auto space-y-6 relative pb-28">
+            <div className="bg-white rounded-3xl border border-slate-200/90 shadow-sm relative overflow-visible">
+              <div className="h-2 w-full bg-gradient-to-r from-[#0054a5] via-blue-500 to-[#1d92ff] rounded-t-3xl" />
+              
+              <div className="p-5 sm:p-7 space-y-5">
+                <div className="space-y-2">
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Tiêu đề biểu mẫu"
+                    className="w-full text-xl sm:text-2xl font-black text-slate-900 border-b border-transparent hover:border-slate-200 focus:border-[#0054a5] outline-none pb-1.5 transition-all"
+                  />
+                  <AutoResizeTextarea
+                    value={description}
+                    onChange={(val) => setDescription(val)}
+                    placeholder="Mô tả chi tiết biểu mẫu (Ctrl+B in đậm, Ctrl+I in nghiêng, Ctrl+U gạch chân)..."
+                    className="text-xs sm:text-sm text-slate-600 font-medium border-b border-transparent hover:border-slate-200 focus:border-[#0054a5] p-1"
+                  />
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 space-y-4 bg-slate-50/70 p-4 sm:p-5 rounded-2xl border border-slate-200/70">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-2 text-slate-700 font-bold text-xs uppercase tracking-wide">
+                      <Sparkles size={15} className="text-[#0054a5]" />
+                      <span>Cấu hình đối tượng tham gia</span>
+                    </div>
+
+                    <div className="flex p-1 bg-slate-200/80 rounded-xl w-full sm:w-auto">
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchScope('intake')}
+                        className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none cursor-pointer ${
+                          targetScope === 'intake'
+                            ? 'bg-white text-[#0054a5] shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 bg-transparent'
+                        }`}
+                      >
+                        <GraduationCap size={15} />
+                        <span>Theo khóa</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSwitchScope('specific')}
+                        className={`flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all border-none cursor-pointer ${
+                          targetScope === 'specific'
+                            ? 'bg-white text-[#0054a5] shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900 bg-transparent'
+                        }`}
+                      >
+                        <UserCheck size={15} />
+                        <span>Chỉ định cá nhân</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {targetScope === 'intake' && (
+                    <div className="space-y-2 pt-1 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold uppercase text-[#0054a5] flex items-center gap-1.5">
+                          <GraduationCap size={15} /> Lựa chọn khóa sinh viên
+                        </label>
+                        <span className="text-[11px] text-slate-400 font-semibold">
+                          {selectedIntakes.length === 0 ? "Mọi khóa sinh viên" : `Giới hạn: ${selectedIntakes.length} khóa`}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setSelectedIntakes([])}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                            selectedIntakes.length === 0
+                              ? 'bg-[#0054a5] text-white border-[#0054a5] shadow-xs'
+                              : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                          }`}
+                        >
+                          Tất cả các khóa
+                        </button>
+
+                        {POPULAR_INTAKES.map(intake => {
+                          const isChecked = selectedIntakes.includes(intake);
+                          return (
+                            <button
+                              key={intake}
+                              type="button"
+                              onClick={() => toggleIntake(intake)}
+                              className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                                isChecked
+                                  ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                              }`}
+                            >
+                              {isChecked ? `✓ K${intake}` : `K${intake}`}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {targetScope === 'specific' && (
+                    <div className="space-y-2 pt-1 relative animate-in fade-in duration-150" ref={userDropdownRef}>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11px] font-bold uppercase text-[#0054a5] flex items-center gap-1.5">
+                          <UserCheck size={15} /> Danh sách cá nhân được chỉ định
+                        </label>
+                        <span className="text-[11px] text-slate-400 font-semibold">
+                          {selectedUsers.length === 0 ? "Chưa chọn ai" : `Đã chọn: ${selectedUsers.length} người`}
+                        </span>
+                      </div>
+
+                      {selectedUsers.length > 0 && (
+                        <div className="flex flex-wrap gap-2 p-2.5 bg-white rounded-2xl border border-slate-200 max-h-36 overflow-y-auto">
+                          {selectedUsers.map(idKey => (
+                            <span
+                              key={idKey}
+                              className="inline-flex items-center gap-2 bg-blue-50/90 border border-blue-200 text-[#0054a5] px-3 py-1 rounded-xl text-xs font-bold shadow-2xs"
+                            >
+                              <span>{getPersonBadgeLabel(idKey)}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveUser(idKey)}
+                                className="p-0.5 hover:bg-blue-100 rounded-full text-blue-400 hover:text-red-500 transition-colors border-none bg-transparent cursor-pointer flex items-center justify-center"
+                              >
+                                <X size={13} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="relative">
+                        <div className="relative">
+                          <input
+                            type="text"
+                            placeholder="Tìm kiếm theo họ tên, MSSV, lớp để chỉ định..."
+                            value={userSearchTerm}
+                            onFocus={() => setIsUserDropdownOpen(true)}
+                            onChange={(e) => {
+                              setUserSearchTerm(e.target.value);
+                              setIsUserDropdownOpen(true);
+                            }}
+                            className="w-full py-2.5 pl-10 pr-10 bg-white border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:border-[#0054a5] focus:ring-2 focus:ring-[#0054a5]/10 transition-all text-slate-800 placeholder:text-slate-400"
+                          />
+                          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                          <ChevronDown size={16} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                        </div>
+
+                        {isUserDropdownOpen && (
+                          <div className="absolute top-full left-0 right-0 mt-1.5 bg-white rounded-2xl shadow-2xl border border-slate-200 z-[90] max-h-64 sm:max-h-72 overflow-y-auto divide-y divide-slate-100 animate-in fade-in slide-in-from-top-2 duration-150">
+                            {filteredAccounts.length > 0 ? (
+                              filteredAccounts.slice(0, 30).map(acc => {
+                                const name = acc.displayName || acc.full_name || 'Thành viên';
+                                const detailText = getPersonDetailText(acc);
+
+                                return (
+                                  <div
+                                    key={acc._id || acc.student_id}
+                                    onClick={() => handleAddUser(acc)}
+                                    className="p-3 sm:px-4 hover:bg-blue-50/80 cursor-pointer flex items-center justify-between transition-colors group"
+                                  >
+                                    <div className="min-w-0 pr-2">
+                                      <p className="text-xs font-bold text-slate-800 group-hover:text-[#0054a5] truncate">
+                                        {name}
+                                      </p>
+                                      <p className="text-[11px] text-slate-500 font-medium mt-0.5 truncate">
+                                        {detailText}
+                                      </p>
+                                    </div>
+                                    <div className="w-7 h-7 rounded-lg bg-slate-100 group-hover:bg-[#0054a5] group-hover:text-white flex items-center justify-center text-slate-400 transition-all shrink-0">
+                                      <UserPlus size={14} />
+                                    </div>
+                                  </div>
+                                );
+                              })
+                            ) : (
+                              <div className="p-6 text-center text-xs text-slate-400 italic">
+                                Không tìm thấy sinh viên/nhân sự phù hợp với từ khóa...
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -439,25 +911,25 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
               return (
                 <div key={sec.id} className="space-y-4">
-                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden border-l-8 border-l-[#0054a5]">
-                    <div className="bg-[#0054a5] text-white px-4 py-1.5 inline-block font-black text-xs uppercase rounded-br-xl">
+                  <div className="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden border-l-8 border-l-[#0054a5]">
+                    <div className="bg-[#0054a5] text-white px-4 py-1.5 inline-block font-black text-xs uppercase rounded-br-2xl tracking-wide">
                       Phần {secIdx + 1} / {sections.length}
                     </div>
 
-                    <div className="p-4 sm:p-5 space-y-2">
+                    <div className="p-5 space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <input
                           type="text"
                           value={sec.title}
                           onChange={(e) => handleSectionChange(sec.id, 'title', e.target.value)}
                           placeholder="Mục không có tiêu đề"
-                          className="w-full text-base sm:text-lg font-bold text-gray-800 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] outline-none transition-all"
+                          className="w-full text-base sm:text-lg font-bold text-slate-800 border-b border-transparent hover:border-slate-200 focus:border-[#0054a5] outline-none transition-all pb-1"
                         />
                         {sections.length > 1 && (
                           <button
                             type="button"
                             onClick={() => handleRemoveSection(sec.id)}
-                            className="p-1.5 text-gray-400 hover:text-red-500 rounded-lg border-none bg-transparent cursor-pointer"
+                            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all border-none bg-transparent cursor-pointer shrink-0"
                             title="Xóa phần này"
                           >
                             <Trash2 size={18} />
@@ -469,7 +941,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                         value={sec.description || ''}
                         onChange={(val) => handleSectionChange(sec.id, 'description', val)}
                         placeholder="Mô tả mục (không bắt buộc)..."
-                        className="text-xs text-gray-500 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] p-1"
+                        className="text-xs sm:text-sm text-slate-500 border-b border-transparent hover:border-slate-200 focus:border-[#0054a5] p-1"
                       />
                     </div>
                   </div>
@@ -481,19 +953,19 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                       <div
                         key={q.id}
                         onClick={() => setActiveQuestionId(q.id)}
-                        className={`bg-white rounded-2xl border shadow-sm transition-all relative ${
+                        className={`bg-white rounded-3xl border shadow-sm transition-all relative ${
                           isActive 
-                            ? 'border-gray-300 ring-2 ring-[#0054a5]/30 border-l-8 border-l-[#0054a5] p-4 sm:p-6 space-y-5' 
-                            : 'border-gray-200 hover:border-gray-300 p-4 sm:p-5 space-y-3 cursor-pointer'
+                            ? 'border-slate-300 ring-4 ring-[#0054a5]/10 border-l-8 border-l-[#0054a5] p-5 sm:p-7 space-y-5' 
+                            : 'border-slate-200 hover:border-slate-300 p-5 space-y-3 cursor-pointer'
                         }`}
                       >
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                          <div className="w-full sm:flex-1 bg-gray-50/80 p-2 sm:p-3 rounded-xl border border-gray-200 focus-within:border-[#0054a5] focus-within:bg-white transition-all">
+                          <div className="w-full sm:flex-1 bg-slate-50/80 p-3 rounded-2xl border border-slate-200 focus-within:border-[#0054a5] focus-within:bg-white transition-all">
                             <AutoResizeTextarea
                               value={q.text}
                               onChange={(val) => handleQuestionChange(q.id, 'text', val)}
                               placeholder="Nội dung câu hỏi..."
-                              className="text-xs sm:text-sm font-bold text-gray-800 bg-transparent"
+                              className="text-xs sm:text-sm font-bold text-slate-800 bg-transparent"
                             />
                           </div>
 
@@ -501,7 +973,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                             <select
                               value={q.type}
                               onChange={(e) => handleQuestionChange(q.id, 'type', e.target.value as QuestionType)}
-                              className="p-3 bg-gray-50 border border-gray-200 rounded-xl text-xs font-bold text-gray-700 outline-none focus:border-[#0054a5] cursor-pointer w-full sm:w-auto"
+                              className="p-3 bg-slate-50 border border-slate-200 rounded-2xl text-xs font-bold text-slate-700 outline-none focus:border-[#0054a5] cursor-pointer w-full sm:w-auto shrink-0 shadow-2xs"
                             >
                               <option value="short_text">Trả lời ngắn</option>
                               <option value="paragraph">Đoạn văn</option>
@@ -513,7 +985,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                         </div>
 
                         {q.image_url && (
-                          <div className="relative group max-w-md rounded-xl overflow-hidden border border-gray-200 bg-gray-50">
+                          <div className="relative group max-w-md rounded-2xl overflow-hidden border border-slate-200 bg-slate-50">
                             <img src={q.image_url} alt="Ảnh câu hỏi" className="w-full max-h-64 object-contain" />
                             {isActive && (
                               <button
@@ -530,13 +1002,13 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
                         <div className="pt-2">
                           {q.type === 'short_text' && (
-                            <div className="p-3 border-b border-dashed border-gray-300 text-xs text-gray-400 font-medium max-w-xs">
+                            <div className="p-3.5 border-b border-dashed border-slate-300 text-xs text-slate-400 font-medium max-w-sm">
                               Văn bản câu trả lời ngắn
                             </div>
                           )}
 
                           {q.type === 'paragraph' && (
-                            <div className="p-3 border-b border-dashed border-gray-300 text-xs text-gray-400 font-medium max-w-md">
+                            <div className="p-3.5 border-b border-dashed border-slate-300 text-xs text-slate-400 font-medium max-w-md">
                               Văn bản câu trả lời dài (Ctrl+B/I/U)
                             </div>
                           )}
@@ -545,22 +1017,23 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                             <div className="space-y-3">
                               {(q.options || []).map((opt, optIdx) => (
                                 <div key={opt.id} className="flex items-center gap-3">
-                                  {q.type === 'multiple_choice' && <div className="w-4 h-4 rounded-full border-2 border-gray-300 shrink-0" />}
-                                  {q.type === 'checkboxes' && <div className="w-4 h-4 rounded border-2 border-gray-300 shrink-0" />}
-                                  {q.type === 'dropdown' && <span className="text-xs font-bold text-gray-400 shrink-0">{optIdx + 1}.</span>}
+                                  {q.type === 'multiple_choice' && <div className="w-4 h-4 rounded-full border-2 border-slate-300 shrink-0" />}
+                                  {q.type === 'checkboxes' && <div className="w-4 h-4 rounded-md border-2 border-slate-300 shrink-0" />}
+                                  {q.type === 'dropdown' && <span className="text-xs font-bold text-slate-400 shrink-0">{optIdx + 1}.</span>}
 
                                   <input
                                     type="text"
                                     value={opt.text}
                                     onChange={(e) => handleOptionTextChange(q.id, opt.id, e.target.value)}
-                                    className="flex-1 p-1.5 border-b border-transparent hover:border-gray-200 focus:border-[#0054a5] text-xs font-semibold text-gray-800 outline-none transition-all"
+                                    className="flex-1 p-2 border-b border-transparent hover:border-slate-200 focus:border-[#0054a5] text-xs font-semibold text-slate-800 outline-none transition-all"
                                   />
 
                                   {isActive && (
                                     <button
                                       type="button"
                                       onClick={() => handleRemoveOption(q.id, opt.id)}
-                                      className="p-1 text-gray-400 hover:text-red-500 rounded-full border-none bg-transparent cursor-pointer"
+                                      className="p-1.5 text-slate-400 hover:text-red-500 rounded-lg border-none bg-transparent cursor-pointer"
+                                      title="Xóa lựa chọn"
                                     >
                                       <X size={16} />
                                     </button>
@@ -585,16 +1058,16 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                         </div>
 
                         {isActive && (
-                          <div className="pt-4 border-t border-gray-100 flex items-center justify-end gap-3 text-gray-500">
-                            <label className="p-2 hover:bg-gray-100 rounded-full transition-colors cursor-pointer" title="Chèn ảnh vào câu hỏi">
-                              <ImageIcon size={18} className="text-[#0054a5]" />
+                          <div className="pt-4 border-t border-slate-100 flex flex-wrap items-center justify-end gap-3 text-slate-500">
+                            <label className="p-2 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer text-[#0054a5]" title="Chèn ảnh vào câu hỏi">
+                              <ImageIcon size={18} />
                               <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(q.id, e)} />
                             </label>
 
                             <button
                               type="button"
                               onClick={() => handleDuplicateQuestion(q)}
-                              className="p-2 hover:bg-gray-100 rounded-full transition-colors border-none bg-transparent cursor-pointer"
+                              className="p-2 hover:bg-slate-100 rounded-xl transition-colors border-none bg-transparent cursor-pointer text-slate-600"
                               title="Nhân bản câu hỏi"
                             >
                               <Copy size={18} />
@@ -603,16 +1076,16 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                             <button
                               type="button"
                               onClick={() => handleRemoveQuestion(q.id)}
-                              className="p-2 hover:bg-gray-100 hover:text-red-500 rounded-full transition-colors border-none bg-transparent cursor-pointer"
+                              className="p-2 hover:bg-red-50 hover:text-red-500 rounded-xl transition-colors border-none bg-transparent cursor-pointer text-slate-600"
                               title="Xóa câu hỏi"
                             >
                               <Trash2 size={18} />
                             </button>
 
-                            <div className="h-6 w-px bg-gray-200" />
+                            <div className="h-6 w-px bg-slate-200 mx-1" />
 
                             <label className="flex items-center gap-2 cursor-pointer select-none">
-                              <span className="text-xs font-bold text-gray-600">Bắt buộc</span>
+                              <span className="text-xs font-bold text-slate-600">Bắt buộc</span>
                               <input
                                 type="checkbox"
                                 checked={q.required}
@@ -627,7 +1100,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                   })}
 
                   {secIdx < sections.length - 1 && (
-                    <div className="p-3 bg-white/80 rounded-xl border border-dashed border-gray-300 text-xs font-bold text-gray-500 text-center">
+                    <div className="p-3 bg-white/80 rounded-2xl border border-dashed border-slate-300 text-xs font-bold text-slate-500 text-center">
                       Sau phần {secIdx + 1}: Tiếp tục tới phần tiếp theo (Phần {secIdx + 2})
                     </div>
                   )}
@@ -635,11 +1108,11 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
               );
             })}
 
-            <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 bg-white rounded-2xl border border-gray-200 shadow-2xl p-2 flex flex-col items-center gap-3 z-30">
+            <div className="fixed bottom-6 right-6 sm:bottom-8 sm:right-8 bg-white/95 backdrop-blur-md rounded-2xl border border-slate-200 shadow-2xl p-2 flex flex-col items-center gap-2 z-40">
               <button
                 type="button"
                 onClick={() => handleAddQuestion()}
-                className="p-3 bg-[#0054a5] text-white hover:bg-blue-700 rounded-xl transition-transform hover:scale-105 shadow-md border-none cursor-pointer"
+                className="p-3 bg-[#0054a5] hover:bg-blue-700 text-white rounded-xl transition-transform hover:scale-105 shadow-md border-none cursor-pointer"
                 title="Thêm câu hỏi mới"
               >
                 <Plus size={20} />
@@ -648,8 +1121,8 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
               <button
                 type="button"
                 onClick={handleAddSection}
-                className="p-3 bg-gray-100 text-gray-700 hover:bg-[#0054a5] hover:text-white rounded-xl transition-all border-none cursor-pointer"
-                title="Tách phần / Tách trang (=)"
+                className="p-3 bg-slate-100 hover:bg-[#0054a5] text-slate-700 hover:text-white rounded-xl transition-all border-none cursor-pointer"
+                title="Tách phần / Tách trang"
               >
                 <Split size={20} />
               </button>
@@ -659,33 +1132,33 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
       )}
 
       {activeTab === 'responses' && (
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
-          <div className="max-w-3xl mx-auto space-y-5 pb-24">
-            <div className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 pb-4">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
+          <div className="max-w-3xl mx-auto space-y-6 pb-28">
+            <div className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-black text-gray-900">
+                  <h2 className="text-xl sm:text-2xl font-black text-slate-900">
                     {responses.length} câu trả lời
                   </h2>
-                  <p className="text-xs text-gray-500 font-semibold mt-1">
+                  <p className="text-xs text-slate-500 font-semibold mt-1">
                     Bản tóm tắt kết quả khảo sát tổng hợp từ hệ thống
                   </p>
                 </div>
 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <button
                     type="button"
                     onClick={exportResponsesToExcel}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
+                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-sm transition-all border-none cursor-pointer active:scale-95"
                   >
-                    <FileSpreadsheet size={16} /> Xuất file Excel
+                    <FileSpreadsheet size={16} /> Xuất Excel
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setIsLocked(!isLocked)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border-none cursor-pointer transition-all ${
-                      isLocked ? 'bg-rose-100 text-rose-700' : 'bg-blue-50 text-[#0054a5]'
+                    className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold border-none cursor-pointer transition-all ${
+                      isLocked ? 'bg-rose-100 text-rose-700 hover:bg-rose-200' : 'bg-blue-50 text-[#0054a5] hover:bg-blue-100'
                     }`}
                   >
                     {isLocked ? <Lock size={16} /> : <Unlock size={16} />}
@@ -694,14 +1167,14 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 text-xs font-bold text-[#0054a5] bg-blue-50/60 p-3 rounded-xl border border-blue-100">
+              <div className="flex items-center gap-2 text-xs font-bold text-[#0054a5] bg-blue-50/60 p-3.5 rounded-2xl border border-blue-100">
                 <Users size={16} />
                 <span>Số người tham gia thực hiện khảo sát: {responses.length} sinh viên</span>
               </div>
             </div>
 
             {responses.length === 0 ? (
-              <div className="bg-white p-12 rounded-2xl border border-gray-200 text-center text-gray-400 font-medium italic">
+              <div className="bg-white p-12 rounded-3xl border border-slate-200 text-center text-slate-400 font-medium italic">
                 Chưa có lượt phản hồi nào cho bài khảo sát này.
               </div>
             ) : (
@@ -720,27 +1193,27 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                 const totalAnswersForQ = answerList.length;
 
                 return (
-                  <div key={q.id} className="bg-white p-4 sm:p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4">
-                    <div className="border-b border-gray-100 pb-3">
-                      <h3 className="font-bold text-gray-800 text-sm">
+                  <div key={q.id} className="bg-white p-5 sm:p-7 rounded-3xl border border-slate-200 shadow-sm space-y-4">
+                    <div className="border-b border-slate-100 pb-3">
+                      <h3 className="font-bold text-slate-800 text-sm sm:text-base">
                         {idx + 1}. {q.text}
                       </h3>
-                      <p className="text-[11px] font-semibold text-gray-400 mt-1">
+                      <p className="text-[11px] font-semibold text-slate-400 mt-1">
                         {totalAnswersForQ} câu trả lời
                       </p>
                     </div>
 
                     {['short_text', 'paragraph'].includes(q.type) && (
-                      <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                      <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
                         {answerList.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">Chưa có câu trả lời.</p>
+                          <p className="text-xs text-slate-400 italic">Chưa có câu trả lời.</p>
                         ) : (
                           answerList.map((item, aIdx) => (
-                            <div key={aIdx} className="p-3 bg-[#f8f9fa] rounded-xl border border-gray-100 text-xs text-gray-700 font-medium space-y-1">
-                              <p className="font-bold text-gray-800 whitespace-pre-wrap">{String(item.val)}</p>
+                            <div key={aIdx} className="p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100 text-xs text-slate-700 font-medium space-y-1">
+                              <p className="font-bold text-slate-900 whitespace-pre-wrap">{String(item.val)}</p>
                               {(item.student_id || item.full_name) && (
-                                <p className="text-[10px] text-gray-400 font-semibold">
-                                  — {item.full_name || 'Sinh viên'} ({item.student_id || 'MSSV'})
+                                <p className="text-[10px] text-slate-400 font-semibold">
+                                  — {item.full_name || 'Sinh viên'} {item.student_id ? `(${item.student_id})` : ''}
                                 </p>
                               )}
                             </div>
@@ -750,7 +1223,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                     )}
 
                     {['multiple_choice', 'checkboxes', 'dropdown'].includes(q.type) && (
-                      <div className="space-y-3">
+                      <div className="space-y-3 pt-1">
                         {(q.options || []).map((opt) => {
                           const count = answerList.filter(item => {
                             if (Array.isArray(item.val)) {
@@ -764,16 +1237,16 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                             : '0';
 
                           return (
-                            <div key={opt.id} className="space-y-1">
-                              <div className="flex items-center justify-between text-xs font-bold text-gray-700">
+                            <div key={opt.id} className="space-y-1.5">
+                              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
                                 <span>{opt.text}</span>
                                 <span className="text-[#0054a5]">
                                   {count} lượt ({percentage}%)
                                 </span>
                               </div>
-                              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                              <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
                                 <div
-                                  className="bg-[#0054a5] h-3 rounded-full transition-all duration-500"
+                                  className="bg-gradient-to-r from-[#0054a5] to-[#1d92ff] h-2.5 rounded-full transition-all duration-500"
                                   style={{ width: `${percentage}%` }}
                                 />
                               </div>

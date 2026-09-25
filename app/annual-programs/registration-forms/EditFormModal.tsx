@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, Edit3, UserCheck, Loader2 } from 'lucide-react';
+import { X, Edit3, UserCheck, Loader2, GraduationCap } from 'lucide-react';
 import { RegistrationForm, ProgramConfig } from './types';
 
 interface Props {
@@ -9,6 +9,8 @@ interface Props {
   onClose: () => void;
   onSave: (updated: RegistrationForm) => void | Promise<void>;
 }
+
+const POPULAR_INTAKES = ["2021", "2022", "2023", "2024", "2025", "2026"];
 
 const BADGE_COLOR_PALETTES = [
   'bg-rose-50 text-rose-700 border-rose-200',
@@ -49,7 +51,8 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
   const [title, setTitle] = useState(form.title);
   const [description, setDescription] = useState(form.description);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+  const [selectedIntakes, setSelectedIntakes] = useState<string[]>(form.target_intakes || []);
+
   const [programs, setPrograms] = useState<ProgramConfig[]>(() => {
     return (form.programs || []).map(p => {
       const depts = p.departments || [];
@@ -77,6 +80,14 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
     });
   });
 
+  const toggleIntake = (intake: string) => {
+    if (selectedIntakes.includes(intake)) {
+      setSelectedIntakes(selectedIntakes.filter(i => i !== intake));
+    } else {
+      setSelectedIntakes([...selectedIntakes, intake]);
+    }
+  };
+
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
@@ -91,7 +102,7 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
             const user = JSON.parse(userStr);
             currentUserId = user._id || user.user_id || user.id || '';
           } catch (err) {
-            console.error('Lỗi đọc user:', err);
+            console.error(err);
           }
         }
       }
@@ -100,34 +111,15 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
         ...form,
         title,
         description,
+        target_intakes: selectedIntakes,
         created_by: (form as any).created_by || currentUserId,
         programs,
       } as any;
 
-      const getFormId = (id: any) => typeof id === 'object' && id?.$oid ? id.$oid : String(id);
-      const formId = getFormId(form._id);
-      const token = localStorage.getItem('token') || '';
-
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${formId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'x-user-id': currentUserId
-        },
-        body: JSON.stringify(updatedForm)
-      });
-
-      if (res.ok) {
-        const savedData = await res.json();
-        await onSave(savedData);
-      } else {
-        const err = await res.json();
-        alert(err.message || 'Cập nhật thất bại!');
-        setIsSubmitting(false);
-      }
+      await onSave(updatedForm);
+      onClose();
     } catch (error) {
-      console.error('Lỗi khi cập nhật phiếu:', error);
+      console.error(error);
       setIsSubmitting(false);
     }
   };
@@ -249,6 +241,49 @@ export default function EditFormModal({ form, onClose, onSave }: Props) {
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full p-3 bg-white rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-amber-500 resize-none transition-all"
               />
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-amber-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold uppercase text-amber-700 flex items-center gap-1.5">
+                  <GraduationCap size={14} /> Khóa phân bổ được phép đăng ký
+                </label>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {selectedIntakes.length === 0 ? "Mọi khóa đều được đăng ký" : `Đã giới hạn: ${selectedIntakes.length} khóa`}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIntakes([])}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                    selectedIntakes.length === 0
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  Tất cả các khóa
+                </button>
+
+                {POPULAR_INTAKES.map(intake => {
+                  const isChecked = selectedIntakes.includes(intake);
+                  return (
+                    <button
+                      key={intake}
+                      type="button"
+                      onClick={() => toggleIntake(intake)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        isChecked
+                          ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {isChecked ? `✓ K${intake}` : `K${intake}`}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

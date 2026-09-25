@@ -1,8 +1,7 @@
-// SubmitRegistrationModal.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, FileCheck2, User, Send, UserCheck, Check, Loader2, Lock, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, FileCheck2, User, Send, UserCheck, Check, Loader2, Lock, AlertCircle, CheckCircle2, GraduationCap } from 'lucide-react';
 import { RegistrationForm, ProgramConfig } from '../annual-programs/registration-forms/types';
 
 interface Props {
@@ -13,6 +12,24 @@ interface Props {
   onSubmitSuccess: () => void;
 }
 
+const extractIntake = (user: { class_name?: string; student_id?: string }): string => {
+  if (!user) return '';
+  const classStr = user.class_name || '';
+  const match = String(classStr).match(/(?:19|20)\d{2}/);
+  if (match) {
+    const year = parseInt(match[0], 10);
+    if (year >= 1990 && year <= 2050) return String(year);
+  }
+  const sid = String(user.student_id || '').trim();
+  if (sid.length >= 2) {
+    const prefix = parseInt(sid.substring(0, 2), 10);
+    if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
+      return `20${prefix}`;
+    }
+  }
+  return '';
+};
+
 export default function SubmitRegistrationModal({ 
   form, 
   userInfo, 
@@ -21,6 +38,11 @@ export default function SubmitRegistrationModal({
   onSubmitSuccess 
 }: Props) {
   const isLocked = !!form.is_locked;
+  const userIntake = extractIntake(userInfo);
+  const targetIntakes = form.target_intakes || [];
+  const isEligible = targetIntakes.length === 0 || !userIntake || targetIntakes.includes(userIntake);
+
+  const isDisabled = isLocked || (!isEligible && !existingSubmission);
 
   const [choices, setChoices] = useState<Record<string, string>>(
     existingSubmission?.choices || {}
@@ -64,7 +86,7 @@ export default function SubmitRegistrationModal({
   };
 
   const handleSelectDepartment = (programId: string, deptName: string) => {
-    if (isLocked) return;
+    if (isDisabled) return;
 
     setChoices(prev => {
       const updated = { ...prev };
@@ -92,7 +114,7 @@ export default function SubmitRegistrationModal({
   };
 
   const handleSelectLeadership = (programId: string, option: string) => {
-    if (isLocked) return;
+    if (isDisabled) return;
 
     const selectedDept = choices[programId];
     const isAllowed = isLeadershipOptionAllowed(selectedDept, option);
@@ -122,8 +144,13 @@ export default function SubmitRegistrationModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (isLocked) return;
+    if (isDisabled) return;
     
+    if (!isEligible && !existingSubmission) {
+      showToast('Bạn không thuộc khóa được phân bổ để đăng ký chương trình này!', 'error');
+      return;
+    }
+
     if (Object.keys(choices).length === 0 && Object.keys(leadershipChoices).length === 0) {
       showToast('Vui lòng chọn ít nhất 1 Ban tham gia hoặc 1 vị trí ứng cử!', 'error');
       return;
@@ -181,7 +208,7 @@ export default function SubmitRegistrationModal({
           <div className="flex items-center gap-2">
             <FileCheck2 size={20} />
             <h3 className="font-bold uppercase tracking-widest text-sm">
-              {isLocked ? 'Chi tiết nguyện vọng đã khóa' : existingSubmission ? 'Chỉnh sửa nguyện vọng đăng ký' : 'Điền phiếu đăng ký chương trình'}
+              {isLocked ? 'Chi tiết nguyện vọng đã khóa' : !isEligible && !existingSubmission ? 'Xem thông tin phiếu đăng ký' : existingSubmission ? 'Chỉnh sửa nguyện vọng đăng ký' : 'Điền phiếu đăng ký chương trình'}
             </h3>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-white/10 rounded-full text-white border-none bg-transparent cursor-pointer">
@@ -197,8 +224,24 @@ export default function SubmitRegistrationModal({
             </div>
           )}
 
+          {!isEligible && !existingSubmission && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-800 text-xs font-bold">
+              <AlertCircle size={18} className="shrink-0 text-amber-600" />
+              <span>
+                Phiếu đăng ký này chỉ dành cho sinh viên khóa {targetIntakes.map(k => `K${k}`).join(', ')}. 
+                Bạn thuộc {userIntake ? `khóa K${userIntake}` : 'khóa khác'} nên chỉ có thể xem thông tin, không thể đăng ký!
+              </span>
+            </div>
+          )}
+
           <div className="space-y-2 border-b border-gray-100 pb-4">
-            <h2 className="text-lg font-black text-[#0054a5]">{form.title}</h2>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-lg font-black text-[#0054a5]">{form.title}</h2>
+              <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-sky-200">
+                <GraduationCap size={13} />
+                {targetIntakes.length > 0 ? `Khóa: ${targetIntakes.map(k => `K${k}`).join(', ')}` : 'Mọi khóa sinh viên'}
+              </span>
+            </div>
             <p className="text-xs text-gray-600 font-medium leading-relaxed">{form.description}</p>
           </div>
 
@@ -209,7 +252,7 @@ export default function SubmitRegistrationModal({
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs font-bold text-gray-700">
               <div><span className="text-gray-400 font-normal">Họ tên:</span> {userInfo.full_name}</div>
               <div><span className="text-gray-400 font-normal">MSSV:</span> {userInfo.student_id}</div>
-              <div><span className="text-gray-400 font-normal">Lớp:</span> {userInfo.class_name}</div>
+              <div><span className="text-gray-400 font-normal">Lớp:</span> {userInfo.class_name} {userIntake ? `(K${userIntake})` : ''}</div>
             </div>
           </div>
 
@@ -218,7 +261,7 @@ export default function SubmitRegistrationModal({
               <h4 className="text-xs font-black uppercase text-gray-400 tracking-wider">
                 Chọn Ban tham gia (Không bắt buộc chọn tất cả)
               </h4>
-              {!isLocked && (
+              {!isDisabled && (
                 <span className="text-[11px] text-amber-600 font-semibold italic">
                   * Nhấp lại vào Ban đã chọn để hủy chọn
                 </span>
@@ -249,7 +292,7 @@ export default function SubmitRegistrationModal({
                             key={dept}
                             onClick={() => handleSelectDepartment(prog.program_id, dept)}
                             className={`flex items-center gap-3 p-3 rounded-xl border transition-all ${
-                              isLocked
+                              isDisabled
                                 ? isSelected
                                   ? 'bg-blue-50 border-[#0054a5] text-[#0054a5] font-bold opacity-80 cursor-not-allowed'
                                   : 'bg-gray-50/50 border-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
@@ -262,7 +305,7 @@ export default function SubmitRegistrationModal({
                               type="radio"
                               name={`prog_${prog.program_id}`}
                               checked={isSelected}
-                              disabled={isLocked}
+                              disabled={isDisabled}
                               onChange={() => {}}
                               className="accent-[#0054a5] w-4 h-4"
                             />
@@ -282,14 +325,14 @@ export default function SubmitRegistrationModal({
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         {(prog.leadership_options || []).map((option: string) => {
                           const isChecked = selectedLeaderships.includes(option);
-                          const isAllowed = !isLocked && isLeadershipOptionAllowed(selectedDept, option);
+                          const isAllowed = !isDisabled && isLeadershipOptionAllowed(selectedDept, option);
 
                           return (
                             <div
                               key={option}
                               onClick={() => handleSelectLeadership(prog.program_id, option)}
                               className={`flex items-center gap-3 p-3 rounded-xl border transition-all select-none ${
-                                isLocked
+                                isDisabled
                                   ? isChecked
                                     ? 'bg-amber-50 border-amber-500 ring-1 ring-amber-500 opacity-80 cursor-not-allowed'
                                     : 'bg-gray-100/50 border-gray-200 text-gray-400 opacity-50 cursor-not-allowed'
@@ -302,7 +345,7 @@ export default function SubmitRegistrationModal({
                             >
                               <div
                                 className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                                  isLocked || !isAllowed
+                                  isDisabled || !isAllowed
                                     ? isChecked
                                       ? 'border-amber-600 bg-amber-600 text-white'
                                       : 'border-gray-300 bg-gray-200'
@@ -315,7 +358,7 @@ export default function SubmitRegistrationModal({
                               </div>
                               <span
                                 className={`text-xs font-bold ${
-                                  isLocked || !isAllowed
+                                  isDisabled || !isAllowed
                                     ? isChecked
                                       ? 'text-amber-800'
                                       : 'text-gray-400'
@@ -343,9 +386,9 @@ export default function SubmitRegistrationModal({
               onClick={onClose}
               className="px-5 py-2.5 rounded-xl font-bold text-gray-400 hover:bg-gray-100 text-xs uppercase border-none bg-transparent cursor-pointer"
             >
-              {isLocked ? 'Đóng' : 'Hủy'}
+              {isDisabled ? 'Đóng' : 'Hủy'}
             </button>
-            {!isLocked && (
+            {!isDisabled && (
               <button
                 type="submit"
                 disabled={submitting}

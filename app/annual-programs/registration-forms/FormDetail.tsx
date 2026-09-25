@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Edit, Trash2, Users, CheckCircle2, Calendar, Lock, Unlock, ShieldAlert, Share2 } from 'lucide-react';
+import { Download, Edit, Trash2, Users, CheckCircle2, Calendar, Lock, Unlock, ShieldAlert, Share2, GraduationCap } from 'lucide-react';
 import { RegistrationForm, ProgramConfig, FormPermission } from './types';
 import { exportRegistrationToExcel } from './utils/exportExcel';
 
@@ -46,8 +46,15 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
     return String(id || '');
   };
 
+  // 🟢 FIX BUG 1: Lọc chỉ lấy những sinh viên THỰC SỰ có đăng ký ban hoặc có ứng cử
+  const validSubmissions = (form.submissions || []).filter(sub => {
+    const hasDeptChoice = sub.choices && Object.values(sub.choices).some((v: any) => Boolean(v && String(v).trim()));
+    const hasLeaderChoice = sub.leadership_choices && Object.values(sub.leadership_choices).some((arr: any) => Array.isArray(arr) && arr.length > 0);
+    return hasDeptChoice || hasLeaderChoice;
+  });
+
   const getDepartmentStats = (programId: string, deptName: string) => {
-    return form.submissions.filter(sub => sub.choices && sub.choices[programId] === deptName).length;
+    return validSubmissions.filter(sub => sub.choices && sub.choices[programId] === deptName).length;
   };
 
   const handleToggleLock = async () => {
@@ -125,16 +132,8 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
     try {
       const date = new Date(dateStr);
       if (isNaN(date.getTime())) return dateStr;
-
       const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-      const day = pad(date.getDate());
-      const month = pad(date.getMonth() + 1);
-      const year = date.getFullYear();
-      const hours = pad(date.getHours());
-      const minutes = pad(date.getMinutes());
-      const seconds = pad(date.getSeconds());
-
-      return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+      return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
     } catch {
       return dateStr;
     }
@@ -151,6 +150,8 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
       return dateStr;
     }
   };
+
+  const allowedIntakes = form.target_intakes || [];
 
   return (
     <div className="space-y-6 text-black">
@@ -171,6 +172,11 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                   <Lock size={12} /> Đã khóa
                 </span>
               )}
+              {/* Badge hiển thị khóa phân bổ */}
+              <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-sky-200">
+                <GraduationCap size={13} />
+                {allowedIntakes.length > 0 ? `Khóa: ${allowedIntakes.map(k => `K${k}`).join(', ')}` : 'Mọi khóa sinh viên'}
+              </span>
             </div>
             <p className="text-xs text-gray-600 font-medium">{form.description}</p>
           </div>
@@ -187,7 +193,7 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
 
             {canExport && (
               <button
-                onClick={() => exportRegistrationToExcel(form)}
+                onClick={() => exportRegistrationToExcel({ ...form, submissions: validSubmissions })}
                 className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
               >
                 <Download size={16} /> Xuất Excel
@@ -234,7 +240,8 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
             </div>
             <div>
               <p className="text-[10px] font-bold uppercase text-gray-500">Tổng lượt đăng ký</p>
-              <p className="text-xl font-black text-[#0054a5]">{form.submissions.length} sinh viên</p>
+              {/* 🟢 Hiển thị số lượng đã lọc đúng thực tế */}
+              <p className="text-xl font-black text-[#0054a5]">{validSubmissions.length} sinh viên</p>
             </div>
           </div>
           <div className="p-4 bg-emerald-50/60 rounded-2xl border border-emerald-100 flex items-center gap-3">
@@ -309,8 +316,9 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
       </div>
 
       <div className="space-y-3">
+        {/* 🟢 Hiển thị đúng số lượng sau khi lọc */}
         <h4 className="text-sm font-black text-[#0054a5] uppercase tracking-wider">
-          Danh sách chi tiết sinh viên đăng ký ({form.submissions.length})
+          Danh sách chi tiết sinh viên đăng ký ({validSubmissions.length})
         </h4>
 
         {canViewSubmissions ? (
@@ -327,8 +335,8 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                {form.submissions.length > 0 ? (
-                  form.submissions.map((sub: any, idx) => (
+                {validSubmissions.length > 0 ? (
+                  validSubmissions.map((sub: any, idx) => (
                     <tr key={idx} className="hover:bg-blue-50/30 transition-colors">
                       <td className="px-4 py-4 text-center font-bold text-gray-400">{idx + 1}</td>
                       <td className="px-4 py-4 text-center font-bold text-[#0054a5]">{sub.student_id}</td>

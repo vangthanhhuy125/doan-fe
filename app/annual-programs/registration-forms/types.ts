@@ -49,7 +49,8 @@ export interface RegistrationForm {
   description: string;
   created_at: string;
   created_by?: string;
-  is_locked?: boolean; 
+  is_locked?: boolean;
+  target_intakes?: string[]; // Mảng các khóa cho phép (VD: ["2023", "2024"]). Rỗng = Tất cả các khóa
   programs: ProgramConfig[];
   submissions: Submission[];
   shared_permissions?: FormPermission[];

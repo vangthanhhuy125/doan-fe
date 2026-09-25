@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { FileCheck2, CheckCircle2, Clock, ChevronRight, Loader2, Calendar, Lock } from 'lucide-react';
+import { 
+  FileCheck2, CheckCircle2, Clock, ChevronRight, 
+  Loader2, Calendar, Lock, GraduationCap, Ban 
+} from 'lucide-react';
 import { RegistrationForm, ProgramConfig, Submission } from '../annual-programs/registration-forms/types';
 import SubmitRegistrationModal from './SubmitRegistrationModal';
 
@@ -13,6 +16,24 @@ interface Props {
   };
   onRefreshCount?: () => void;
 }
+
+const extractIntake = (user: { class_name?: string; student_id?: string }): string => {
+  if (!user) return '';
+  const classStr = user.class_name || '';
+  const match = String(classStr).match(/(?:19|20)\d{2}/);
+  if (match) {
+    const year = parseInt(match[0], 10);
+    if (year >= 1990 && year <= 2050) return String(year);
+  }
+  const sid = String(user.student_id || '').trim();
+  if (sid.length >= 2) {
+    const prefix = parseInt(sid.substring(0, 2), 10);
+    if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
+      return `20${prefix}`;
+    }
+  }
+  return '';
+};
 
 export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props) {
   const [forms, setForms] = useState<RegistrationForm[]>([]);
@@ -57,8 +78,10 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
     );
   }
 
+  const userIntake = extractIntake(userInfo);
+
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-6 space-y-6 text-black">
       <div className="flex items-center justify-between border-b pb-3">
         <h3 className="flex items-center gap-2 text-lg font-bold text-gray-800">
           <FileCheck2 className="text-[#0054a5]" size={20} /> Danh sách phiếu đăng ký
@@ -80,6 +103,9 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
             const isSubmitted = !!userSub;
             const isLocked = !!form.is_locked;
 
+            const targetIntakes = form.target_intakes || [];
+            const isEligible = targetIntakes.length === 0 || !userIntake || targetIntakes.includes(userIntake);
+
             return (
               <div
                 key={formId}
@@ -90,7 +116,11 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
                     <div className="flex items-center gap-2.5 flex-wrap">
                       <h4 className="font-bold text-gray-800 text-base">{form.title}</h4>
                       
-                      {/* HIỂN THỊ BADGE TRẠNG THÁI PHIẾU */}
+                      <span className="inline-flex items-center gap-1 bg-sky-50 text-sky-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-sky-200">
+                        <GraduationCap size={13} />
+                        {targetIntakes.length > 0 ? `Khóa: ${targetIntakes.map(k => `K${k}`).join(', ')}` : 'Mọi khóa'}
+                      </span>
+
                       {isLocked ? (
                         <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-rose-200">
                           <Lock size={12} /> Đã khóa đăng ký
@@ -98,6 +128,10 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
                       ) : isSubmitted ? (
                         <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-emerald-200">
                           <CheckCircle2 size={12} /> Đã đăng ký
+                        </span>
+                      ) : !isEligible ? (
+                        <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-full text-xs font-bold border border-slate-200">
+                          <Ban size={12} /> Không thuộc đối tượng
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 px-2.5 py-0.5 rounded-full text-xs font-bold border border-amber-200">
@@ -110,7 +144,6 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
                     )}
                   </div>
 
-                  {/* NÚT THAO TÁC */}
                   {isLocked ? (
                     <button
                       onClick={() => setSelectedFormToSubmit(form)}
@@ -119,16 +152,28 @@ export default function UserRegistrationTab({ userInfo, onRefreshCount }: Props)
                       <span>{isSubmitted ? 'Xem nguyện vọng' : 'Xem thông tin (Đã khóa)'}</span>
                       <ChevronRight size={14} />
                     </button>
+                  ) : isSubmitted ? (
+                    <button
+                      onClick={() => setSelectedFormToSubmit(form)}
+                      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition-all border-none bg-gray-100 text-gray-700 hover:bg-gray-200 shrink-0 self-start sm:self-auto"
+                    >
+                      <span>Xem / Sửa nguyện vọng</span>
+                      <ChevronRight size={14} />
+                    </button>
+                  ) : !isEligible ? (
+                    <button
+                      onClick={() => setSelectedFormToSubmit(form)}
+                      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition-all border-none bg-slate-100 text-slate-500 hover:bg-slate-200 shrink-0 self-start sm:self-auto"
+                    >
+                      <span>Xem thông tin (Khác khóa)</span>
+                      <ChevronRight size={14} />
+                    </button>
                   ) : (
                     <button
                       onClick={() => setSelectedFormToSubmit(form)}
-                      className={`flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition-all border-none active:scale-95 shrink-0 self-start sm:self-auto ${
-                        isSubmitted
-                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          : 'bg-[#0054a5] text-white hover:bg-blue-700'
-                      }`}
+                      className="flex cursor-pointer items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold shadow-sm transition-all border-none active:scale-95 bg-[#0054a5] text-white hover:bg-blue-700 shrink-0 self-start sm:self-auto"
                     >
-                      <span>{isSubmitted ? 'Xem / Sửa nguyện vọng' : 'Đăng ký ngay'}</span>
+                      <span>Đăng ký ngay</span>
                       <ChevronRight size={14} />
                     </button>
                   )}

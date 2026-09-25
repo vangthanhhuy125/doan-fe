@@ -5,8 +5,20 @@ import { Plus, Edit, Trash2, Users, Sliders, ShieldCheck } from "lucide-react";
 import GroupsModal from "./GroupsModal";
 import GroupPermissionsModal, { SIDEBAR_MENU_ITEMS } from "./GroupPermissionsModal";
 
+const cleanId = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'object') {
+    if (val.$oid) return String(val.$oid).trim();
+    if (val._id) return cleanId(val._id);
+    if (val.id) return cleanId(val.id);
+  }
+  const str = String(val).trim();
+  return str === '[object Object]' ? '' : str;
+};
+
 export default function GroupsTab() {
   const [groups, setGroups] = useState<any[]>([]);
+  const [accounts, setAccounts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const [groupModal, setGroupModal] = useState<{ open: boolean; mode: 'add' | 'edit' | 'delete'; data: any }>({
@@ -20,29 +32,74 @@ export default function GroupsTab() {
     group: null
   });
 
-  const fetchGroups = async () => {
+  const fetchData = async () => {
     setIsLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/permissions`);
-      if (res.ok) {
-        const data = await res.json();
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : '';
+      const headers: HeadersInit = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+      const [resGroups, resAccounts] = await Promise.all([
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/permissions`),
+        fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts`, { headers })
+      ]);
+
+      if (resGroups.ok) {
+        const data = await resGroups.json();
         const groupList = Array.isArray(data) ? data : [];
         groupList.sort((a: any, b: any) => (a.order ?? 99) - (b.order ?? 99));
         setGroups(groupList);
       } else {
         setGroups([]);
       }
+
+      if (resAccounts.ok) {
+        const accData = await resAccounts.json();
+        setAccounts(Array.isArray(accData) ? accData : []);
+      } else {
+        setAccounts([]);
+      }
     } catch (error) {
-      console.error("Lỗi tải danh sách phân quyền:", error);
+      console.error(error);
       setGroups([]);
+      setAccounts([]);
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchGroups();
+    fetchData();
   }, []);
+
+  const getMemberCount = (group: any) => {
+    if (!Array.isArray(accounts) || accounts.length === 0) return 0;
+    const targetGroupId = cleanId(group._id || group.id);
+    const targetGroupName = (group.name || '').trim().toLowerCase();
+
+    return accounts.filter((acc: any) => {
+      const accGroupId = cleanId(
+        acc.group_id || acc.groupId || acc.permission_id || acc.group
+      );
+
+      if (targetGroupId && accGroupId && targetGroupId === accGroupId) {
+        return true;
+      }
+
+      const accRole = (acc.role || '').trim().toLowerCase();
+      if (
+        targetGroupName.includes('quản trị') &&
+        (accRole === 'admin' || acc.username === 'admin')
+      ) {
+        return true;
+      }
+
+      if (accRole && accRole === targetGroupName) {
+        return true;
+      }
+
+      return false;
+    }).length;
+  };
 
   const handleDeleteGroup = async (id: string | number) => {
     try {
@@ -50,12 +107,12 @@ export default function GroupsTab() {
         method: 'DELETE' 
       });
       if (res.ok || res.status === 204) {
-        fetchGroups();
+        fetchData();
       } else {
         alert("Xóa nhóm quyền thất bại!");
       }
     } catch (e) {
-      console.error("Lỗi xóa nhóm quyền:", e);
+      console.error(e);
     }
   };
 
@@ -79,13 +136,13 @@ export default function GroupsTab() {
 
       if (res.ok) {
         setGroupModal({ open: false, mode: 'add', data: null });
-        fetchGroups();
+        fetchData();
       } else {
         const err = await res.json();
         alert(err.message || "Lưu thông tin thất bại!");
       }
     } catch (e) {
-      console.error("Lỗi lưu nhóm quyền:", e);
+      console.error(e);
     }
   };
 
@@ -98,12 +155,12 @@ export default function GroupsTab() {
       });
 
       if (res.ok) {
-        fetchGroups();
+        fetchData();
       } else {
         alert("Lưu phân quyền thất bại!");
       }
     } catch (e) {
-      console.error("Lỗi lưu phân quyền:", e);
+      console.error(e);
     }
   };
 
@@ -145,7 +202,7 @@ export default function GroupsTab() {
                         <h4 className="font-black text-slate-800 text-sm">{group.name}</h4>
                       </div>
                       <span className="inline-flex items-center gap-1 mt-2 text-[11px] font-bold text-[#0054a5] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                        <Users size={12} /> {group.membersCount || 0} thành viên
+                        <Users size={12} /> {getMemberCount(group)} thành viên
                       </span>
                     </div>
                     <div className="flex items-center gap-1">

@@ -71,18 +71,36 @@ export default function ProfilePage() {
     }
   };
 
-  const fetchUnsubmittedCount = async (currentStudentId: string) => {
+  const fetchUnsubmittedCount = async (currentStudentId: string, currentClassName: string = '') => {
     if (!currentStudentId) return;
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data)) {
+          // Trích xuất khóa của sinh viên
+          const match = String(currentClassName).match(/(?:19|20)\d{2}/);
+          let userIntake = match ? match[0] : '';
+          if (!userIntake && currentStudentId.length >= 2) {
+            const prefix = parseInt(currentStudentId.substring(0, 2), 10);
+            if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
+              userIntake = `20${prefix}`;
+            }
+          }
+
           const count = data.filter((form: any) => {
             const isSubmitted = form.submissions?.some(
               (sub: any) => sub.student_id === currentStudentId
             );
-            return !isSubmitted;
+            if (isSubmitted) return false;
+            if (form.is_locked) return false;
+
+            // Kiểm tra phân bổ khóa
+            const targetIntakes = form.target_intakes || [];
+            if (targetIntakes.length > 0 && userIntake && !targetIntakes.includes(userIntake)) {
+              return false;
+            }
+            return true;
           }).length;
           setUnsubmittedCount(count);
         }

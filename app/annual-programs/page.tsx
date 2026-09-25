@@ -200,6 +200,7 @@ export default function ToChucPage() {
           title: newFormPayload.title,
           description: newFormPayload.description,
           created_at: newFormPayload.created_at,
+          target_intakes: newFormPayload.target_intakes || [],
           programs: newFormPayload.programs,
           created_by: (newFormPayload as any).created_by || currentUserId,
         }),

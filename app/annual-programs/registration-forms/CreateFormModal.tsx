@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { X, FileCheck2, UserCheck, Loader2 } from 'lucide-react';
+import { X, FileCheck2, UserCheck, Loader2, GraduationCap } from 'lucide-react';
 import { Program, ProgramConfig, RegistrationForm } from './types';
 
 interface Props {
@@ -17,6 +17,9 @@ const DEFAULT_LEADERSHIP_OPTIONS = [
   "Trưởng Ban Truyền thông",
   "Trưởng Ban Hậu cần"
 ];
+
+// Danh sách các khóa sinh viên trong trường
+const POPULAR_INTAKES = ["2021", "2022", "2023", "2024", "2025", "2026"];
 
 const BADGE_COLOR_PALETTES = [
   'bg-rose-50 text-rose-700 border-rose-200',
@@ -62,6 +65,10 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
   const [title, setTitle] = useState(`PHIẾU ĐĂNG KÝ THAM GIA CHƯƠNG TRÌNH`);
   const [description, setDescription] = useState("Thông báo tuyển Ban chuyên môn, Sinh viên đăng ký tham gia các Ban phụ trách chương trình.");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // 🟢 Cấu hình Khóa phân bổ: Mặc định [] là cho phép tất cả các khóa
+  const [selectedIntakes, setSelectedIntakes] = useState<string[]>([]);
+
   const [configs, setConfigs] = useState<ProgramConfig[]>(
     selectedPrograms.map(p => ({
       program_id: getProgramId(p),
@@ -73,6 +80,14 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
       leadership_options: [...DEFAULT_LEADERSHIP_OPTIONS]
     }))
   );
+
+  const toggleIntake = (intake: string) => {
+    if (selectedIntakes.includes(intake)) {
+      setSelectedIntakes(selectedIntakes.filter(i => i !== intake));
+    } else {
+      setSelectedIntakes([...selectedIntakes, intake]);
+    }
+  };
 
   const handleConfigChange = (idx: number, field: string, value: any) => {
     setConfigs(prev => prev.map((item, pIdx) => pIdx === idx ? { ...item, [field]: value } : item));
@@ -178,11 +193,11 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
         description,
         created_at: new Date().toISOString(),
         created_by: currentUserId,
+        target_intakes: selectedIntakes, // 🟢 Đính kèm danh sách khóa được phép
         programs: configs,
         submissions: []
       } as any;
 
-      // Chỉ gọi onSave đẩy dữ liệu lên component cha xử lý API 1 lần duy nhất
       await onSave(newForm);
     } catch (error) {
       console.error('Lỗi khi tạo phiếu:', error);
@@ -228,6 +243,50 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full p-3 bg-white rounded-xl border border-slate-200 text-xs font-semibold outline-none focus:border-[#1d92ff] resize-none"
               />
+            </div>
+
+            {/* 🟢 KHỐI CHỌN KHÓA PHÂN BỔ ĐƯỢC PHÉP ĐĂNG KÝ */}
+            <div className="space-y-2 pt-2 border-t border-slate-200/80">
+              <div className="flex items-center justify-between">
+                <label className="text-[10px] font-bold uppercase text-[#0054a5] flex items-center gap-1.5">
+                  <GraduationCap size={14} /> Khóa phân bổ được phép đăng ký
+                </label>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  {selectedIntakes.length === 0 ? "Mọi khóa đều được đăng ký" : `Đã giới hạn: ${selectedIntakes.length} khóa`}
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedIntakes([])}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                    selectedIntakes.length === 0
+                      ? 'bg-[#0054a5] text-white border-[#0054a5] shadow-xs'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  Tất cả các khóa
+                </button>
+
+                {POPULAR_INTAKES.map(intake => {
+                  const isChecked = selectedIntakes.includes(intake);
+                  return (
+                    <button
+                      key={intake}
+                      type="button"
+                      onClick={() => toggleIntake(intake)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                        isChecked
+                          ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                    >
+                      {isChecked ? `✓ K${intake}` : `K${intake}`}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

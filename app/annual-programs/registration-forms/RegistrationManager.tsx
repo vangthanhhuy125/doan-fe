@@ -29,7 +29,7 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
         const user = JSON.parse(userStr);
         setCurrentUserId(user._id || user.user_id || user.id || '');
       } catch (e) {
-        console.error('Lỗi đọc user:', e);
+        console.error(e);
       }
     }
   }, []);
@@ -44,10 +44,12 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
   const handleDeleteConfirm = async () => {
     if (!deleteTargetId) return;
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${deleteTargetId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
           'x-user-id': currentUserId,
         },
         body: JSON.stringify({ user_id: currentUserId }),
@@ -62,7 +64,7 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
         alert('Có lỗi xảy ra khi xóa phiếu đăng ký!');
       }
     } catch (error) {
-      console.error('Lỗi khi xóa phiếu:', error);
+      console.error(error);
     } finally {
       setDeleteTargetId(null);
     }
@@ -71,15 +73,18 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
   const handleSaveEditedForm = async (updatedForm: RegistrationForm) => {
     const formId = getFormId(updatedForm._id);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${formId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
           'x-user-id': currentUserId,
         },
         body: JSON.stringify({
           title: updatedForm.title,
           description: updatedForm.description,
+          target_intakes: updatedForm.target_intakes || [],
           programs: updatedForm.programs,
           user_id: currentUserId,
           created_by: (updatedForm as any).created_by,
@@ -88,16 +93,15 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
 
       if (res.ok) {
         await onRefresh();
-        const updatedData = await res.json();
         if (selectedForm && getFormId(selectedForm._id) === formId) {
-          setSelectedForm(updatedData);
+          setSelectedForm(prev => (prev ? { ...prev, ...updatedForm } : null));
         }
         setEditTargetForm(null);
       } else {
         alert('Cập nhật phiếu đăng ký thất bại!');
       }
     } catch (error) {
-      console.error('Lỗi khi cập nhật phiếu:', error);
+      console.error(error);
     }
   };
 
@@ -106,10 +110,12 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
     const formId = getFormId(shareTargetForm._id);
 
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${formId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
           'x-user-id': currentUserId,
         },
         body: JSON.stringify({
@@ -129,7 +135,7 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
         alert('Lưu thông tin chia sẻ thất bại!');
       }
     } catch (e) {
-      console.error('Lỗi khi lưu chia sẻ:', e);
+      console.error(e);
     }
   };
 

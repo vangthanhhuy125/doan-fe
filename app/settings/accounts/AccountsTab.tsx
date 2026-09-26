@@ -1,9 +1,11 @@
-// AccountsTab.tsx
 'use client';
 
-import { useState, useEffect } from "react";
-import { Plus, Edit, Trash2, Search, RotateCcw, ShieldCheck, ChevronDown, User, KeyRound } from "lucide-react";
-import AccountsModal from "../accounts/AccountsModal";
+import { useState, useEffect, useMemo } from "react";
+import { 
+  Plus, Edit, Trash2, Search, RotateCcw, ShieldCheck, ChevronDown, 
+  User, KeyRound, GraduationCap, Building2 
+} from "lucide-react";
+import AccountsModal from "./AccountsModal";
 
 const BADGE_COLOR_PALETTES = [
   'bg-blue-50 text-blue-700 border-blue-200',
@@ -19,9 +21,25 @@ const BADGE_COLOR_PALETTES = [
   'bg-amber-50 text-amber-700 border-amber-200',
 ];
 
+const extractIntake = (cls: string, sid: string): string => {
+  const match = String(cls || '').match(/(?:19|20)\d{2}/);
+  if (match) return `K${match[0]}`;
+  const s = String(sid || '').trim();
+  if (s.length >= 2) {
+    const prefix = parseInt(s.substring(0, 2), 10);
+    if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
+      return `K20${prefix}`;
+    }
+  }
+  return '';
+};
+
 export default function AccountsTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroupFilter, setSelectedGroupFilter] = useState("");
+  const [selectedIntakeFilter, setSelectedIntakeFilter] = useState("");
+  const [selectedClassFilter, setSelectedClassFilter] = useState("");
+
   const [accounts, setAccounts] = useState<any[]>([]);
   const [nhanSuList, setNhanSuList] = useState<any[]>([]);
   const [groupsList, setGroupsList] = useState<any[]>([]);
@@ -55,6 +73,62 @@ export default function AccountsTab() {
     fetchData();
   }, []);
 
+  // Kết nối thông tin MSSV, Lớp, Khóa từ danh sách nhân sự sang tài khoản
+  const enrichedAccounts = useMemo(() => {
+    const nsMap = new Map<string, any>();
+    nhanSuList.forEach(ns => {
+      const id = String(ns._id || ns.id || '').trim();
+      const sid = String(ns.student_id || ns.mssv || '').trim().toLowerCase();
+      const email = String(ns.email || ns.personal_email || '').trim().toLowerCase();
+      if (id) nsMap.set(id, ns);
+      if (sid) nsMap.set(sid, ns);
+      if (email) nsMap.set(email, ns);
+    });
+
+    return accounts.map(acc => {
+      const accId = String(acc.user_id || acc.nhan_su_id || acc.personnel_id || acc._id || '').trim();
+      const accSid = String(acc.student_id || acc.mssv || '').trim().toLowerCase();
+      const accUname = String(acc.username || '').trim().toLowerCase();
+      const accEmail = String(acc.email || '').trim().toLowerCase();
+
+      const matchedNs = nsMap.get(accId) || nsMap.get(accSid) || nsMap.get(accUname) || nsMap.get(accEmail);
+
+      const resolvedSid = String(
+        acc.student_id || acc.mssv || matchedNs?.student_id || matchedNs?.mssv || (accUname.match(/^\d{7,10}$/) ? accUname : '')
+      ).trim();
+      const resolvedClass = String(acc.class || matchedNs?.class || matchedNs?.chi_doan || '').trim();
+      const resolvedIntake = extractIntake(resolvedClass, resolvedSid);
+
+      return {
+        ...acc,
+        resolvedSid,
+        resolvedClass,
+        resolvedIntake,
+      };
+    });
+  }, [accounts, nhanSuList]);
+
+  // Danh sách các Khóa xuất hiện trong dữ liệu
+  const availableIntakes = useMemo(() => {
+    const intakes = new Set<string>(["K2021", "K2022", "K2023", "K2024", "K2025", "K2026"]);
+    enrichedAccounts.forEach(acc => {
+      if (acc.resolvedIntake) intakes.add(acc.resolvedIntake);
+    });
+    return Array.from(intakes).sort();
+  }, [enrichedAccounts]);
+
+  // Danh sách các Lớp (tự động thu hẹp theo Khóa nếu đang chọn Khóa)
+  const availableClasses = useMemo(() => {
+    return Array.from(
+      new Set(
+        enrichedAccounts
+          .filter(acc => !selectedIntakeFilter || acc.resolvedIntake === selectedIntakeFilter)
+          .map(acc => acc.resolvedClass)
+          .filter(Boolean)
+      )
+    ).sort((a, b) => String(a).localeCompare(String(b), 'vi', { numeric: true }));
+  }, [enrichedAccounts, selectedIntakeFilter]);
+
   const getGroupOrder = (groupId: any) => {
     if (!groupId) return 9999;
     const group = groupsList.find(g => String(g._id || g.id) === String(groupId));
@@ -80,10 +154,15 @@ export default function AccountsTab() {
     return BADGE_COLOR_PALETTES[Math.abs(hash) % BADGE_COLOR_PALETTES.length];
   };
 
-  const filteredAccounts = accounts.filter(acc => {
+  // Áp dụng bộ lọc 4 tiêu chí
+  const filteredAccounts = enrichedAccounts.filter(acc => {
+    const s = searchTerm.toLowerCase().trim();
     const matchesSearch =
-      (acc.displayName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (acc.username || "").toLowerCase().includes(searchTerm.toLowerCase());
+      !s ||
+      (acc.displayName || "").toLowerCase().includes(s) ||
+      (acc.username || "").toLowerCase().includes(s) ||
+      (acc.resolvedSid || "").toLowerCase().includes(s) ||
+      (acc.resolvedClass || "").toLowerCase().includes(s);
 
     const accGroupId = acc.group_id || acc.groupId || acc.permission_id || "";
 
@@ -94,7 +173,10 @@ export default function AccountsTab() {
       matchesGroup = String(accGroupId) === String(selectedGroupFilter);
     }
 
-    return matchesSearch && matchesGroup;
+    const matchesIntake = !selectedIntakeFilter || acc.resolvedIntake === selectedIntakeFilter;
+    const matchesClass = !selectedClassFilter || acc.resolvedClass === selectedClassFilter;
+
+    return matchesSearch && matchesGroup && matchesIntake && matchesClass;
   });
 
   const sortedAccounts = [...filteredAccounts].sort((a, b) => {
@@ -164,47 +246,94 @@ export default function AccountsTab() {
     );
   };
 
+  const isFiltering = searchTerm !== "" || selectedGroupFilter !== "" || selectedIntakeFilter !== "" || selectedClassFilter !== "";
+
+  const resetFilters = () => {
+    setSearchTerm("");
+    setSelectedGroupFilter("");
+    setSelectedIntakeFilter("");
+    setSelectedClassFilter("");
+  };
+
   return (
     <div className="space-y-4 animate-in fade-in duration-200 text-black">
-      {/* THANH TÌM KIẾM & BỘ LỌC */}
-      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center gap-3">
+      {/* THANH TÌM KIẾM & BỘ LỌC ĐA NĂNG */}
+      <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col lg:flex-row items-center gap-3">
+        {/* Tìm kiếm */}
         <div className="relative flex-1 w-full group">
           <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0054a5] transition-colors" />
           <input
             type="text"
-            placeholder="Tìm theo người sở hữu hoặc tên đăng nhập..."
+            placeholder="Tìm theo họ tên, MSSV, tên đăng nhập, lớp..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-11 pr-4 py-2.5 bg-white rounded-xl text-xs sm:text-sm border border-slate-200 outline-none focus:border-[#0054a5] focus:ring-2 ring-blue-100 transition-all font-bold"
           />
         </div>
 
-        <div className="relative w-full sm:w-64 shrink-0">
-          <select
-            value={selectedGroupFilter}
-            onChange={(e) => setSelectedGroupFilter(e.target.value)}
-            className="w-full p-2.5 pl-10 pr-8 bg-white rounded-xl text-xs font-bold border border-slate-200 outline-none focus:border-[#0054a5] focus:ring-2 ring-blue-100 transition-all appearance-none cursor-pointer text-slate-700"
-          >
-            <option value="">Tất cả nhóm người dùng</option>
-            <option value="UNASSIGNED">Chưa phân nhóm</option>
-            {groupsList.map((g: any) => (
-              <option key={g._id || g.id} value={g._id || g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-          <ShieldCheck size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-          <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+        {/* Cụm 3 bộ lọc: Khóa - Lớp - Nhóm quyền */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full lg:w-auto">
+          {/* 1. Lọc theo Khóa */}
+          <div className="relative w-full sm:w-36">
+            <select
+              value={selectedIntakeFilter}
+              onChange={(e) => {
+                setSelectedIntakeFilter(e.target.value);
+                setSelectedClassFilter("");
+              }}
+              className="w-full p-2.5 pl-8 pr-7 bg-white rounded-xl text-xs font-bold border border-slate-200 outline-none focus:border-[#0054a5] focus:ring-2 ring-blue-100 transition-all appearance-none cursor-pointer text-slate-700 shadow-2xs"
+            >
+              <option value="">Tất cả Khóa</option>
+              {availableIntakes.map(intake => (
+                <option key={intake} value={intake}>{intake}</option>
+              ))}
+            </select>
+            <GraduationCap size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#0054a5] pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* 2. Lọc theo Lớp */}
+          <div className="relative w-full sm:w-44">
+            <select
+              value={selectedClassFilter}
+              onChange={(e) => setSelectedClassFilter(e.target.value)}
+              className="w-full p-2.5 pl-8 pr-7 bg-white rounded-xl text-xs font-bold border border-slate-200 outline-none focus:border-[#0054a5] focus:ring-2 ring-blue-100 transition-all appearance-none cursor-pointer text-slate-700 truncate shadow-2xs"
+            >
+              <option value="">Tất cả Lớp</option>
+              {availableClasses.map(cls => (
+                <option key={cls} value={cls}>{cls}</option>
+              ))}
+            </select>
+            <Building2 size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#0054a5] pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* 3. Lọc theo Nhóm quyền */}
+          <div className="relative w-full sm:w-52">
+            <select
+              value={selectedGroupFilter}
+              onChange={(e) => setSelectedGroupFilter(e.target.value)}
+              className="w-full p-2.5 pl-8 pr-7 bg-white rounded-xl text-xs font-bold border border-slate-200 outline-none focus:border-[#0054a5] focus:ring-2 ring-blue-100 transition-all appearance-none cursor-pointer text-slate-700 truncate shadow-2xs"
+            >
+              <option value="">Tất cả nhóm quyền</option>
+              <option value="UNASSIGNED">Chưa phân nhóm</option>
+              {groupsList.map((g: any) => (
+                <option key={g._id || g.id} value={g._id || g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+            <ShieldCheck size={15} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#0054a5] pointer-events-none" />
+            <ChevronDown size={14} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          </div>
         </div>
 
-        {(searchTerm || selectedGroupFilter) && (
+        {/* Nút đặt lại bộ lọc */}
+        {isFiltering && (
           <button
-            onClick={() => {
-              setSearchTerm("");
-              setSelectedGroupFilter("");
-            }}
-            className="p-2.5 bg-white text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-all border-none outline-none cursor-pointer shrink-0"
-            title="Xóa bộ lọc"
+            onClick={resetFilters}
+            className="p-2.5 bg-white text-rose-600 hover:bg-rose-50 rounded-xl border border-rose-200 transition-all border-none outline-none cursor-pointer shrink-0 shadow-2xs"
+            title="Đặt lại bộ lọc"
           >
             <RotateCcw size={16} />
           </button>
@@ -224,10 +353,10 @@ export default function AccountsTab() {
         </button>
       </div>
 
-      {/* 🟢 GIAO DIỆN DESKTOP & TABLET: BẢNG CUỘN NGANG AN TOÀN */}
+      {/* GIAO DIỆN BẢNG DESKTOP */}
       <div className="hidden md:block overflow-hidden rounded-3xl border border-slate-200 shadow-sm bg-white">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse min-w-[720px]">
+          <table className="w-full text-sm text-left border-collapse min-w-[760px]">
             <thead className="bg-[#0054a5] text-white font-bold text-xs uppercase tracking-wider text-center">
               <tr>
                 <th className="px-4 py-4 w-14 text-center">STT</th>
@@ -247,8 +376,17 @@ export default function AccountsTab() {
                     <td className="px-4 py-3.5 text-center font-bold text-slate-400 group-hover:text-[#0054a5] transition-colors text-xs">
                       {index + 1}
                     </td>
-                    <td className="px-5 py-3.5 font-extrabold text-slate-800 text-sm">
-                      {item.displayName || "Chưa đặt tên"}
+                    <td className="px-5 py-3.5 text-left">
+                      <div className="font-extrabold text-slate-800 text-sm">
+                        {item.displayName || "Chưa đặt tên"}
+                      </div>
+                      {(item.resolvedSid || item.resolvedClass) && (
+                        <div className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                          {item.resolvedSid ? `MSSV: ${item.resolvedSid}` : ''}
+                          {item.resolvedClass ? ` — Lớp: ${item.resolvedClass}` : ''}
+                          {item.resolvedIntake ? ` — ${item.resolvedIntake}` : ''}
+                        </div>
+                      )}
                     </td>
                     <td className="px-5 py-3.5 font-bold text-[#0054a5] text-xs font-mono">
                       {item.username}
@@ -287,7 +425,7 @@ export default function AccountsTab() {
               {sortedAccounts.length === 0 && (
                 <tr>
                   <td colSpan={6} className="px-6 py-14 text-center italic text-slate-400 font-bold">
-                    Không có tài khoản nào...
+                    Không có tài khoản nào phù hợp với bộ lọc...
                   </td>
                 </tr>
               )}
@@ -296,7 +434,7 @@ export default function AccountsTab() {
         </div>
       </div>
 
-      {/* 🟢 GIAO DIỆN MOBILE: DẠNG CARD TIỆN DỤNG, TRỰC QUAN */}
+      {/* GIAO DIỆN MOBILE */}
       <div className="grid grid-cols-1 gap-3.5 md:hidden">
         {sortedAccounts.length > 0 ? (
           sortedAccounts.map((item, index) => {
@@ -317,6 +455,13 @@ export default function AccountsTab() {
                       <h4 className="font-extrabold text-slate-900 text-sm leading-snug">
                         {item.displayName || "Chưa đặt tên"}
                       </h4>
+                      {(item.resolvedSid || item.resolvedClass) && (
+                        <div className="text-[11px] text-slate-500 font-medium">
+                          {item.resolvedSid ? `MSSV: ${item.resolvedSid}` : ''}
+                          {item.resolvedClass ? ` — ${item.resolvedClass}` : ''}
+                          {item.resolvedIntake ? ` — ${item.resolvedIntake}` : ''}
+                        </div>
+                      )}
                       <div className="flex items-center gap-1.5 text-xs text-[#0054a5] font-bold font-mono mt-0.5">
                         <User size={12} className="text-slate-400" />
                         <span>{item.username}</span>
@@ -361,7 +506,7 @@ export default function AccountsTab() {
           })
         ) : (
           <div className="p-8 text-center text-xs font-bold text-slate-400 italic bg-white rounded-2xl border border-slate-200">
-            Không có tài khoản nào...
+            Không có tài khoản nào phù hợp với bộ lọc...
           </div>
         )}
       </div>
@@ -375,6 +520,7 @@ export default function AccountsTab() {
           onSave={handleSave}
           nhanSuList={nhanSuList}
           groupsList={groupsList}
+          accountsList={accounts}
         />
       )}
     </div>

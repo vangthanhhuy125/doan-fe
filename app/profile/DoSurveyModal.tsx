@@ -33,7 +33,8 @@ const extractIntake = (user: { class_name?: string; student_id?: string }): stri
   return '';
 };
 
-function FormattingTextarea({
+// 🟢 BỘ SOẠN THẢO TRỰC QUAN NHƯ WORD (WYSIWYG RICH TEXT EDITOR)
+function FormattingEditor({
   value,
   onChange,
   disabled,
@@ -44,68 +45,52 @@ function FormattingTextarea({
   disabled?: boolean;
   placeholder?: string;
 }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [activeFormats, setActiveFormats] = useState({ bold: false, italic: false, underline: false });
 
-  const adjustHeight = () => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.max(120, textareaRef.current.scrollHeight)}px`;
-    }
+  // Tự động chuyển đổi các thẻ thô cũ (**...**) thành thẻ HTML định dạng chuẩn
+  const convertLegacyMarkup = (raw: string): string => {
+    if (!raw) return '';
+    return raw
+      .replace(/\*\*\*(.*?)\*\*\*/g, '<b><i>$1</i></b>')
+      .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+      .replace(/\*(.*?)\*/g, '<i>$1</i>');
   };
 
   useEffect(() => {
-    adjustHeight();
-  }, [value]);
-
-  const applyFormatting = (formatType: 'bold' | 'italic' | 'underline') => {
-    const textarea = textareaRef.current;
-    if (!textarea || disabled) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selectedText = text.substring(start, end);
-
-    let prefix = '';
-    let suffix = '';
-
-    if (formatType === 'bold') {
-      prefix = '**';
-      suffix = '**';
-    } else if (formatType === 'italic') {
-      prefix = '*';
-      suffix = '*';
-    } else if (formatType === 'underline') {
-      prefix = '<u>';
-      suffix = '</u>';
-    }
-
-    const replacement = selectedText ? `${prefix}${selectedText}${suffix}` : `${prefix}nội_dung${suffix}`;
-    const newValue = text.substring(0, start) + replacement + text.substring(end);
-
-    onChange(newValue);
-
-    setTimeout(() => {
-      textarea.focus();
-      const newCursorPos = start + prefix.length + (selectedText ? selectedText.length : 8);
-      textarea.setSelectionRange(start + prefix.length, newCursorPos);
-    }, 0);
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if ((e.ctrlKey || e.metaKey) && !disabled) {
-      const key = e.key.toLowerCase();
-      if (key === 'b') {
-        e.preventDefault();
-        applyFormatting('bold');
-      } else if (key === 'i') {
-        e.preventDefault();
-        applyFormatting('italic');
-      } else if (key === 'u') {
-        e.preventDefault();
-        applyFormatting('underline');
+    if (editorRef.current) {
+      const formatted = convertLegacyMarkup(value || '');
+      if (editorRef.current.innerHTML !== formatted) {
+        editorRef.current.innerHTML = formatted;
       }
     }
+  }, []);
+
+  const updateToolbarState = () => {
+    if (typeof document !== 'undefined') {
+      setActiveFormats({
+        bold: document.queryCommandState('bold'),
+        italic: document.queryCommandState('italic'),
+        underline: document.queryCommandState('underline'),
+      });
+    }
+  };
+
+  const handleInput = () => {
+    if (editorRef.current) {
+      let html = editorRef.current.innerHTML;
+      if (html === '<br>' || html === '<p></p>') html = '';
+      onChange(html);
+      updateToolbarState();
+    }
+  };
+
+  // Áp dụng lệnh định dạng ngay tại vị trí con trỏ / bôi đen
+  const executeFormat = (command: 'bold' | 'italic' | 'underline') => {
+    if (disabled) return;
+    editorRef.current?.focus();
+    document.execCommand(command, false);
+    handleInput();
   };
 
   return (
@@ -115,30 +100,50 @@ function FormattingTextarea({
           <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => applyFormatting('bold')}
-              className="p-1.5 hover:bg-slate-200/70 hover:text-slate-900 rounded-lg transition-colors border-none cursor-pointer bg-transparent"
+              onMouseDown={(e) => {
+                e.preventDefault(); // Giữ nguyên vùng chọn chữ
+                executeFormat('bold');
+              }}
+              className={`p-1.5 rounded-lg transition-colors border-none cursor-pointer ${
+                activeFormats.bold 
+                  ? 'bg-[#0054a5] text-white shadow-xs' 
+                  : 'hover:bg-slate-200/70 hover:text-slate-900 bg-transparent text-slate-600'
+              }`}
               title="In đậm (Ctrl+B)"
             >
               <Bold size={15} />
             </button>
             <button
               type="button"
-              onClick={() => applyFormatting('italic')}
-              className="p-1.5 hover:bg-slate-200/70 hover:text-slate-900 rounded-lg transition-colors border-none cursor-pointer bg-transparent"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                executeFormat('italic');
+              }}
+              className={`p-1.5 rounded-lg transition-colors border-none cursor-pointer ${
+                activeFormats.italic 
+                  ? 'bg-[#0054a5] text-white shadow-xs' 
+                  : 'hover:bg-slate-200/70 hover:text-slate-900 bg-transparent text-slate-600'
+              }`}
               title="In nghiêng (Ctrl+I)"
             >
               <Italic size={15} />
             </button>
             <button
               type="button"
-              onClick={() => applyFormatting('underline')}
-              className="p-1.5 hover:bg-slate-200/70 hover:text-slate-900 rounded-lg transition-colors border-none cursor-pointer bg-transparent"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                executeFormat('underline');
+              }}
+              className={`p-1.5 rounded-lg transition-colors border-none cursor-pointer ${
+                activeFormats.underline 
+                  ? 'bg-[#0054a5] text-white shadow-xs' 
+                  : 'hover:bg-slate-200/70 hover:text-slate-900 bg-transparent text-slate-600'
+              }`}
               title="Gạch chân (Ctrl+U)"
             >
               <Underline size={15} />
             </button>
           </div>
-
           <div className="hidden sm:flex items-center gap-1 text-[11px] font-medium text-slate-400">
             <span>Dùng</span>
             <kbd className="px-1.5 py-0.5 bg-white border border-slate-200 rounded-md text-[10px] font-mono shadow-xs text-slate-600">Ctrl</kbd>
@@ -150,18 +155,27 @@ function FormattingTextarea({
         </div>
       )}
 
-      <textarea
-        ref={textareaRef}
-        disabled={disabled}
-        value={value}
-        onChange={(e) => {
-          onChange(e.target.value);
-          adjustHeight();
-        }}
-        onKeyDown={handleKeyDown}
-        placeholder={placeholder}
-        className="w-full p-4 text-xs sm:text-sm text-slate-800 placeholder:text-slate-400 outline-none resize-none leading-relaxed transition-all min-h-[120px]"
-      />
+      <div className="relative">
+        <div
+          ref={editorRef}
+          contentEditable={!disabled}
+          onInput={handleInput}
+          onKeyUp={updateToolbarState}
+          onMouseUp={updateToolbarState}
+          onFocus={updateToolbarState}
+          className="w-full p-4 text-xs sm:text-sm text-slate-800 outline-none leading-relaxed transition-all min-h-[130px] max-h-[380px] overflow-y-auto"
+        />
+
+        {/* Chữ gợi ý (Placeholder) khi chưa gõ nội dung */}
+        {(!value || value === '<br>' || value === '<p></p>' || value === '') && (
+          <div
+            onClick={() => editorRef.current?.focus()}
+            className="absolute top-4 left-4 text-xs sm:text-sm text-slate-400 pointer-events-none select-none"
+          >
+            {placeholder || 'Nhập câu trả lời chi tiết của bạn...'}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -169,7 +183,6 @@ function FormattingTextarea({
 export default function DoSurveyModal({ survey, userInfo, existingResponse, onClose, onSubmitSuccess }: Props) {
   const isSubmitted = !!existingResponse;
   const isLocked = !!survey.is_locked;
-
   const targetIntakes = Array.isArray(survey.target_intakes) ? survey.target_intakes : [];
   const targetUsers = Array.isArray(survey.target_users) ? survey.target_users : [];
   const userIntake = extractIntake(userInfo);
@@ -182,7 +195,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
   }
 
   const isBlocked = isLocked || (!isEligible && !isSubmitted);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -200,7 +212,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
 
   const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
   const currentSec = sections[currentSectionIndex];
-
   const currentQuestions = (survey.questions || []).filter(
     q => !q.section_id || q.section_id === currentSec.id || sections.length === 1
   );
@@ -214,7 +225,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
         } catch (e) {}
       }
     }
-
     const initial: Record<string, any> = {};
     if (existingResponse?.answers) {
       existingResponse.answers.forEach((ans: any) => {
@@ -246,7 +256,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
   const handleNextSection = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-
     for (const q of currentQuestions) {
       if (q.required) {
         const val = answers[q.id];
@@ -256,7 +265,6 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
         }
       }
     }
-
     if (currentSectionIndex < sections.length - 1) {
       setCurrentSectionIndex(prev => prev + 1);
     }
@@ -314,7 +322,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
       }
     } catch (e) {
       console.error(e);
-      showToast('Không thể kết nối máy chủ!', 'error');
+      showToast('Không thể kết nối đến máy chủ!', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -353,18 +361,15 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                   </span>
                 )}
               </div>
-
               <h3 className="font-extrabold uppercase tracking-wide text-base sm:text-lg leading-snug text-white pt-1">
                 {survey.title}
               </h3>
-
               {currentSec.description && (
                 <p className="text-xs sm:text-sm text-blue-100/90 leading-relaxed font-normal pt-1">
                   {currentSec.description}
                 </p>
               )}
             </div>
-
             <button
               type="button"
               onClick={onClose}
@@ -380,7 +385,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
           <div className="bg-emerald-50/80 p-3.5 px-6 border-b border-emerald-100 text-xs sm:text-sm text-emerald-800 font-semibold flex items-center justify-between shrink-0">
             <span className="flex items-center gap-2">
               <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-              Bạn đã nộp phiếu này trước đây. Có thể chỉnh sửa câu trả lời và gửi lại.
+              Bạn đã nộp phiếu này trước đây. Có thể chỉnh sửa câu trả lời và nộp lại bên dưới.
             </span>
           </div>
         )}
@@ -388,14 +393,13 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
         {!isEligible && !isSubmitted && (
           <div className="bg-amber-50 p-3.5 px-6 border-b border-amber-200 text-xs sm:text-sm text-amber-800 font-semibold flex items-center gap-2 shrink-0">
             <AlertCircle size={16} className="text-amber-600 shrink-0" />
-            <span>Bạn không thuộc đối tượng (khóa/danh sách chỉ định) tham gia khảo sát này, chỉ có thể xem nội dung.</span>
+            <span>Bạn không thuộc đối tượng tham gia khảo sát này, chỉ có thể xem nội dung.</span>
           </div>
         )}
 
         <form onSubmit={handleSubmit} className="p-5 sm:p-8 overflow-y-auto space-y-6 flex-1 text-left bg-slate-50/50">
           {currentQuestions.map((q: Question, idx: number) => {
             const val = answers[q.id];
-
             return (
               <div key={q.id} className="p-6 sm:p-7 bg-white rounded-2xl border border-slate-200/80 shadow-xs space-y-4 hover:border-slate-300 transition-all">
                 <div className="flex items-start gap-3">
@@ -419,13 +423,14 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                     disabled={isBlocked}
                     value={val || ''}
                     onChange={(e) => handleTextChange(q.id, e.target.value)}
-                    placeholder="Câu trả lời của bạn..."
+                    placeholder="Câu trả lời ngắn..."
                     className="w-full p-4 bg-white border border-slate-200 rounded-2xl text-xs sm:text-sm font-medium outline-none focus:border-[#0054a5] focus:ring-4 focus:ring-[#0054a5]/10 disabled:bg-slate-100 disabled:cursor-not-allowed transition-all shadow-xs"
                   />
                 )}
 
+                {/* Đoạn văn trả lời dài: dùng bộ soạn thảo trực quan như Word */}
                 {q.type === 'paragraph' && (
-                  <FormattingTextarea
+                  <FormattingEditor
                     disabled={isBlocked}
                     value={val || ''}
                     onChange={(newVal) => handleTextChange(q.id, newVal)}
@@ -437,7 +442,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                   <div className="space-y-2.5 pt-1">
                     {q.options?.map((opt) => (
                       <label 
-                        key={opt.id} 
+                        key={opt.id}
                         className={`flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border cursor-pointer text-xs sm:text-sm font-semibold transition-all ${
                           val === opt.text 
                             ? 'bg-blue-50/60 border-[#0054a5]/40 text-[#0054a5]' 
@@ -464,7 +469,7 @@ export default function DoSurveyModal({ survey, userInfo, existingResponse, onCl
                       const isChecked = Array.isArray(val) && val.includes(opt.text);
                       return (
                         <label 
-                          key={opt.id} 
+                          key={opt.id}
                           className={`flex items-center gap-3.5 p-3.5 sm:p-4 rounded-xl border cursor-pointer text-xs sm:text-sm font-semibold transition-all ${
                             isChecked 
                               ? 'bg-blue-50/60 border-[#0054a5]/40 text-[#0054a5]' 

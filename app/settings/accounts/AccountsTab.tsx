@@ -34,6 +34,27 @@ const extractIntake = (cls: string, sid: string): string => {
   return '';
 };
 
+// 🟢 Trích xuất năm khóa dạng số để sắp xếp (vd: K2023 -> 2023)
+const getNumericIntake = (acc: any): number => {
+  const intakeStr = acc.resolvedIntake || '';
+  const match = intakeStr.match(/\d{4}/);
+  if (match) {
+    return parseInt(match[0], 10);
+  }
+  const clsMatch = String(acc.resolvedClass || '').match(/(?:19|20)\d{2}/);
+  if (clsMatch) {
+    return parseInt(clsMatch[0], 10);
+  }
+  const sid = String(acc.resolvedSid || '').trim();
+  if (sid.length >= 2) {
+    const prefix = parseInt(sid.substring(0, 2), 10);
+    if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
+      return 2000 + prefix;
+    }
+  }
+  return 9999; // Tài khoản không có khóa (như admin) sẽ nằm ở cuối trong nhóm
+};
+
 export default function AccountsTab() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedGroupFilter, setSelectedGroupFilter] = useState("");
@@ -179,7 +200,9 @@ export default function AccountsTab() {
     return matchesSearch && matchesGroup && matchesIntake && matchesClass;
   });
 
+  // 🟢 SẮP XẾP: NHÓM -> KHÓA TĂNG DẦN -> MSSV TĂNG DẦN -> TÊN
   const sortedAccounts = [...filteredAccounts].sort((a, b) => {
+    // 1. Thứ tự nhóm quyền trước
     const groupOrderA = getGroupOrder(a.group_id || a.groupId || a.permission_id);
     const groupOrderB = getGroupOrder(b.group_id || b.groupId || b.permission_id);
 
@@ -187,7 +210,25 @@ export default function AccountsTab() {
       return groupOrderA - groupOrderB;
     }
     
-    return (a.displayName || "").localeCompare(b.displayName || "");
+    // 2. Trong mỗi nhóm: Khóa tăng dần (K2021 -> K2022 -> K2023 -> K2024...)
+    const intakeA = getNumericIntake(a);
+    const intakeB = getNumericIntake(b);
+    if (intakeA !== intakeB) {
+      return intakeA - intakeB;
+    }
+
+    // 3. Trong cùng khóa: MSSV tăng dần
+    const mssvA = a.resolvedSid || '';
+    const mssvB = b.resolvedSid || '';
+    if (mssvA || mssvB) {
+      if (!mssvA) return 1;
+      if (!mssvB) return -1;
+      const mssvCompare = mssvA.localeCompare(mssvB, undefined, { numeric: true });
+      if (mssvCompare !== 0) return mssvCompare;
+    }
+
+    // 4. Nếu MSSV giống nhau hoặc không có MSSV: Xếp theo tên hiển thị tiếng Việt
+    return (a.displayName || "").localeCompare(b.displayName || "", 'vi');
   });
 
   const handleDelete = async (id: string) => {

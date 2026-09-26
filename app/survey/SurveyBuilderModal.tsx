@@ -8,7 +8,7 @@ import {
   ChevronDown, Sparkles, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import * as XLSX from 'xlsx';
-import { SurveyForm, Question, QuestionType, Section } from './types';
+import type { SurveyForm, Question, QuestionType, Section } from './types';
 
 interface Props {
   survey: SurveyForm | null;
@@ -135,29 +135,24 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
   };
 
   useEffect(() => {
-    const fetchAllPersonnelAndAccounts = async () => {
+    const fetchPersonnelData = async () => {
       try {
         const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
         const headers: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
 
-        const [personnelRes, accountsRes, usersRes] = await Promise.allSettled([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/personnel`, { headers }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts`, { headers }),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, { headers })
+        const [nhanSuRes, usersRes, accountsRes] = await Promise.allSettled([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/nhan-su`, { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/users`, { headers }),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL}/accounts`, { headers })
         ]);
 
-        let rawPersonnel: any[] = [];
-        let rawAccounts: any[] = [];
+        let rawNhanSu: any[] = [];
         let rawUsers: any[] = [];
+        let rawAccounts: any[] = [];
 
-        if (personnelRes.status === 'fulfilled' && personnelRes.value.ok) {
-          const data = await personnelRes.value.json();
-          if (Array.isArray(data)) rawPersonnel = data;
-        }
-
-        if (accountsRes.status === 'fulfilled' && accountsRes.value.ok) {
-          const data = await accountsRes.value.json();
-          if (Array.isArray(data)) rawAccounts = data;
+        if (nhanSuRes.status === 'fulfilled' && nhanSuRes.value.ok) {
+          const data = await nhanSuRes.value.json();
+          if (Array.isArray(data)) rawNhanSu = data;
         }
 
         if (usersRes.status === 'fulfilled' && usersRes.value.ok) {
@@ -165,56 +160,62 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
           if (Array.isArray(data)) rawUsers = data;
         }
 
+        if (accountsRes.status === 'fulfilled' && accountsRes.value.ok) {
+          const data = await accountsRes.value.json();
+          if (Array.isArray(data)) rawAccounts = data;
+        }
+
         const map = new Map<string, any>();
 
-        rawPersonnel.forEach((p: any) => {
-          const sid = String(p.student_id || p.mssv || p.studentId || p.code || '').trim();
-          const cls = String(p.class_name || p.class || p.className || p.lop || '').trim();
-          const name = String(p.full_name || p.fullName || p.name || p.displayName || '').trim();
-          const email = String(p.email || '').trim().toLowerCase();
-          const uid = String(p.user_id || p.account_id || p._id || '');
+        rawNhanSu.forEach((item: any) => {
+          const sid = String(item.student_id || item.mssv || '').trim();
+          const cls = String(item.class || item.chi_doan || '').trim();
+          const name = String(item.full_name || item.name || '').trim();
+          const email = String(item.email || item.personal_email || '').trim().toLowerCase();
+          const id = String(item._id || item.id || '');
+          const intake = extractIntake(cls, sid);
 
-          const key = sid || email || uid || name;
+          const key = sid || id || email || name;
           if (!key) return;
 
           map.set(key, {
-            ...p,
+            ...item,
+            _id: id,
             student_id: sid,
             class: cls,
             full_name: name,
             displayName: name,
             email: email,
-            _id: String(p._id || uid),
-            intake: extractIntake(cls, sid),
-            identifiers: [sid, email, uid, String(p._id)].filter(Boolean)
+            intake: intake,
+            identifiers: [sid, id, email, name.toLowerCase()].filter(Boolean)
           });
         });
 
         rawUsers.forEach((u: any) => {
-          const sid = String(u.student_id || u.studentId || u.mssv || '').trim();
-          const cls = String(u.class || u.class_name || u.className || u.lop || '').trim();
+          const sid = String(u.student_id || u.mssv || '').trim();
+          const cls = String(u.class || u.class_name || '').trim();
           const name = String(u.full_name || u.displayName || u.name || '').trim();
           const email = String(u.email || u.personal_email || '').trim().toLowerCase();
-          const uid = String(u._id || u.user_id || u.account_id || '');
+          const id = String(u._id || u.user_id || u.id || '');
 
-          let existingKey: string | null = null;
+          let matchedKey: string | null = null;
           for (const [k, v] of map.entries()) {
             if (
               (sid && v.student_id === sid) ||
+              (id && v.identifiers?.includes(id)) ||
               (email && v.email === email) ||
-              (uid && v.identifiers?.includes(uid)) ||
               (name && v.full_name?.toLowerCase() === name.toLowerCase())
             ) {
-              existingKey = k;
+              matchedKey = k;
               break;
             }
           }
 
-          if (existingKey) {
-            const current = map.get(existingKey);
+          if (matchedKey) {
+            const current = map.get(matchedKey);
             const combinedSid = current.student_id || sid;
             const combinedCls = current.class || cls;
-            map.set(existingKey, {
+            map.set(matchedKey, {
               ...current,
               ...u,
               student_id: combinedSid,
@@ -222,20 +223,20 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
               full_name: current.full_name || name,
               displayName: current.displayName || name,
               intake: extractIntake(combinedCls, combinedSid),
-              identifiers: Array.from(new Set([...(current.identifiers || []), sid, email, uid, String(u._id)].filter(Boolean)))
+              identifiers: Array.from(new Set([...(current.identifiers || []), sid, id, email, name.toLowerCase()].filter(Boolean)))
             });
           } else {
-            const key = sid || email || uid || name;
+            const key = sid || id || email || name;
             map.set(key, {
               ...u,
+              _id: id,
               student_id: sid,
               class: cls,
               full_name: name,
               displayName: name,
               email: email,
-              _id: String(u._id || uid),
               intake: extractIntake(cls, sid),
-              identifiers: [sid, email, uid, String(u._id)].filter(Boolean)
+              identifiers: [sid, id, email, name.toLowerCase()].filter(Boolean)
             });
           }
         });
@@ -247,25 +248,24 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
           const accId = String(acc._id || acc.id || '');
           const accSid = String(acc.student_id || '').trim();
 
-          let existingKey: string | null = null;
+          let matchedKey: string | null = null;
           for (const [k, v] of map.entries()) {
             if (
               (accSid && v.student_id === accSid) ||
-              (accUsername && (v.student_id === accUsername || v.identifiers?.includes(accUsername))) ||
-              (accEmail && (v.email === accEmail || v.identifiers?.includes(accEmail))) ||
+              (accUsername && v.identifiers?.includes(accUsername)) ||
+              (accEmail && v.email === accEmail) ||
               (accId && v.identifiers?.includes(accId)) ||
               (accName && v.full_name?.toLowerCase() === accName.toLowerCase())
             ) {
-              existingKey = k;
+              matchedKey = k;
               break;
             }
           }
 
-          if (existingKey) {
-            const current = map.get(existingKey);
-            map.set(existingKey, {
+          if (matchedKey) {
+            const current = map.get(matchedKey);
+            map.set(matchedKey, {
               ...current,
-              username: accUsername,
               identifiers: Array.from(new Set([...(current.identifiers || []), accId, accUsername, accEmail, accSid].filter(Boolean)))
             });
           } else {
@@ -273,29 +273,24 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
             if (!extractedSid && /^\d{7,10}$/.test(accUsername)) {
               extractedSid = accUsername;
             }
-            if (!extractedSid && /^\d{7,10}@/.test(accEmail)) {
-              extractedSid = accEmail.split('@')[0];
-            }
-
-            const key = extractedSid || accEmail || accUsername || accId;
+            const key = extractedSid || accId || accUsername;
             map.set(key, {
               ...acc,
+              _id: accId,
               student_id: extractedSid,
               class: acc.class || '',
               full_name: accName,
               displayName: accName,
               email: accEmail,
-              username: accUsername,
-              _id: accId,
               intake: extractIntake(acc.class || '', extractedSid),
               identifiers: [accId, accUsername, accEmail, extractedSid].filter(Boolean)
             });
           }
         });
 
-        const list = Array.from(map.values()).sort((a, b) => 
-          (a.displayName || a.full_name || '').localeCompare(b.displayName || b.full_name || '', 'vi')
-        );
+        const list = Array.from(map.values())
+          .filter(item => Boolean(item.full_name || item.displayName || item.student_id))
+          .sort((a, b) => (a.displayName || a.full_name || '').localeCompare(b.displayName || b.full_name || '', 'vi'));
 
         setAccounts(list);
       } catch (err) {
@@ -303,7 +298,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
       }
     };
 
-    fetchAllPersonnelAndAccounts();
+    fetchPersonnelData();
   }, []);
 
   useEffect(() => {
@@ -402,10 +397,9 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
   const getPersonDetailText = (person: any) => {
     const parts: string[] = [];
-    if (person.student_id) parts.push(`MSSV: ${person.student_id}`);
+    parts.push(person.student_id ? `MSSV: ${person.student_id}` : 'MSSV: Chưa cập nhật');
     if (person.class) parts.push(`Lớp: ${person.class}`);
     if (person.intake) parts.push(`Khóa: ${person.intake}`);
-    if (parts.length === 0) return 'Chưa cập nhật thông tin học tập';
     return parts.join(' — ');
   };
 
@@ -418,7 +412,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
     if (!matched) return idKey;
 
-    const name = matched.displayName || matched.full_name || idKey;
+    const name = matched.displayName || matched.full_name || 'Thành viên';
     const subParts: string[] = [];
     if (matched.student_id) subParts.push(matched.student_id);
     if (matched.class) subParts.push(matched.class);
@@ -732,7 +726,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                   <AutoResizeTextarea
                     value={description}
                     onChange={(val) => setDescription(val)}
-                    placeholder="Mô tả chi tiết biểu mẫu (Ctrl+B in đậm, Ctrl+I in nghiêng, Ctrl+U gạch chân)..."
+                    placeholder="Mô tả chi tiết biểu mẫu..."
                     className="text-xs sm:text-sm text-slate-600 font-medium border-b border-transparent hover:border-slate-200 focus:border-[#0054a5] p-1"
                   />
                 </div>
@@ -741,7 +735,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                     <div className="flex items-center gap-2 text-slate-700 font-bold text-xs uppercase tracking-wide">
                       <Sparkles size={15} className="text-[#0054a5]" />
-                      <span>Cấu hình đối tượng tham gia</span>
+                      <span>Đối tượng tham gia khảo sát</span>
                     </div>
 
                     <div className="flex p-1 bg-slate-200/80 rounded-xl w-full sm:w-auto">
@@ -824,7 +818,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
                           <UserCheck size={15} /> Danh sách cá nhân được chỉ định
                         </label>
                         <span className="text-[11px] text-slate-400 font-semibold">
-                          {selectedUsers.length === 0 ? "Chưa chọn ai" : `Đã chọn: ${selectedUsers.length} người`}
+                          {selectedUsers.length === 0 ? "Đã chọn: 0 người" : `Đã chọn: ${selectedUsers.length} người`}
                         </span>
                       </div>
 

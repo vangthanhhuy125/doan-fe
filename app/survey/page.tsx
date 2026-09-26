@@ -8,17 +8,19 @@ import { SurveyForm } from './types';
 import SurveyList from './SurveyList';
 import SurveyBuilderModal from './SurveyBuilderModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function SurveyPage() {
+  const { canCreate, canView } = usePermissions('khao-sat');
+
   const [surveys, setSurveys] = useState<SurveyForm[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState('');
 
-  // States lọc & tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'locked'>('all');
 
-  // Modals
   const [selectedSurveyForBuilder, setSelectedSurveyForBuilder] = useState<SurveyForm | null | 'new'>(null);
   const [surveyToDelete, setSurveyToDelete] = useState<SurveyForm | null>(null);
 
@@ -31,7 +33,7 @@ export default function SurveyPage() {
         setSurveys(Array.isArray(data) ? data : []);
       }
     } catch (e) {
-      console.error('Lỗi lấy danh sách khảo sát:', e);
+      console.error(e);
     } finally {
       setLoading(false);
     }
@@ -43,16 +45,16 @@ export default function SurveyPage() {
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
+          setCurrentUser(user);
           setCurrentUserId(String(user._id || user.user_id || user.id || ''));
         } catch (e) {
-          console.error('Lỗi đọc user:', e);
+          console.error(e);
         }
       }
     }
     fetchSurveys();
   }, []);
 
-  // Khóa / Mở khóa phiếu nhanh
   const handleToggleLock = async (survey: SurveyForm) => {
     try {
       const updatedStatus = !survey.is_locked;
@@ -69,7 +71,7 @@ export default function SurveyPage() {
         setSurveys(prev => prev.map(s => s._id === survey._id ? { ...s, is_locked: updatedStatus } : s));
       }
     } catch (e) {
-      console.error('Lỗi khóa phiếu:', e);
+      console.error(e);
     }
   };
 
@@ -78,6 +80,9 @@ export default function SurveyPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys/${surveyToDelete._id}`, {
         method: 'DELETE',
+        headers: {
+          'x-user-id': currentUserId
+        }
       });
       if (res.ok) {
         await fetchSurveys();
@@ -122,10 +127,36 @@ export default function SurveyPage() {
 
   const isFiltering = searchTerm !== '' || statusFilter !== 'all';
 
-  // CHỈ LỌC RA CÁC PHIẾU DO CHÍNH USER ĐANG ĐĂNG NHẬP TẠO RA
+  const getCreatedById = (val: any): string => {
+    if (!val) return '';
+    if (typeof val === 'object') {
+      return String(val.$oid || val._id || val.id || '');
+    }
+    return String(val).trim();
+  };
+
   const filteredSurveys = surveys.filter(item => {
-    const isCreator = String(item.created_by) === String(currentUserId);
-    if (!isCreator) return false;
+    const creatorId = getCreatedById(item.created_by);
+    const isAdmin = currentUser?.role === 'admin' || currentUser?.username === 'admin';
+
+    const myIdentifiers = [
+      String(currentUser?._id || ''),
+      String(currentUser?.user_id || ''),
+      String(currentUser?.id || ''),
+      String(currentUser?.username || ''),
+      String(currentUser?.student_id || ''),
+      String(currentUser?.email || ''),
+    ].filter(Boolean);
+
+    const isAuthorized = 
+      isAdmin ||
+      Boolean(canView) ||
+      !creatorId ||
+      creatorId === 'undefined' ||
+      creatorId === 'null' ||
+      myIdentifiers.some(id => id.toLowerCase() === creatorId.toLowerCase());
+
+    if (!isAuthorized) return false;
 
     const matchesSearch = (item.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (item.voucherNo || '').toLowerCase().includes(searchTerm.toLowerCase());
@@ -139,7 +170,6 @@ export default function SurveyPage() {
 
   return (
     <div className="space-y-6 text-black">
-      {/* HEADER TÊN TRANG & NÚT THÊM */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between border-b-2 border-[#0054a5] pb-3 gap-3">
         <div className="flex items-center gap-3">
           <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100 transition-transform hover:scale-105">
@@ -151,16 +181,17 @@ export default function SurveyPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
-            onClick={() => setSelectedSurveyForBuilder('new')}
-            className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
-          >
-            <Plus size={20} /> Thêm phiếu khảo sát
-          </button>
+          {(canCreate || currentUser?.role === 'admin' || currentUser?.username === 'admin' || !currentUser) && (
+            <button
+              onClick={() => setSelectedSurveyForBuilder('new')}
+              className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
+            >
+              <Plus size={20} /> Thêm phiếu khảo sát
+            </button>
+          )}
         </div>
       </div>
 
-      {/* THANH TÌM KIẾM & BỘ LỌC */}
       <div className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm space-y-4">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="relative max-w-md w-full">
@@ -203,7 +234,6 @@ export default function SurveyPage() {
         </div>
       </div>
 
-      {/* DANH SÁCH DẠNG PHIẾU / CARDS */}
       {loading ? (
         <div className="flex h-48 items-center justify-center bg-white rounded-xl border border-gray-200">
           <Loader2 className="h-8 w-8 animate-spin text-[#0054a5]" />
@@ -218,7 +248,6 @@ export default function SurveyPage() {
         />
       )}
 
-      {/* MODAL THIẾT KẾ PHIẾU KHẢO SÁT */}
       {selectedSurveyForBuilder && (
         <SurveyBuilderModal
           survey={selectedSurveyForBuilder === 'new' ? null : selectedSurveyForBuilder}
@@ -228,7 +257,6 @@ export default function SurveyPage() {
         />
       )}
 
-      {/* MODAL XÁC NHẬN XÓA */}
       {surveyToDelete && (
         <ConfirmDeleteModal
           title={surveyToDelete.title}

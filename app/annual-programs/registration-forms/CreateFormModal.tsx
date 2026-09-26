@@ -62,7 +62,7 @@ export default function CreateFormModal({ selectedPrograms, onClose, onSave }: P
   };
 
   const [title, setTitle] = useState(`PHIẾU ĐĂNG KÝ THAM GIA CHƯƠNG TRÌNH`);
-  const [description, setDescription] = useState("Thông báo tuyển Ban chuyên môn, Sinh viên đăng ký tham gia các Ban phụ trách chương trình.");
+  const [description, setDescription] = useState("Thông báo thành viên Ban Chấp hành đăng ký tham gia các chương trình.");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [configs, setConfigs] = useState<ProgramConfig[]>(

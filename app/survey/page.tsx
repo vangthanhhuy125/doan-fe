@@ -8,14 +8,10 @@ import { SurveyForm } from './types';
 import SurveyList from './SurveyList';
 import SurveyBuilderModal from './SurveyBuilderModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
-import { usePermissions } from '@/hooks/usePermissions';
 
 export default function SurveyPage() {
-  const { canCreate, canView } = usePermissions('khao-sat');
-
   const [surveys, setSurveys] = useState<SurveyForm[]>([]);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState('');
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -45,7 +41,6 @@ export default function SurveyPage() {
       if (userStr) {
         try {
           const user = JSON.parse(userStr);
-          setCurrentUser(user);
           setCurrentUserId(String(user._id || user.user_id || user.id || ''));
         } catch (e) {
           console.error(e);
@@ -80,9 +75,6 @@ export default function SurveyPage() {
     try {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys/${surveyToDelete._id}`, {
         method: 'DELETE',
-        headers: {
-          'x-user-id': currentUserId
-        }
       });
       if (res.ok) {
         await fetchSurveys();
@@ -127,37 +119,7 @@ export default function SurveyPage() {
 
   const isFiltering = searchTerm !== '' || statusFilter !== 'all';
 
-  const getCreatedById = (val: any): string => {
-    if (!val) return '';
-    if (typeof val === 'object') {
-      return String(val.$oid || val._id || val.id || '');
-    }
-    return String(val).trim();
-  };
-
   const filteredSurveys = surveys.filter(item => {
-    const creatorId = getCreatedById(item.created_by);
-    const isAdmin = currentUser?.role === 'admin' || currentUser?.username === 'admin';
-
-    const myIdentifiers = [
-      String(currentUser?._id || ''),
-      String(currentUser?.user_id || ''),
-      String(currentUser?.id || ''),
-      String(currentUser?.username || ''),
-      String(currentUser?.student_id || ''),
-      String(currentUser?.email || ''),
-    ].filter(Boolean);
-
-    const isAuthorized = 
-      isAdmin ||
-      Boolean(canView) ||
-      !creatorId ||
-      creatorId === 'undefined' ||
-      creatorId === 'null' ||
-      myIdentifiers.some(id => id.toLowerCase() === creatorId.toLowerCase());
-
-    if (!isAuthorized) return false;
-
     const matchesSearch = (item.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (item.voucherNo || '').toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -181,14 +143,12 @@ export default function SurveyPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          {(canCreate || currentUser?.role === 'admin' || currentUser?.username === 'admin' || !currentUser) && (
-            <button
-              onClick={() => setSelectedSurveyForBuilder('new')}
-              className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
-            >
-              <Plus size={20} /> Thêm phiếu khảo sát
-            </button>
-          )}
+          <button
+            onClick={() => setSelectedSurveyForBuilder('new')}
+            className="flex items-center gap-2 bg-[#1d92ff] text-white px-4 py-2 rounded-lg font-bold shadow-lg hover:bg-[#0054a5] transition-all active:scale-95 text-xs uppercase tracking-wider border-none outline-none cursor-pointer"
+          >
+            <Plus size={20} /> Thêm phiếu khảo sát
+          </button>
         </div>
       </div>
 

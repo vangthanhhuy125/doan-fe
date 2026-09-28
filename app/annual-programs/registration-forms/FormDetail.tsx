@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Download, Edit, Trash2, Users, CheckCircle2, Calendar, Lock, Unlock, ShieldAlert, Share2, GraduationCap } from 'lucide-react';
+import { Download, Edit, Trash2, Users, CheckCircle2, Calendar, Lock, Unlock, ShieldAlert, Share2 } from 'lucide-react';
 import { RegistrationForm, ProgramConfig, FormPermission } from './types';
 import { exportRegistrationToExcel } from './utils/exportExcel';
 
@@ -12,26 +12,107 @@ interface Props {
   onOpenShareModal: (form: RegistrationForm) => void;
 }
 
-export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShareModal }: Props) {
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+const cleanVal = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val.trim().toLowerCase();
+  if (typeof val === 'object') {
+    if (val.$oid) return String(val.$oid).trim().toLowerCase();
+    if (val._id) return cleanVal(val._id);
+    if (val.id) return cleanVal(val.id);
+    if (val.user_id) return cleanVal(val.user_id);
+    if (val.student_id) return cleanVal(val.student_id);
+  }
+  return String(val).trim().toLowerCase();
+};
 
-  useEffect(() => {
+const getUserIdentifiers = (): Set<string> => {
+  const ids = new Set<string>();
+  if (typeof window === 'undefined') return ids;
+
+  try {
     const userStr = localStorage.getItem('user');
     if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setCurrentUserId(user._id || user.user_id || user.id || '');
-      } catch (e) {
-        console.error(e);
+      const u = JSON.parse(userStr);
+      [u._id, u.user_id, u.id, u.student_id, u.username, u.email, u.nhan_su_id, u.personnel_id].forEach(v => {
+        const c = cleanVal(v);
+        if (c) ids.add(c);
+      });
+      if (u.user && typeof u.user === 'object') {
+        [u.user._id, u.user.user_id, u.user.id, u.user.student_id, u.user.username].forEach(v => {
+          const c = cleanVal(v);
+          if (c) ids.add(c);
+        });
       }
     }
+  } catch (e) {}
+
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        [payload._id, payload.user_id, payload.id, payload.student_id, payload.username, payload.sub].forEach(v => {
+          const c = cleanVal(v);
+          if (c) ids.add(c);
+        });
+      }
+    }
+  } catch (e) {}
+
+  return ids;
+};
+
+export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShareModal }: Props) {
+  const [userIds, setUserIds] = useState<Set<string>>(new Set());
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [primaryUserId, setPrimaryUserId] = useState<string>('');
+
+  useEffect(() => {
+    const ids = getUserIdentifiers();
+    setUserIds(ids);
+
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        setPrimaryUserId(String(u._id || u.user_id || u.id || ''));
+        if (u.role === 'admin' || u.username === 'admin' || u.user?.role === 'admin' || u.user?.username === 'admin') {
+          setIsAdmin(true);
+        }
+      }
+      const token = localStorage.getItem('token');
+      if (token) {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          if (payload.role === 'admin' || payload.username === 'admin') {
+            setIsAdmin(true);
+          }
+          if (!primaryUserId) {
+            setPrimaryUserId(String(payload._id || payload.user_id || payload.sub || ''));
+          }
+        }
+      }
+    } catch (e) {}
   }, []);
 
-  const createdBy = (form as any).created_by;
-  const isCreator = !createdBy || String(createdBy) === String(currentUserId);
+  const createdByRaw = (form as any).created_by;
+  const createdById = cleanVal(createdByRaw);
+
+  const isOwner = !createdById ||
+    userIds.has(createdById) ||
+    (typeof createdByRaw === 'object' && (
+      userIds.has(cleanVal(createdByRaw?.username)) ||
+      userIds.has(cleanVal(createdByRaw?.student_id)) ||
+      userIds.has(cleanVal(createdByRaw?._id)) ||
+      userIds.has(cleanVal(createdByRaw?.user_id))
+    ));
+
+  const isCreator = isAdmin || isOwner;
 
   const sharedList: FormPermission[] = form.shared_permissions || [];
-  const myPerm = sharedList.find(p => String(p.user_id) === String(currentUserId));
+  const myPerm = sharedList.find(p => userIds.has(cleanVal(p.user_id)) || userIds.has(cleanVal(p.username)));
 
   const canViewSubmissions = isCreator || Boolean(myPerm?.can_view_submissions);
   const canExport = isCreator || Boolean(myPerm?.can_export);
@@ -72,11 +153,11 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-user-id': currentUserId
+          'x-user-id': primaryUserId
         },
         body: JSON.stringify({
           ...form,
-          user_id: currentUserId,
+          user_id: primaryUserId,
           is_locked: newLockState
         })
       });
@@ -109,9 +190,9 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-user-id': currentUserId
+          'x-user-id': primaryUserId
         },
-        body: JSON.stringify({ user_id: currentUserId })
+        body: JSON.stringify({ user_id: primaryUserId })
       });
 
       if (res.ok || res.status === 204) {

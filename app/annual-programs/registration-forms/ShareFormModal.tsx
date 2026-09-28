@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { X, Share2, Search, UserPlus, Shield, Check, Trash2, Loader2 } from 'lucide-react';
+import { X, Share2, Search, UserPlus, Shield, Trash2, Loader2 } from 'lucide-react';
 import { RegistrationForm, FormPermission } from './types';
 
 interface Props {
@@ -9,6 +9,19 @@ interface Props {
   onClose: () => void;
   onSavePermissions: (updatedPermissions: FormPermission[]) => Promise<void>;
 }
+
+const cleanVal = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val.trim().toLowerCase();
+  if (typeof val === 'object') {
+    if (val.$oid) return String(val.$oid).trim().toLowerCase();
+    if (val._id) return cleanVal(val._id);
+    if (val.id) return cleanVal(val.id);
+    if (val.user_id) return cleanVal(val.user_id);
+    if (val.student_id) return cleanVal(val.student_id);
+  }
+  return String(val).trim().toLowerCase();
+};
 
 export default function ShareFormModal({ form, onClose, onSavePermissions }: Props) {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -29,7 +42,7 @@ export default function ShareFormModal({ form, onClose, onSavePermissions }: Pro
           setAccounts(Array.isArray(data) ? data : []);
         }
       } catch (e) {
-        console.error('Lỗi tải tài khoản:', e);
+        console.error(e);
       }
     };
     fetchAccounts();
@@ -45,15 +58,26 @@ export default function ShareFormModal({ form, onClose, onSavePermissions }: Pro
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const createdBy = (form as any).created_by;
+  const createdById = cleanVal((form as any).created_by);
 
   const availableAccounts = accounts.filter(acc => {
-    const accId = String(acc._id || acc.user_id || acc.id);
-    const isOwner = String(accId) === String(createdBy);
-    const isAlreadyShared = sharedPermissions.some(p => String(p.user_id) === String(accId));
-    const matchesSearch =
-      (acc.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (acc.username || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const accId = cleanVal(acc._id || acc.user_id || acc.id);
+    const accUname = cleanVal(acc.username);
+    const accSid = cleanVal(acc.student_id);
+
+    const isOwner = accId === createdById || accUname === createdById || accSid === createdById;
+
+    const isAlreadyShared = sharedPermissions.some(p => {
+      const pId = cleanVal(p.user_id);
+      const pUname = cleanVal(p.username);
+      return pId === accId || (accUname && pUname === accUname) || (accSid && pId === accSid);
+    });
+
+    const s = searchTerm.toLowerCase().trim();
+    const matchesSearch = !s ||
+      (acc.displayName || '').toLowerCase().includes(s) ||
+      (acc.username || '').toLowerCase().includes(s) ||
+      (acc.student_id || '').toLowerCase().includes(s);
 
     return !isOwner && !isAlreadyShared && matchesSearch;
   });
@@ -124,7 +148,6 @@ export default function ShareFormModal({ form, onClose, onSavePermissions }: Pro
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 overflow-y-auto space-y-6 flex-1 text-left">
-          {/* TÌM KIẾM VÀ THÊM NGƯỜI DÙNG */}
           <div className="space-y-2" ref={dropdownRef}>
             <label className="text-[10px] font-bold uppercase text-gray-400">Thêm người được chia sẻ</label>
             <div className="relative">
@@ -148,7 +171,7 @@ export default function ShareFormModal({ form, onClose, onSavePermissions }: Pro
                   {availableAccounts.length > 0 ? (
                     availableAccounts.map(acc => (
                       <div
-                        key={acc._id}
+                        key={acc._id || acc.id}
                         onClick={() => handleAddUser(acc)}
                         className="p-3 hover:bg-blue-50 cursor-pointer flex items-center justify-between border-b border-gray-50 last:border-none transition-colors"
                       >
@@ -169,7 +192,6 @@ export default function ShareFormModal({ form, onClose, onSavePermissions }: Pro
             </div>
           </div>
 
-          {/* DANH SÁCH THÀNH VIÊN ĐÃ ĐƯỢC CHIA SẺ */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-[#0054a5] uppercase tracking-wider flex items-center gap-1.5">
               <Shield size={14} /> Danh sách người được ủy quyền ({sharedPermissions.length})
@@ -196,7 +218,6 @@ export default function ShareFormModal({ form, onClose, onSavePermissions }: Pro
                     </button>
                   </div>
 
-                  {/* CHECKBOX QUYỀN HẠN CHI TIẾT */}
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2 border-t border-gray-200/60">
                     <label className="flex items-center gap-2 cursor-pointer select-none">
                       <input

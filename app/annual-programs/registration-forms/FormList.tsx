@@ -13,20 +13,85 @@ interface Props {
   onOpenShareModal: (form: RegistrationForm) => void;
 }
 
-export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm, onOpenShareModal }: Props) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+const cleanVal = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val.trim().toLowerCase();
+  if (typeof val === 'object') {
+    if (val.$oid) return String(val.$oid).trim().toLowerCase();
+    if (val._id) return cleanVal(val._id);
+    if (val.id) return cleanVal(val.id);
+    if (val.user_id) return cleanVal(val.user_id);
+    if (val.student_id) return cleanVal(val.student_id);
+  }
+  return String(val).trim().toLowerCase();
+};
 
-  useEffect(() => {
+const getUserIdentifiers = (): Set<string> => {
+  const ids = new Set<string>();
+  if (typeof window === 'undefined') return ids;
+
+  try {
     const userStr = localStorage.getItem('user');
     if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setCurrentUserId(user._id || user.user_id || user.id || '');
-      } catch (e) {
-        console.error('Lỗi đọc user:', e);
+      const u = JSON.parse(userStr);
+      [u._id, u.user_id, u.id, u.student_id, u.username, u.email, u.nhan_su_id, u.personnel_id].forEach(v => {
+        const c = cleanVal(v);
+        if (c) ids.add(c);
+      });
+      if (u.user && typeof u.user === 'object') {
+        [u.user._id, u.user.user_id, u.user.id, u.user.student_id, u.user.username].forEach(v => {
+          const c = cleanVal(v);
+          if (c) ids.add(c);
+        });
       }
     }
+  } catch (e) {}
+
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        [payload._id, payload.user_id, payload.id, payload.student_id, payload.username, payload.sub].forEach(v => {
+          const c = cleanVal(v);
+          if (c) ids.add(c);
+        });
+      }
+    }
+  } catch (e) {}
+
+  return ids;
+};
+
+export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm, onOpenShareModal }: Props) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [userIds, setUserIds] = useState<Set<string>>(new Set());
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+
+  useEffect(() => {
+    const ids = getUserIdentifiers();
+    setUserIds(ids);
+
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const u = JSON.parse(userStr);
+        if (u.role === 'admin' || u.username === 'admin' || u.user?.role === 'admin' || u.user?.username === 'admin') {
+          setIsAdmin(true);
+        }
+      }
+      const token = localStorage.getItem('token');
+      if (token) {
+        const parts = token.split('.');
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+          if (payload.role === 'admin' || payload.username === 'admin') {
+            setIsAdmin(true);
+          }
+        }
+      }
+    } catch (e) {}
   }, []);
 
   const getFormId = (id: string | { $oid: string }): string => {
@@ -36,7 +101,6 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
     return String(id || '');
   };
 
-  // 🟢 Đã bọc an toàn tránh crash khi title hoặc description bị null / undefined
   const filteredForms = forms.filter(f => {
     const titleStr = (f?.title || '').toLowerCase();
     const descStr = (f?.description || '').toLowerCase();
@@ -67,11 +131,22 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
         {filteredForms.length > 0 ? (
           filteredForms.map((form) => {
             const formId = getFormId(form._id);
-            const createdBy = (form as any).created_by;
-            const isCreator = !createdBy || String(createdBy) === String(currentUserId);
+            const createdByRaw = (form as any).created_by;
+            const createdById = cleanVal(createdByRaw);
+
+            const isOwner = !createdById ||
+              userIds.has(createdById) ||
+              (typeof createdByRaw === 'object' && (
+                userIds.has(cleanVal(createdByRaw?.username)) ||
+                userIds.has(cleanVal(createdByRaw?.student_id)) ||
+                userIds.has(cleanVal(createdByRaw?._id)) ||
+                userIds.has(cleanVal(createdByRaw?.user_id))
+              ));
+
+            const isCreator = isAdmin || isOwner;
 
             const sharedList: FormPermission[] = form.shared_permissions || [];
-            const myPerm = sharedList.find(p => String(p.user_id) === String(currentUserId));
+            const myPerm = sharedList.find(p => userIds.has(cleanVal(p.user_id)) || userIds.has(cleanVal(p.username)));
 
             const canExport = isCreator || Boolean(myPerm?.can_export);
             const canEdit = isCreator || Boolean(myPerm?.can_edit);

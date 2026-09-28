@@ -15,23 +15,45 @@ interface Props {
   onBack: () => void;
 }
 
+const getAccountAndUserIds = (): { accountId: string; userId: string } => {
+  let accountId = '';
+  let userId = '';
+
+  if (typeof window === 'undefined') return { accountId, userId };
+
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (payload._id) accountId = String(payload._id);
+        if (payload.user_id) userId = String(payload.user_id);
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const u = JSON.parse(userStr);
+      if (!accountId) accountId = String(u._id || '');
+      if (!userId) userId = String(u.user_id || u.id || '');
+    }
+  } catch (e) {}
+
+  return { accountId: accountId || userId, userId: userId || accountId };
+};
+
 export default function RegistrationManager({ forms, onRefresh, onBack }: Props) {
   const [selectedForm, setSelectedForm] = useState<RegistrationForm | null>(null);
   const [editTargetForm, setEditTargetForm] = useState<RegistrationForm | null>(null);
   const [shareTargetForm, setShareTargetForm] = useState<RegistrationForm | null>(null);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [ids, setIds] = useState({ accountId: '', userId: '' });
 
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        setCurrentUserId(user._id || user.user_id || user.id || '');
-      } catch (e) {
-        console.error(e);
-      }
-    }
+    setIds(getAccountAndUserIds());
   }, []);
 
   const getFormId = (id: string | { $oid: string }): string => {
@@ -50,9 +72,13 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-user-id': currentUserId,
+          'x-user-id': ids.accountId || ids.userId,
         },
-        body: JSON.stringify({ user_id: currentUserId }),
+        body: JSON.stringify({
+          user_id: ids.accountId,
+          account_id: ids.accountId,
+          profile_user_id: ids.userId
+        }),
       });
 
       if (res.ok) {
@@ -72,6 +98,12 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
 
   const handleSaveEditedForm = async (updatedForm: RegistrationForm) => {
     const formId = getFormId(updatedForm._id);
+    const formCreatedBy = String((updatedForm as any).created_by || '');
+
+    const effectiveUserId = formCreatedBy === ids.accountId 
+      ? ids.accountId 
+      : (formCreatedBy === ids.userId ? ids.userId : (ids.accountId || ids.userId));
+
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${formId}`, {
@@ -79,14 +111,16 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-user-id': currentUserId,
+          'x-user-id': effectiveUserId,
         },
         body: JSON.stringify({
           title: updatedForm.title,
           description: updatedForm.description,
           programs: updatedForm.programs,
-          user_id: currentUserId,
-          created_by: (updatedForm as any).created_by,
+          user_id: effectiveUserId,
+          account_id: ids.accountId,
+          profile_user_id: ids.userId,
+          created_by: (updatedForm as any).created_by || effectiveUserId,
         }),
       });
 
@@ -99,7 +133,8 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
         }
         setEditTargetForm(null);
       } else {
-        alert('Cập nhật phiếu đăng ký thất bại!');
+        const err = await res.json();
+        alert(err.message || 'Cập nhật phiếu đăng ký thất bại!');
       }
     } catch (error) {
       console.error(error);
@@ -109,6 +144,10 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
   const handleSavePermissions = async (updatedPermissions: FormPermission[]) => {
     if (!shareTargetForm) return;
     const formId = getFormId(shareTargetForm._id);
+    const formCreatedBy = String((shareTargetForm as any).created_by || '');
+    const effectiveUserId = formCreatedBy === ids.accountId 
+      ? ids.accountId 
+      : (formCreatedBy === ids.userId ? ids.userId : (ids.accountId || ids.userId));
 
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
@@ -117,11 +156,13 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-user-id': currentUserId,
+          'x-user-id': effectiveUserId,
         },
         body: JSON.stringify({
           shared_permissions: updatedPermissions,
-          user_id: currentUserId,
+          user_id: effectiveUserId,
+          account_id: ids.accountId,
+          profile_user_id: ids.userId
         }),
       });
 

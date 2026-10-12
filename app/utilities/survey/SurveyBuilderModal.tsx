@@ -552,6 +552,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
 
     setIsSaving(true);
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const payload = {
         voucherNo: survey?.voucherNo,
         title,
@@ -559,7 +560,8 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
         is_locked: isLocked,
         target_intakes: targetScope === 'intake' ? selectedIntakes : [],
         target_users: targetScope === 'specific' ? selectedUsers : [],
-        created_by: currentUserId,
+        created_by: (survey as any)?.created_by || currentUserId,
+        user_id: currentUserId,
         sections,
         questions
       };
@@ -574,6 +576,7 @@ export default function SurveyBuilderModal({ survey, currentUserId, onClose, onS
         method,
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           'x-user-id': currentUserId
         },
         body: JSON.stringify(payload)

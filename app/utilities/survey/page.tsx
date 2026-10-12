@@ -9,10 +9,68 @@ import SurveyList from './SurveyList';
 import SurveyBuilderModal from './SurveyBuilderModal';
 import ConfirmDeleteModal from './ConfirmDeleteModal';
 
+const cleanVal = (val: any): string => {
+  if (!val) return '';
+  if (typeof val === 'string') return val.trim().toLowerCase();
+  if (typeof val === 'object') {
+    if (val.$oid) return String(val.$oid).trim().toLowerCase();
+    if (val._id) return cleanVal(val._id);
+    if (val.id) return cleanVal(val.id);
+    if (val.user_id) return cleanVal(val.user_id);
+    if (val.student_id) return cleanVal(val.student_id);
+  }
+  return String(val).trim().toLowerCase();
+};
+
+const getUserIdentifiers = (): { idSet: Set<string>; primaryId: string } => {
+  const idSet = new Set<string>();
+  let primaryId = '';
+  if (typeof window === 'undefined') return { idSet, primaryId };
+
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        [payload._id, payload.user_id, payload.id, payload.student_id, payload.username, payload.sub].forEach(v => {
+          const c = cleanVal(v);
+          if (c) idSet.add(c);
+        });
+        if (payload._id) primaryId = String(payload._id);
+        else if (payload.user_id) primaryId = String(payload.user_id);
+      }
+    }
+  } catch (e) {}
+
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const u = JSON.parse(userStr);
+      [u._id, u.user_id, u.id, u.student_id, u.username, u.email].forEach(v => {
+        const c = cleanVal(v);
+        if (c) idSet.add(c);
+      });
+      if (u.user && typeof u.user === 'object') {
+        [u.user._id, u.user.user_id, u.user.id, u.user.student_id, u.user.username].forEach(v => {
+          const c = cleanVal(v);
+          if (c) idSet.add(c);
+        });
+      }
+      if (!primaryId) {
+        primaryId = String(u._id || u.user_id || u.id || '');
+      }
+    }
+  } catch (e) {}
+
+  return { idSet, primaryId };
+};
+
 export default function SurveyPage() {
   const [surveys, setSurveys] = useState<SurveyForm[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState('');
+  const [userIds, setUserIds] = useState<Set<string>>(new Set());
 
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'locked'>('all');
@@ -20,10 +78,17 @@ export default function SurveyPage() {
   const [selectedSurveyForBuilder, setSelectedSurveyForBuilder] = useState<SurveyForm | null | 'new'>(null);
   const [surveyToDelete, setSurveyToDelete] = useState<SurveyForm | null>(null);
 
-  const fetchSurveys = async () => {
+  const fetchSurveys = async (uid?: string) => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys`);
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+      const activeId = uid || currentUserId;
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-user-id': activeId
+        }
+      });
       if (res.ok) {
         const data = await res.json();
         setSurveys(Array.isArray(data) ? data : []);
@@ -36,30 +101,28 @@ export default function SurveyPage() {
   };
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        try {
-          const user = JSON.parse(userStr);
-          setCurrentUserId(String(user._id || user.user_id || user.id || ''));
-        } catch (e) {
-          console.error(e);
-        }
-      }
-    }
-    fetchSurveys();
+    const { idSet, primaryId } = getUserIdentifiers();
+    setUserIds(idSet);
+    setCurrentUserId(primaryId);
+    fetchSurveys(primaryId);
   }, []);
 
   const handleToggleLock = async (survey: SurveyForm) => {
     try {
       const updatedStatus = !survey.is_locked;
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys/${survey._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
           'x-user-id': currentUserId
         },
-        body: JSON.stringify({ ...survey, is_locked: updatedStatus })
+        body: JSON.stringify({ 
+          ...survey, 
+          is_locked: updatedStatus,
+          user_id: currentUserId 
+        })
       });
 
       if (res.ok) {
@@ -73,11 +136,16 @@ export default function SurveyPage() {
   const handleConfirmDelete = async () => {
     if (!surveyToDelete) return;
     try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/surveys/${surveyToDelete._id}`, {
         method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-user-id': currentUserId
+        }
       });
       if (res.ok) {
-        await fetchSurveys();
+        await fetchSurveys(currentUserId);
         setSurveyToDelete(null);
       } else {
         alert('Xóa phiếu khảo sát thất bại!');
@@ -119,7 +187,25 @@ export default function SurveyPage() {
 
   const isFiltering = searchTerm !== '' || statusFilter !== 'all';
 
+  // LỌC: Chỉ hiển thị các phiếu do user đó tạo
   const filteredSurveys = surveys.filter(item => {
+    const createdByRaw = (item as any)?.created_by;
+    const createdById = cleanVal(createdByRaw);
+
+    const isOwner = Boolean(
+      createdById && (
+        userIds.has(createdById) ||
+        (typeof createdByRaw === 'object' && (
+          userIds.has(cleanVal(createdByRaw?._id)) ||
+          userIds.has(cleanVal(createdByRaw?.user_id)) ||
+          userIds.has(cleanVal(createdByRaw?.username)) ||
+          userIds.has(cleanVal(createdByRaw?.student_id))
+        ))
+      )
+    );
+
+    if (!isOwner) return false;
+
     const matchesSearch = (item.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (item.voucherNo || '').toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -213,7 +299,7 @@ export default function SurveyPage() {
           survey={selectedSurveyForBuilder === 'new' ? null : selectedSurveyForBuilder}
           currentUserId={currentUserId}
           onClose={() => setSelectedSurveyForBuilder(null)}
-          onSaved={fetchSurveys}
+          onSaved={() => fetchSurveys(currentUserId)}
         />
       )}
 

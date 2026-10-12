@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { 
-  LogOut, User, UserCircle, KeyRound, X, Eye, EyeOff, Check, Lock, Loader2, ClipboardList, CheckCircle2, AlertCircle 
+  LogOut, User, UserCircle, KeyRound, X, Eye, EyeOff, Check, Lock, Loader2, LayoutGrid, CheckCircle2, AlertCircle 
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
@@ -253,12 +253,12 @@ export default function Header() {
                 <button
                   onClick={() => {
                     setIsOpen(false);
-                    router.push("/survey");
+                    router.push("/utilities");
                   }}
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-[#0054a5] hover:bg-blue-50/80 rounded-xl transition-all cursor-pointer border-none bg-transparent"
                 >
-                  <ClipboardList size={18} className="text-[#0054a5]" />
-                  <span>Tạo phiếu khảo sát</span>
+                  <LayoutGrid size={18} className="text-[#0054a5]" />
+                  <span>Tiện ích</span>
                 </button>
 
                 <button

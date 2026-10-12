@@ -8,10 +8,11 @@ import InfoTab from './InfoTab';
 import NotificationsTab from './NotificationsTab';
 import UserRegistrationTab from './UserRegistrationTab';
 import SurveyTab from './SurveyTab';
+import AttendanceTab from './AttendanceTab';
 import AnnouncementModal from './AnnouncementModal';
 
 export default function ProfilePage() {
-  const [activeTab, setActiveTab] = useState<'info' | 'notifications' | 'registrations' | 'surveys'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'notifications' | 'registrations' | 'surveys' | 'attendance'>('info');
   const [profile, setProfile] = useState<any>(null);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const [loading, setLoading] = useState(true);
@@ -31,13 +32,12 @@ export default function ProfilePage() {
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [loadingNotifs, setLoadingNotifs] = useState(false);
   const [selectedNotif, setSelectedNotif] = useState<any>(null);
-
   const [unsubmittedCount, setUnsubmittedCount] = useState(0);
   const [unsubmittedSurveyCount, setUnsubmittedSurveyCount] = useState(0);
+  const [unattendedSessionCount, setUnattendedSessionCount] = useState(0);
 
   const handleMarkAsRead = async (notifId: string) => {
     if (!notifId || !currentUserId) return;
-
     try {
       const token = localStorage.getItem('token');
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/announcements/${notifId}/read`, {
@@ -49,7 +49,6 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({ user_id: currentUserId })
       });
-
       if (res.ok) {
         setAnnouncements(prev => prev.map(a => {
           const aId = a._id || a.id;
@@ -70,8 +69,9 @@ export default function ProfilePage() {
   const extractIntake = (currClass: string, currSid: string) => {
     const match = String(currClass).match(/(?:19|20)\d{2}/);
     if (match) return match[0];
-    if (currSid.length >= 2) {
-      const prefix = parseInt(currSid.substring(0, 2), 10);
+    const s = String(currSid || '').trim();
+    if (s.length >= 2) {
+      const prefix = parseInt(s.substring(0, 2), 10);
       if (!isNaN(prefix) && prefix >= 15 && prefix <= 35) {
         return `20${prefix}`;
       }
@@ -87,18 +87,15 @@ export default function ProfilePage() {
         const data = await res.json();
         if (Array.isArray(data)) {
           const userIntake = extractIntake(currentClassName, currentStudentId);
-
           const count = data.filter((form: any) => {
             const isSubmitted = form.submissions?.some(
               (sub: any) => sub.student_id === currentStudentId
             );
             if (isSubmitted || form.is_locked) return false;
-
             const isEligible = (form.programs || []).some((prog: any) => {
               const pIntakes = prog.target_intakes || [];
               return pIntakes.length === 0 || !userIntake || pIntakes.includes(userIntake);
             });
-
             return isEligible;
           }).length;
           setUnsubmittedCount(count);
@@ -117,30 +114,50 @@ export default function ProfilePage() {
         const data = await res.json();
         if (Array.isArray(data)) {
           const userIntake = extractIntake(currentClassName, currentStudentId);
-
           const count = data.filter((survey: any) => {
             const isSubmitted = survey.responses?.some(
               (r: any) => r.student_id === currentStudentId || r.user_id === currUid
             );
             if (isSubmitted || survey.is_locked) return false;
-
             const intakes = Array.isArray(survey.target_intakes) ? survey.target_intakes : [];
             const users = Array.isArray(survey.target_users) ? survey.target_users : [];
-
             if (intakes.length === 0 && users.length === 0) return true;
-
             const isTargetUser = users.some((u: any) => {
               const s = String(u).trim();
               return s === currentStudentId || s === currUid;
             });
             if (isTargetUser) return true;
-
             const isTargetIntake = intakes.length > 0 && userIntake && intakes.includes(userIntake);
             if (isTargetIntake) return true;
-
             return false;
           }).length;
           setUnsubmittedSurveyCount(count);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const fetchUnattendedAttendanceCount = async (currentStudentId: string, currentClassName: string = '') => {
+    if (!currentStudentId) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/attendance`);
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          const userIntake = extractIntake(currentClassName, currentStudentId);
+          const count = data.filter((s: any) => {
+            if (s.is_locked) return false;
+            const intakes = Array.isArray(s.target_intakes) ? s.target_intakes : [];
+            const isEligible = intakes.length === 0 || !userIntake || intakes.includes(userIntake);
+            if (!isEligible) return false;
+            const isChecked = (s.records || []).some(
+              (r: any) => String(r.student_id).trim().toLowerCase() === currentStudentId.trim().toLowerCase()
+            );
+            return !isChecked;
+          }).length;
+          setUnattendedSessionCount(count);
         }
       }
     } catch (e) {
@@ -210,6 +227,7 @@ export default function ProfilePage() {
           if (data.student_id) {
             await fetchUnsubmittedCount(data.student_id, data.class || '');
             await fetchUnsubmittedSurveyCount(data.student_id, data.class || '', realProfileId);
+            await fetchUnattendedAttendanceCount(data.student_id, data.class || '');
           }
         } else {
           await fetchAnnouncements(accountId);
@@ -368,6 +386,7 @@ export default function ProfilePage() {
           notifCount={unreadNotifCount}
           registrationCount={unsubmittedCount}
           surveyCount={unsubmittedSurveyCount}
+          attendanceCount={unattendedSessionCount}
         />
         {activeTab === 'info' && (
           <InfoTab
@@ -411,6 +430,16 @@ export default function ProfilePage() {
               class_name: className,
             }}
             onRefreshCount={() => fetchUnsubmittedSurveyCount(studentId, className, currentUserId)}
+          />
+        )}
+        {activeTab === 'attendance' && (
+          <AttendanceTab
+            userInfo={{
+              student_id: studentId,
+              full_name: fullName,
+              class_name: className,
+            }}
+            onRefreshCount={() => fetchUnattendedAttendanceCount(studentId, className)}
           />
         )}
       </div>

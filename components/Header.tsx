@@ -206,12 +206,19 @@ export default function Header() {
         </div>
       )}
 
-      <div className="flex items-center gap-3 pl-11 lg:pl-0">
-        <Image src="/truong-doan-khoa.png" alt="Logo" width={120} height={120} className="w-auto h-9 sm:h-10 object-contain" />
-        <span className="font-semibold text-[#0054a5] hidden md:block text-[15px] leading-tight">
-          Đoàn khoa Công nghệ Phần mềm, <br/> Đoàn trường Đại học Công nghệ Thông tin - ĐHQG-HCM   
-        </span>
-      </div>
+    <div className="flex items-center gap-3 pl-11 lg:pl-0">
+      <img 
+        src="/truong-doan-khoa.png" 
+        alt="Logo" 
+        className="w-auto h-9 sm:h-10 object-contain" 
+        onError={(e) => {
+          (e.target as HTMLImageElement).src = '/doankhoa.png';
+        }}
+      />
+      <span className="font-semibold text-[#0054a5] hidden md:block text-[15px] leading-tight">
+        Đoàn khoa Công nghệ Phần mềm, <br/> Đoàn trường Đại học Công nghệ Thông tin - ĐHQG-HCM   
+      </span>
+    </div>
       
       <div className="flex items-center gap-6">
         <div className="relative" ref={menuRef}>

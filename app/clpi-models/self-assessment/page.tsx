@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Award, CheckCircle2, AlertCircle, Send, 
@@ -12,11 +12,10 @@ interface IndicatorConfig {
   name: string;
   subTitle: string;
   description: string;
-  weight: number; // Tỷ lệ %
+  weight: number;
   explanationPlaceholder: string;
 }
 
-// Cấu hình 4 nhóm chỉ số năng lực theo BRD
 const INDICATORS: IndicatorConfig[] = [
   {
     code: 'WPI',
@@ -52,7 +51,6 @@ const INDICATORS: IndicatorConfig[] = [
   },
 ];
 
-// Thang phân loại xếp loại theo BRD
 const getClassification = (score: number) => {
   if (score >= 90) return { label: 'Xuất sắc', style: 'bg-emerald-500 text-white' };
   if (score >= 80) return { label: 'Tốt', style: 'bg-blue-600 text-white' };
@@ -61,7 +59,7 @@ const getClassification = (score: number) => {
   return { label: 'Chưa đạt', style: 'bg-rose-600 text-white' };
 };
 
-export default function SelfAssessmentPage() {
+function SelfAssessmentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isRevisionMode = searchParams.get('mode') === 'revision';
@@ -71,7 +69,6 @@ export default function SelfAssessmentPage() {
   const [evaluationId, setEvaluationId] = useState('eval_current');
   const [revisionReason, setRevisionReason] = useState<string | null>(null);
 
-  // State lưu điểm (0-100) và nội dung giải trình của 4 chỉ số
   const [scores, setScores] = useState<Record<string, number | ''>>({
     WPI: 94,
     LEI: 92,
@@ -122,7 +119,6 @@ export default function SelfAssessmentPage() {
     fetchExistingData();
   }, []);
 
-  // Tính tổng điểm CLPI dự kiến theo trọng số realtime
   const calculatedClpi = useMemo(() => {
     let total = 0;
     INDICATORS.forEach((ind) => {
@@ -157,7 +153,6 @@ export default function SelfAssessmentPage() {
     }
   };
 
-  // Kiểm tra tính hợp lệ trước khi nộp
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
@@ -234,7 +229,6 @@ export default function SelfAssessmentPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-28 text-slate-800 animate-in fade-in duration-200">
-      {/* Toast Alert */}
       {toastMessage && (
         <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[160] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold text-white animate-in slide-in-from-top-4 ${
           toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
@@ -244,7 +238,6 @@ export default function SelfAssessmentPage() {
         </div>
       )}
 
-      {/* Cảnh báo BTV yêu cầu bổ sung nếu đang ở Revision Mode */}
       {isRevisionMode && (
         <div className="p-4 bg-amber-50 border border-amber-300 rounded-3xl text-xs font-bold text-amber-900 flex items-start gap-3">
           <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
@@ -257,7 +250,6 @@ export default function SelfAssessmentPage() {
         </div>
       )}
 
-      {/* 1. Tiêu đề trang & Thẻ Dự kiến tổng điểm góc trên phải */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
@@ -268,7 +260,6 @@ export default function SelfAssessmentPage() {
           </p>
         </div>
 
-        {/* Numeric Summary Card */}
         <div className="p-3.5 px-6 bg-white border border-blue-200 rounded-2xl shadow-xs text-center shrink-0 self-start sm:self-auto">
           <p className="text-[10px] font-extrabold uppercase text-slate-400">Dự kiến tổng điểm CLPI</p>
           <div className="text-2xl font-black text-[#0054a5]">
@@ -277,7 +268,6 @@ export default function SelfAssessmentPage() {
         </div>
       </div>
 
-      {/* 2. Danh sách 4 Khối Chỉ số (WPI, LEI, CEI, SDI) */}
       <form onSubmit={handleOpenConfirm} className="space-y-5">
         {INDICATORS.map((ind) => {
           const scoreVal = scores[ind.code];
@@ -290,7 +280,6 @@ export default function SelfAssessmentPage() {
               key={ind.code}
               className="bg-white rounded-3xl border border-slate-200/90 shadow-xs p-6 sm:p-7 space-y-4 hover:border-[#0054a5]/30 transition-all"
             >
-              {/* Header Khối: Mã chỉ số, Tên, Mô tả & Trọng số */}
               <div className="flex items-start justify-between gap-3 border-b border-slate-100 pb-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -311,9 +300,7 @@ export default function SelfAssessmentPage() {
                 </span>
               </div>
 
-              {/* Vùng nhập Giải thích & Điểm tự chấm */}
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start pt-1">
-                {/* Cột trái (8 cols): Textarea Giải thích */}
                 <div className="md:col-span-8 space-y-1.5">
                   <label className="text-[11px] font-bold uppercase text-slate-500 flex items-center justify-between">
                     <span>Giải thích kết quả tự đánh giá {ind.code}: *</span>
@@ -337,7 +324,6 @@ export default function SelfAssessmentPage() {
                   )}
                 </div>
 
-                {/* Cột phải (4 cols): Numeric Input Điểm tự chấm (0-100) */}
                 <div className="md:col-span-4 p-4 bg-slate-50/60 rounded-2xl border border-slate-200/80 flex flex-col items-center justify-center text-center space-y-2">
                   <span className="text-[11px] font-bold uppercase text-slate-500">
                     Điểm tự chấm (0-100)
@@ -367,7 +353,6 @@ export default function SelfAssessmentPage() {
           );
         })}
 
-        {/* 3. Thanh tổng kết dưới cùng cố định (Bottom Summary Panel) */}
         <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 text-white border-t border-slate-800 shadow-2xl p-4 sm:px-8">
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-0.5 text-center sm:text-left">
@@ -394,7 +379,6 @@ export default function SelfAssessmentPage() {
         </div>
       </form>
 
-      {/* Modal xác nhận nộp hồ sơ */}
       {showConfirmModal && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-100 text-center">
@@ -438,5 +422,19 @@ export default function SelfAssessmentPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function SelfAssessmentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex h-72 items-center justify-center bg-white rounded-3xl border border-slate-100">
+          <Loader2 className="h-8 w-8 animate-spin text-[#0054a5]" />
+        </div>
+      }
+    >
+      <SelfAssessmentContent />
+    </Suspense>
   );
 }

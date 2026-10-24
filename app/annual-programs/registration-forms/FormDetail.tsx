@@ -28,7 +28,6 @@ const cleanVal = (val: any): string => {
 const getUserIdentifiers = (): Set<string> => {
   const ids = new Set<string>();
   if (typeof window === 'undefined') return ids;
-
   try {
     const userStr = localStorage.getItem('user');
     if (userStr) {
@@ -45,7 +44,6 @@ const getUserIdentifiers = (): Set<string> => {
       }
     }
   } catch (e) {}
-
   try {
     const token = localStorage.getItem('token');
     if (token) {
@@ -59,8 +57,32 @@ const getUserIdentifiers = (): Set<string> => {
       }
     }
   } catch (e) {}
-
   return ids;
+};
+
+const getAccountAndUserIds = (): { accountId: string; userId: string } => {
+  let accountId = '';
+  let userId = '';
+  try {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      const u = JSON.parse(userStr);
+      accountId = String(u._id || '');
+      userId = String(u.user_id || u.id || u.student_id || accountId);
+    }
+  } catch (e) {}
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const parts = token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+        if (!accountId && payload._id) accountId = String(payload._id);
+        if (!userId && (payload.user_id || payload.sub)) userId = String(payload.user_id || payload.sub);
+      }
+    }
+  } catch (e) {}
+  return { accountId: accountId || userId, userId: userId || accountId };
 };
 
 export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShareModal }: Props) {
@@ -71,7 +93,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
   useEffect(() => {
     const ids = getUserIdentifiers();
     setUserIds(ids);
-
     try {
       const userStr = localStorage.getItem('user');
       if (userStr) {
@@ -99,7 +120,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
 
   const createdByRaw = (form as any).created_by;
   const createdById = cleanVal(createdByRaw);
-
   const isOwner = !createdById ||
     userIds.has(createdById) ||
     (typeof createdByRaw === 'object' && (
@@ -108,7 +128,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
       userIds.has(cleanVal(createdByRaw?._id)) ||
       userIds.has(cleanVal(createdByRaw?.user_id))
     ));
-
   const isCreator = isAdmin || isOwner;
 
   const sharedList: FormPermission[] = form.shared_permissions || [];
@@ -137,14 +156,19 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
     return validSubmissions.filter(sub => sub.choices && sub.choices[programId] === deptName).length;
   };
 
+  // ✅ ĐÃ SỬA: Chỉ gửi trường is_locked và đúng bộ ID người tạo, KHÔNG gửi shared_permissions
   const handleToggleLock = async () => {
     if (!canLock) {
-      alert('Bạn không có quyền khóa/mở khóa phiếu này!');
+      alert('Bạn không có quyền khóa phiếu này!');
       return;
     }
-
     const formId = getFormId(form._id);
     const newLockState = !form.is_locked;
+    const formCreatedBy = String((form as any).created_by || '');
+    const accountIds = getAccountAndUserIds();
+    const effectiveUserId = (formCreatedBy && userIds.has(cleanVal(formCreatedBy)))
+      ? formCreatedBy
+      : (primaryUserId || accountIds.accountId || accountIds.userId);
 
     try {
       const token = localStorage.getItem('token') || '';
@@ -153,36 +177,44 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-user-id': primaryUserId
+          'x-user-id': effectiveUserId
         },
         body: JSON.stringify({
-          ...form,
-          user_id: primaryUserId,
-          is_locked: newLockState
+          is_locked: newLockState,
+          user_id: effectiveUserId,
+          account_id: accountIds.accountId,
+          profile_user_id: accountIds.userId,
+          created_by: formCreatedBy || effectiveUserId,
         })
       });
 
       if (res.ok) {
-        alert(newLockState ? 'Đã khóa phiếu đăng ký!' : 'Đã mở khóa phiếu đăng ký!');
+        alert(newLockState ? 'Đã khóa phiếu đăng ký thành công!' : 'Đã mở khóa phiếu đăng ký thành công!');
         window.location.reload();
       } else {
         const err = await res.json();
-        alert(err.message || 'Thao tác thất bại!');
+        alert(err.message || 'Thao tác khóa phiếu thất bại!');
       }
     } catch (e) {
       console.error(e);
+      alert('Không thể kết nối đến máy chủ!');
     }
   };
 
+  // ✅ ĐÃ SỬA: Gửi đầy đủ định danh người tạo khi xóa
   const handleDelete = async () => {
     if (!canDelete) {
       alert('Bạn không có quyền xóa phiếu này!');
       return;
     }
-
     if (!confirm('Bạn có chắc chắn muốn xóa phiếu đăng ký này?')) return;
-
     const formId = getFormId(form._id);
+    const formCreatedBy = String((form as any).created_by || '');
+    const accountIds = getAccountAndUserIds();
+    const effectiveUserId = (formCreatedBy && userIds.has(cleanVal(formCreatedBy)))
+      ? formCreatedBy
+      : (primaryUserId || accountIds.accountId || accountIds.userId);
+
     try {
       const token = localStorage.getItem('token') || '';
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${formId}`, {
@@ -190,11 +222,14 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
-          'x-user-id': primaryUserId
+          'x-user-id': effectiveUserId
         },
-        body: JSON.stringify({ user_id: primaryUserId })
+        body: JSON.stringify({ 
+          user_id: effectiveUserId,
+          account_id: accountIds.accountId,
+          profile_user_id: accountIds.userId
+        })
       });
-
       if (res.ok || res.status === 204) {
         alert('Xóa phiếu thành công!');
         onDeleteForm(formId);
@@ -204,18 +239,7 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
       }
     } catch (e) {
       console.error(e);
-    }
-  };
-
-  const formatDateTime = (dateStr: string) => {
-    if (!dateStr) return '';
-    try {
-      const date = new Date(dateStr);
-      if (isNaN(date.getTime())) return dateStr;
-      const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
-      return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
-    } catch {
-      return dateStr;
+      alert('Không thể kết nối đến máy chủ!');
     }
   };
 
@@ -231,16 +255,27 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
     }
   };
 
+  const formatDateTime = (dateStr: string) => {
+    if (!dateStr) return '';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr;
+      const pad = (n: number) => (n < 10 ? `0${n}` : `${n}`);
+      return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    } catch {
+      return dateStr;
+    }
+  };
+
   return (
     <div className="space-y-6 text-black">
       <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm space-y-4">
         {!isCreator && (
           <div className="p-3 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-2 text-amber-800 text-xs font-bold">
             <ShieldAlert size={16} className="shrink-0 text-amber-600" />
-            <span>Phiếu này được chia sẻ với bạn. Quyền hạn của bạn sẽ dựa theo sự ủy quyền của Người tạo phiếu.</span>
+            <span>Phiếu này được chia sẻ với bạn. Quyền thao tác dựa theo sự ủy quyền của Người tạo phiếu.</span>
           </div>
         )}
-
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 pb-4">
           <div className="space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
@@ -253,7 +288,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
             </div>
             <p className="text-xs text-gray-600 font-medium">{form.description}</p>
           </div>
-
           <div className="flex items-center gap-2 shrink-0 flex-wrap">
             {isCreator && (
               <button
@@ -263,7 +297,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                 <Share2 size={16} /> Chia sẻ
               </button>
             )}
-
             {canExport && (
               <button
                 onClick={() => exportRegistrationToExcel({ ...form, submissions: validSubmissions })}
@@ -272,7 +305,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                 <Download size={16} /> Xuất Excel
               </button>
             )}
-
             {canLock && (
               <button
                 onClick={handleToggleLock}
@@ -284,7 +316,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                 <span>{form.is_locked ? 'Mở khóa phiếu' : 'Khóa phiếu'}</span>
               </button>
             )}
-
             {canEdit && (
               <button
                 onClick={() => onEditForm(form)}
@@ -293,7 +324,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                 <Edit size={16} /> Chỉnh sửa
               </button>
             )}
-
             {canDelete && (
               <button
                 onClick={handleDelete}
@@ -305,7 +335,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
             )}
           </div>
         </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 pt-2">
           <div className="p-4 bg-blue-50/60 rounded-2xl border border-blue-100 flex items-center gap-3">
             <div className="p-3 bg-[#0054a5] text-white rounded-xl">
@@ -336,7 +365,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
           </div>
         </div>
       </div>
-
       <div className="space-y-4">
         <h4 className="text-sm font-black text-[#0054a5] uppercase tracking-wider">
           Thống kê lượt đăng ký từng Ban theo chương trình
@@ -347,7 +375,6 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
               (sum, dept) => sum + getDepartmentStats(prog.program_id, dept),
               0
             );
-
             return (
               <div key={prog.program_id} className="bg-white p-5 rounded-3xl border border-gray-200 shadow-sm space-y-3">
                 <div className="border-b border-gray-100 pb-2">
@@ -393,12 +420,10 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
           })}
         </div>
       </div>
-
       <div className="space-y-3">
         <h4 className="text-sm font-black text-[#0054a5] uppercase tracking-wider">
           Danh sách chi tiết sinh viên đăng ký ({validSubmissions.length})
         </h4>
-
         {canViewSubmissions ? (
           <div className="overflow-x-auto rounded-3xl border border-gray-200 shadow-sm bg-white">
             <table className="w-full text-sm text-left border-collapse">
@@ -406,7 +431,7 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                 <tr>
                   <th className="px-4 py-4 text-center w-12">STT</th>
                   <th className="px-4 py-4 text-center w-28">MSSV</th>
-                  <th className="px-4 py-4 text-left w-44">Họ và Tên</th>
+                  <th className="px-4 py-4 text-left w-44">Họ và tên</th>
                   <th className="px-4 py-4 text-center w-28">Lớp</th>
                   <th className="px-4 py-4 text-left">Nguyện vọng / Ban đăng ký</th>
                   <th className="px-4 py-4 text-center w-48">Thời gian</th>
@@ -420,15 +445,12 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                       <td className="px-4 py-4 text-center font-bold text-[#0054a5]">{sub.student_id}</td>
                       <td className="px-4 py-4 font-bold text-slate-800">{sub.full_name}</td>
                       <td className="px-4 py-4 text-center font-semibold text-gray-600">{sub.class_name}</td>
-                      
                       <td className="px-4 py-4">
                         <div className="flex flex-col gap-2">
                           {form.programs.map((prog: ProgramConfig) => {
                             const dept = sub.choices?.[prog.program_id];
                             const leaderOpts: string[] = sub.leadership_choices?.[prog.program_id] || [];
-
                             if (!dept && leaderOpts.length === 0) return null;
-
                             return (
                               <div key={prog.program_id} className="space-y-1 text-xs">
                                 <div className="font-bold text-slate-700 flex items-center gap-1.5 flex-wrap">
@@ -439,13 +461,12 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
                                     </span>
                                   )}
                                 </div>
-
                                 {leaderOpts.length > 0 && (
                                   <div className="pl-4 flex items-center gap-1.5 flex-wrap">
                                     <span className="text-[11px] font-bold text-amber-700">Ứng cử:</span>
                                     {leaderOpts.map((opt) => (
                                       <span key={opt} className="bg-amber-50 text-amber-800 px-2 py-0.5 rounded-md font-bold border border-amber-200 text-[11px]">
-                                        ★ {opt}
+                                        {opt}
                                       </span>
                                     ))}
                                   </div>
@@ -477,7 +498,7 @@ export default function FormDetail({ form, onEditForm, onDeleteForm, onOpenShare
               Bạn không có quyền xem danh sách chi tiết sinh viên đăng ký
             </p>
             <p className="text-xs text-gray-500 font-medium">
-              Bạn cần được Người tạo phiếu cấp quyền "Xem danh sách SV" để truy cập thông tin này.
+              Bạn cần Người tạo phiếu cấp quyền "Xem danh sách SV" để truy cập thông tin này.
             </p>
           </div>
         )}

@@ -1,8 +1,7 @@
 'use client';
 
-// ĐÃ SỬA: Sửa lại cú pháp import { useRouter } chuẩn của Next.js App Router
 import { useRouter } from "next/navigation"; 
-import { Shield, Image as ImageIcon, History, Settings2 } from "lucide-react";
+import { Shield, Image as ImageIcon, Settings2 } from "lucide-react";
 
 export default function SettingsMenuPage() {
   const router = useRouter();
@@ -25,14 +24,6 @@ export default function SettingsMenuPage() {
       bgColor: "bg-amber-50"
     },
     {
-      title: "Lịch sử truy cập",
-      description: "Xem nhật ký hoạt động và lịch sử thao tác của các tài khoản",
-      path: "/settings/logs",
-      icon: History,
-      iconColor: "text-emerald-500",
-      bgColor: "bg-emerald-50"
-    },
-    {
       title: "Cấu hình Hệ thống",
       description: "Thiết lập các tham số mặc định: năm học, học kỳ, ...",
       path: "/settings/system-config",
@@ -50,7 +41,8 @@ export default function SettingsMenuPage() {
         </h2>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 pt-2">
+      {/* Grid 3 cột cân đối cho 3 phân hệ còn lại */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 pt-2">
         {settingMenus.map((menu, index) => {
           const IconComponent = menu.icon;
           return (
@@ -67,7 +59,7 @@ export default function SettingsMenuPage() {
                 <h3 className="font-black text-slate-800 text-sm sm:text-base group-hover:text-[#0054a5] transition-colors">
                   {menu.title}
                 </h3>
-                <p className="text-slate-400 text-[11px] sm:text-xs font-medium leading-relaxed max-w-[180px] mx-auto">
+                <p className="text-slate-400 text-[11px] sm:text-xs font-medium leading-relaxed max-w-[200px] mx-auto">
                   {menu.description}
                 </p>
               </div>

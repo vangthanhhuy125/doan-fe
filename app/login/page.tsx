@@ -54,7 +54,7 @@ export default function AuthPage() {
         <div className="mb-12 flex flex-col items-center text-center">
           <div className="relative mb-6 transform transition-hover hover:scale-105 duration-300">
             <Image
-              src="/truong-doan-khoa.png" 
+              src="/truong-doan-hoi-khoa.png" 
               alt="Logo Đoàn"
               width={350}
               height={250}
@@ -64,7 +64,7 @@ export default function AuthPage() {
           </div>
           <h1 className="text-xl font-bold uppercase leading-tight text-[#0054a5] tracking-tight">
             Hệ thống nghiệp vụ công tác <br /> 
-            <span className="text-2xl">Đoàn TNCS Hồ Chí Minh <br /> </span>
+            <span className="text-2xl">Đoàn Thanh niên - Hội Sinh viên <br /> </span>
             <span className="text-xl opacity-80">Khoa Công nghệ Phần mềm <br /> SE - UIT - VNUHCM</span>
           </h1>
         </div>
@@ -121,7 +121,7 @@ export default function AuthPage() {
             </button>
           </form>
           <p className="mt-8 text-[10px] text-gray-400 text-center tracking-widest">
-            © 2026 Bản quyền thuộc về Đoàn khoa CNPM, <br/> Đoàn Trường ĐH CNTT - ĐHQG-HCM <br/>
+            © 2026 Bản quyền thuộc về Đoàn - Hội khoa CNPM, <br/> ĐTN - HSV Trường ĐH CNTT - ĐHQG-HCM <br/>
             Thực hiện: Văng Thanh Huy
           </p>
         </div>

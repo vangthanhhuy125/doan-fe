@@ -63,6 +63,44 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
     return String(id || '');
   };
 
+  const handleToggleLockForm = async (form: RegistrationForm) => {
+    const formId = getFormId(form._id);
+    const newLockState = !form.is_locked;
+    const formCreatedBy = String((form as any).created_by || '');
+    const effectiveUserId = formCreatedBy === ids.accountId
+      ? ids.accountId
+      : (formCreatedBy === ids.userId ? ids.userId : (ids.accountId || ids.userId));
+
+    try {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('token') || '' : '';
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/registration-forms/${formId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+          'x-user-id': effectiveUserId,
+        },
+        body: JSON.stringify({
+          is_locked: newLockState,
+          user_id: effectiveUserId,
+          account_id: ids.accountId,
+          profile_user_id: ids.userId,
+          created_by: formCreatedBy || effectiveUserId,
+        }),
+      });
+
+      if (res.ok) {
+        await onRefresh();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err.message || 'Thao tác khóa/mở khóa phiếu thất bại!');
+      }
+    } catch (error) {
+      console.error(error);
+      alert('Không thể kết nối đến máy chủ!');
+    }
+  };
+
   const handleDeleteConfirm = async () => {
     if (!deleteTargetId) return;
     try {
@@ -211,6 +249,7 @@ export default function RegistrationManager({ forms, onRefresh, onBack }: Props)
           onEditForm={setEditTargetForm}
           onDeleteForm={setDeleteTargetId}
           onOpenShareModal={setShareTargetForm}
+          onToggleLockForm={handleToggleLockForm}
         />
       ) : (
         <FormDetail

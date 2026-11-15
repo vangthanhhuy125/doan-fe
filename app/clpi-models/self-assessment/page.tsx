@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Award, CheckCircle2, AlertCircle, Send, 
-  Save, Loader2, Sparkles, HelpCircle, ArrowRight
+  Loader2
 } from 'lucide-react';
 
 interface IndicatorConfig {
@@ -353,7 +353,8 @@ function SelfAssessmentContent() {
           );
         })}
 
-        <div className="fixed bottom-0 left-0 right-0 z-40 bg-slate-900 text-white border-t border-slate-800 shadow-2xl p-4 sm:px-8">
+        {/* Bottom Summary Bar: Nằm gọn bên phải Sidebar ở màn hình lg */}
+        <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-30 bg-slate-900 text-white border-t border-slate-800 shadow-2xl p-4 sm:px-8 transition-all">
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-0.5 text-center sm:text-left">
               <div className="flex items-center gap-2 justify-center sm:justify-start">

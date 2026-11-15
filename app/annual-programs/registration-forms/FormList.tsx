@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Search, Eye, Download, Edit, Trash2, Calendar, Share2 } from 'lucide-react';
+import { Search, Eye, Download, Edit, Trash2, Calendar, Share2, Lock, Unlock } from 'lucide-react';
 import { RegistrationForm, FormPermission } from './types';
 import { exportRegistrationToExcel } from './utils/exportExcel';
 
@@ -11,6 +11,7 @@ interface Props {
   onEditForm: (form: RegistrationForm) => void;
   onDeleteForm: (id: string) => void;
   onOpenShareModal: (form: RegistrationForm) => void;
+  onToggleLockForm: (form: RegistrationForm) => void;
 }
 
 const cleanVal = (val: any): string => {
@@ -64,7 +65,14 @@ const getUserIdentifiers = (): Set<string> => {
   return ids;
 };
 
-export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm, onOpenShareModal }: Props) {
+export default function FormList({
+  forms,
+  onSelectForm,
+  onEditForm,
+  onDeleteForm,
+  onOpenShareModal,
+  onToggleLockForm,
+}: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [userIds, setUserIds] = useState<Set<string>>(new Set());
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
@@ -144,12 +152,14 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
               ));
 
             const isCreator = isAdmin || isOwner;
+            const isLocked = Boolean(form.is_locked);
 
             const sharedList: FormPermission[] = form.shared_permissions || [];
             const myPerm = sharedList.find(p => userIds.has(cleanVal(p.user_id)) || userIds.has(cleanVal(p.username)));
 
             const canExport = isCreator || Boolean(myPerm?.can_export);
             const canEdit = isCreator || Boolean(myPerm?.can_edit);
+            const canLock = isCreator || Boolean(myPerm?.can_lock);
             const canDelete = isCreator || Boolean(myPerm?.can_delete);
 
             return (
@@ -158,6 +168,17 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-black text-[#0054a5]">{form.title || "Chưa có tiêu đề"}</h3>
+
+                      {isLocked ? (
+                        <span className="inline-flex items-center gap-1 bg-rose-50 text-rose-700 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-rose-200">
+                          <Lock size={11} /> Đã khóa
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full text-[11px] font-bold border border-emerald-200">
+                          <Unlock size={11} /> Đang mở
+                        </span>
+                      )}
+
                       {!isCreator && (
                         <span className="inline-flex items-center gap-1 bg-[#0054a5]/10 text-[#0054a5] px-2.5 py-0.5 rounded-full text-[10px] font-bold border border-[#0054a5]/20">
                           Được chia sẻ
@@ -191,6 +212,20 @@ export default function FormList({ forms, onSelectForm, onEditForm, onDeleteForm
                         className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md transition-all border-none cursor-pointer"
                       >
                         <Download size={16} /> Excel
+                      </button>
+                    )}
+
+                    {canLock && (
+                      <button
+                        onClick={() => onToggleLockForm(form)}
+                        className={`p-2 rounded-xl transition-all border-none bg-transparent cursor-pointer ${
+                          isLocked
+                            ? 'text-slate-600 hover:bg-slate-100'
+                            : 'text-rose-600 hover:bg-rose-50'
+                        }`}
+                        title={isLocked ? 'Mở khóa phiếu đăng ký' : 'Khóa phiếu đăng ký'}
+                      >
+                        {isLocked ? <Unlock size={18} /> : <Lock size={18} />}
                       </button>
                     )}
 

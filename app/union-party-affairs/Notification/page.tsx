@@ -181,7 +181,7 @@ export default function NotificationPage() {
           <div className="p-2 bg-[#0054a5] rounded-xl text-white shadow-lg shadow-blue-100 transition-transform hover:scale-105">
             <Bell size={24} />
           </div>
-          <h2 className="font-black text-[#0054a5] tracking-tight text-2xl">
+          <h2 className="font-black text-[#0054a5] tracking-tight text-2xl uppercase">
             Thông báo - Triển khai
           </h2>
         </div>

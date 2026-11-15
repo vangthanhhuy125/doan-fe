@@ -11,7 +11,7 @@ const menuItems = [
   { id: "gioi-thieu", name: "Giới thiệu", href: "/about", icon: LayoutDashboard },
   { id: "tai-lieu", name: "Tài liệu", href: "/documents", icon: FileText },
   { id: "chuong-trinh-nam", name: "Chương trình năm", href: "/annual-programs", icon: CalendarDays },
-  { id: "cong-tac-doan", name: "Công tác Đoàn - Đảng", href: "/union-party-affairs", icon: Flag },
+  { id: "cong-tac-doan", name: "Công tác", href: "/union-party-affairs", icon: Flag },
   { id: "thi-dua", name: "Thi đua", href: "/emulation-awards", icon: Trophy },
   { id: "to-chuc-doan", name: "Tổ chức Đoàn - Hội", href: "/faculty-union-structure", icon: Users },
   { id: "nhan-su", name: "Nhân sự", href: "/personnel", icon: UserSquare2 },
@@ -96,8 +96,8 @@ export default function Sidebar() {
         transition-transform duration-300 ease-in-out shadow-xl lg:shadow-none
         ${isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
       `}>
-        <div className="p-4 text-xl text-center font-bold">
-          HỆ THỐNG NGHIỆP VỤ <br /> CÔNG TÁC ĐOÀN
+        <div className="p-4 text-[20px] text-center font-bold">
+          HỆ THỐNG NGHIỆP VỤ <br /> CÔNG TÁC ĐOÀN HỘI
         </div>
         <div className="text-center">
           <div className="inline-block px-6 py-2 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-xl transition-all duration-300 ease-out hover:scale-110 hover:shadow-2xl">

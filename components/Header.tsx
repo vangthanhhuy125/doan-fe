@@ -208,7 +208,7 @@ export default function Header() {
 
     <div className="flex items-center gap-3 pl-11 lg:pl-0">
       <img 
-        src="/truong-doan-khoa.png" 
+        src="/truong-doan-hoi-khoa.png" 
         alt="Logo" 
         className="w-auto h-9 sm:h-10 object-contain" 
         onError={(e) => {
@@ -216,7 +216,7 @@ export default function Header() {
         }}
       />
       <span className="font-semibold text-[#0054a5] hidden md:block text-[15px] leading-tight">
-        Đoàn khoa Công nghệ Phần mềm, <br/> Đoàn trường Đại học Công nghệ Thông tin - ĐHQG-HCM   
+        Đoàn Thanh niên - Hội sinh viên trường Đại học Công nghệ Thông tin, ĐHQG-HCM <br/> Đoàn khoa - Liên Chi hội khoa khoa Công nghệ Phần mềm   
       </span>
     </div>
       

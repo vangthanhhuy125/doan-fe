@@ -20,7 +20,7 @@ export default function RootLayout({
   return (
     <html lang="vi">
       <head>
-        <title>Hệ thống nghiệp vụ công tác Đoàn - Hội Công nghệ Phần mềm (UIT-VNUHCM)</title>
+        <title>Đoàn - Hội Khoa CNPM | UIT-VNUHCM</title>
         <meta name="description" content="Đoàn TNCS Hồ Chí Minh" />
         <link rel="icon" href="/LOGO-DAIHOI-V.png?v=100" />
         <link rel="shortcut icon" href="/LOGO-DAIHOI-V.png?v=100" />

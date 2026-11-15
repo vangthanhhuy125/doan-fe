@@ -22,9 +22,9 @@ export default function RootLayout({
       <head>
         <title>Đoàn - Hội Khoa CNPM | UIT-VNUHCM</title>
         <meta name="description" content="Đoàn TNCS Hồ Chí Minh" />
-        <link rel="icon" href="/LOGO-DAIHOI-V.png?v=100" />
-        <link rel="shortcut icon" href="/LOGO-DAIHOI-V.png?v=100" />
-        <link rel="apple-touch-icon" href="/LOGO-DAIHOI-V.png?v=100" />
+        <link rel="icon" href="/logo-web.png?v=100" />
+        <link rel="shortcut icon" href="/logo-web.png?v=100" />
+        <link rel="apple-touch-icon" href="/logo-web.png?v=100" />
       </head>
       <body className={`${inter.className} antialiased m-0 p-0 bg-white text-slate-900`}>
         {isLoginPage ? (

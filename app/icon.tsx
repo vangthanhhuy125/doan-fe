@@ -9,7 +9,7 @@ export const size = {
 export const contentType = 'image/png'
 
 export default async function Icon() {
-  const imagePath = join(process.cwd(), 'public', 'LOGO-DAIHOI-V.png')
+  const imagePath = join(process.cwd(), 'public', 'logo-web.png')
   const imageData = readFileSync(imagePath)
   const base64Image = `data:image/png;base64,${imageData.toString('base64')}`
 

@@ -40,6 +40,7 @@ const sortPersonnel = (list: any[]) => {
 
 export default function NhanSuPage() {
   const [nhanSuList, setNhanSuList] = useState<any[]>([]);
+  const [positionsList, setPositionsList] = useState<string[]>([]);
   const [modal, setModal] = useState<any>({ open: false, mode: 'view', data: null });
 
   const fetchNhanSu = async () => {
@@ -63,6 +64,18 @@ export default function NhanSuPage() {
     }
   };
 
+  const fetchPositions = async () => {
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/system-config`);
+      if (res.ok) {
+        const data = await res.json();
+        setPositionsList(Array.isArray(data?.positions) ? data.positions : []);
+      }
+    } catch (error) {
+      console.error("Lỗi lấy danh mục chức vụ:", error);
+    }
+  };
+
   useEffect(() => {
     if (memoryCachedNhanSu && memoryCachedNhanSu.length > 0) {
       setNhanSuList(memoryCachedNhanSu);
@@ -79,6 +92,7 @@ export default function NhanSuPage() {
     }
 
     fetchNhanSu();
+    fetchPositions();
   }, []);
 
   const handleOpenModal = (mode: string, data: any = null) => setModal({ open: true, mode, data });
@@ -119,11 +133,16 @@ export default function NhanSuPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <SectionNhanSu nhanSuList={nhanSuList} onOpenModal={handleOpenModal} />
+      <SectionNhanSu 
+        nhanSuList={nhanSuList} 
+        positionsList={positionsList}
+        onOpenModal={handleOpenModal} 
+      />
       {modal.open && (
         <NhanSuModal 
           mode={modal.mode}
           data={modal.data}
+          positionsList={positionsList}
           onClose={() => setModal({ ...modal, open: false })}
           onConfirmDelete={handleDelete}
           onSave={handleSave}

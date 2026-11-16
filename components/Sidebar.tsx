@@ -35,14 +35,16 @@ export default function Sidebar() {
           return;
         }
 
-        const user = JSON.parse(userStr);
-        if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.isAdmin) {
+        const parsed = JSON.parse(userStr);
+        const user = parsed.user || parsed;
+
+        if (user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' || user.role === 'admin' || user.isAdmin) {
           setAllowedMenuItems(menuItems);
           setIsLoading(false);
           return;
         }
 
-        const groupId = user.group_id || user.groupId || user.permission_id;
+        const groupId = user.group_id || user.groupId || user.permission_id || user.group;
         if (!groupId) {
           setAllowedMenuItems([]);
           setIsLoading(false);
@@ -54,8 +56,16 @@ export default function Sidebar() {
           const groupData = await res.json();
           const permissions: string[] = groupData.permissions || groupData.menu_permissions || [];
           if (Array.isArray(permissions)) {
-            const filtered = menuItems.filter(item => permissions.includes(item.id));
-            setAllowedMenuItems(filtered);
+            if (permissions.includes('*')) {
+              setAllowedMenuItems(menuItems);
+            } else {
+              const filtered = menuItems.filter(
+                (item) =>
+                  permissions.includes(item.id) ||
+                  permissions.some((p) => p.startsWith(`${item.id}:`))
+              );
+              setAllowedMenuItems(filtered);
+            }
           } else {
             setAllowedMenuItems([]);
           }
@@ -115,7 +125,7 @@ export default function Sidebar() {
             </div>
           ) : (
             allowedMenuItems.map((item) => {
-              const isActive = pathname === item.href;
+              const isActive = pathname === item.href || pathname?.startsWith(`${item.href}/`);
               return (
                 <Link 
                   key={item.href} 

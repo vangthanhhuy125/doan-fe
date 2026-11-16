@@ -5,6 +5,7 @@ import { Inter } from 'next/font/google'
 import { usePathname } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import Header from '@/components/Header'
+import RouteGuard from '@/components/RouteGuard'
 
 const inter = Inter({ subsets: ['latin'] })
 
@@ -38,7 +39,9 @@ export default function RootLayout({
               <Header />
               <main className="flex-1 overflow-y-auto p-4 md:p-6 custom-scrollbar">
                 <div className="mx-auto max-w-[1600px] min-h-full">
-                  {children}
+                  <RouteGuard>
+                    {children}
+                  </RouteGuard>
                 </div>
               </main>
             </div>
@@ -48,3 +51,4 @@ export default function RootLayout({
     </html>
   )
 }
+

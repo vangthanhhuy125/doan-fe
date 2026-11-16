@@ -44,6 +44,7 @@ const fetchFreshData = async () => {
 export function usePermissions(moduleId: string) {
   const [permissions, setPermissions] = useState<string[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true);
   const [isLoading, setIsLoading] = useState(true);
 
   const resolvePermissions = async () => {
@@ -52,12 +53,25 @@ export function usePermissions(moduleId: string) {
 
       const userStr = localStorage.getItem('user');
       if (!userStr) {
+        setIsAuthenticated(false);
+        setPermissions([]);
+        setIsAdmin(false);
         setIsLoading(false);
         return;
       }
 
+      setIsAuthenticated(true);
       const parsed = JSON.parse(userStr);
       const user = parsed.user || parsed;
+
+      // Nạp tạm quyền từ localStorage ngay lập tức để tránh nhấp nháy khi chuyển route
+      if (Array.isArray(user.permissions) && user.permissions.length > 0) {
+        setPermissions(user.permissions);
+        if (user.permissions.includes('*')) setIsAdmin(true);
+      }
+      if (user.role === 'admin' || user.username === 'admin' || user.role === 'QUAN_TRI') {
+        setIsAdmin(true);
+      }
 
       let currentGroupId = cleanId(
         user.group_id || user.groupId || user.permission_id || user.group
@@ -92,11 +106,11 @@ export function usePermissions(moduleId: string) {
             isSuperAdmin = true;
           }
         }
-      } 
+      }
       // 2. CHỈ KHI tài khoản KHÔNG thuộc nhóm nào và có quyền admin thì mới là Quản trị viên tự do
       else if (user.role === 'admin' || user.username === 'admin' || user.role === 'QUAN_TRI') {
         isSuperAdmin = true;
-      } 
+      }
       // 3. Fallback lấy permissions lưu sẵn trên user
       else if (Array.isArray(user.permissions)) {
         activePerms = user.permissions;
@@ -135,20 +149,20 @@ export function usePermissions(moduleId: string) {
   }, [moduleId]);
 
   const hasAction = (action: PermissionAction): boolean => {
-    // Quản trị viên tối cao hoặc nhóm có ký tự đại diện '*'
     if (isAdmin || permissions.includes('*')) return true;
+    if (!moduleId) return false;
 
-    // 1. Kiểm tra chính xác quyền chi tiết (VD: 'thi-dua:view')
+    // 1. Kiểm tra chính xác quyền chi tiết (VD: 'nhan-su:view')
     if (permissions.includes(`${moduleId}:${action}`)) return true;
 
-    // 2. Nếu đã có bất kỳ quyền con nào dạng 'thi-dua:*' được khai báo,
+    // 2. Nếu đã có bất kỳ quyền con nào dạng 'nhan-su:*' được khai báo,
     // nhưng hành động hiện tại không nằm trong đó -> TỪ CHỐI
     const hasExplicitAction = permissions.some(p => p.startsWith(`${moduleId}:`));
     if (hasExplicitAction) {
       return false;
     }
 
-    // 3. Tương thích ngược: nhóm cũ chỉ lưu 'thi-dua' và không có cấu hình chi tiết
+    // 3. Tương thích ngược: nhóm cũ chỉ lưu 'nhan-su' và không có cấu hình chi tiết
     if (permissions.includes(moduleId)) {
       return true;
     }
@@ -156,14 +170,22 @@ export function usePermissions(moduleId: string) {
     return false;
   };
 
+  const canView = hasAction('view');
+  const canCreate = hasAction('create');
+  const canEdit = hasAction('edit');
+  const canDelete = hasAction('delete');
+  const hasAnyAction = canView || canCreate || canEdit || canDelete;
+
   return {
     isLoading,
+    isAuthenticated,
     isAdmin,
-    canView: hasAction('view'),
-    canCreate: hasAction('create'),
-    canEdit: hasAction('edit'),
-    canDelete: hasAction('delete'),
-    hasAnyAction:
-      hasAction('view') || hasAction('create') || hasAction('edit') || hasAction('delete')
+    permissions,
+    canView,
+    canCreate,
+    canEdit,
+    canDelete,
+    hasAnyAction,
+    canAccessPage: hasAnyAction,
   };
 }

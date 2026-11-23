@@ -33,7 +33,7 @@ export const SIDEBAR_MENU_ITEMS = [
   { id: 'thi-dua', name: 'Thi đua', icon: Award },
   { id: 'to-chuc-doan', name: 'Tổ chức Đoàn khoa', icon: Users },
   { id: 'nhan-su', name: 'Nhân sự', icon: UserCheck },
-  { id: 'mo-hinh-clb', name: 'Mô hình CLB', icon: Layers },
+  { id: 'mo-hinh-clb', name: 'Đánh giá công việc', icon: Layers },
   { id: 'cai-dat', name: 'Cài đặt hệ thống', icon: Settings },
 ];
 

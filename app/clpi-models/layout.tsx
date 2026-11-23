@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import {
-  Home,
+  Home, ListPlus,
   CheckSquare,
   FileText,
   Award,
@@ -237,6 +237,13 @@ export default function ClpiPortalLayout({ children }: { children: React.ReactNo
       group: 'QUẢN LÝ & KIỂM TRA',
       items: [
         {
+          label: 'Quản lý & Giao việc',
+          href: '/clpi-models/assign-tasks',
+          icon: ListPlus,
+          exact: true,
+          roles: ['UNIT_MANAGER', 'REVIEWER', 'CLPI_ADMIN', 'SYS_ADMIN'],
+        },
+        {
           label: 'Hồ sơ chờ đánh giá',
           href: '/clpi-models/review',
           icon: ClipboardCheck,
@@ -305,7 +312,8 @@ export default function ClpiPortalLayout({ children }: { children: React.ReactNo
     setActiveRole(newRole);
     if (
       newRole === 'OFFICER' &&
-      (pathname.startsWith('/clpi-models/review') ||
+      (pathname.startsWith('/clpi-models/assign-tasks') ||
+        pathname.startsWith('/clpi-models/review') ||
         pathname.startsWith('/clpi-models/unit-dashboard') ||
         pathname.startsWith('/clpi-models/admin-dashboard') ||
         pathname.startsWith('/clpi-models/cycles') ||

@@ -15,7 +15,7 @@ const menuItems = [
   { id: "thi-dua", name: "Thi đua", href: "/emulation-awards", icon: Trophy },
   { id: "to-chuc-doan", name: "Tổ chức Đoàn - Hội", href: "/faculty-union-structure", icon: Users },
   { id: "nhan-su", name: "Nhân sự", href: "/personnel", icon: UserSquare2 },
-  { id: "mo-hinh-clb", name: "Mô hình CLPI", href: "/clpi-models", icon: LayoutGrid },
+  { id: "mo-hinh-clb", name: "Đánh giá công việc", href: "/clpi-models", icon: LayoutGrid },
   { id: "cai-dat", name: "Cài đặt", href: "/settings", icon: Settings },
 ];
 

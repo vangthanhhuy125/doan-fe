@@ -3,10 +3,19 @@
 import { useState, useEffect, useMemo, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, RotateCcw, CheckCircle2, AlertCircle, 
-  FileText, Link as LinkIcon, User, Send, Check, 
-  Calendar, ExternalLink, Download, Loader2, ShieldCheck
+import {
+  ArrowLeft,
+  RotateCcw,
+  CheckCircle2,
+  AlertCircle,
+  FileText,
+  Link as LinkIcon,
+  User,
+  Send,
+  Check,
+  ExternalLink,
+  Loader2,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface EvidenceReviewItem {
@@ -32,15 +41,15 @@ interface AssessmentDetail {
     CEI: number;
     SDI: number;
   };
+  reviewerScores?: {
+    WPI: number;
+    LEI: number;
+    CEI: number;
+    SDI: number;
+  };
+  reviewerComment?: string;
   evidences: EvidenceReviewItem[];
 }
-
-const INDICATOR_WEIGHTS = {
-  WPI: 40,
-  LEI: 25,
-  CEI: 20,
-  SDI: 15,
-};
 
 const getClassification = (score: number) => {
   if (score >= 90) return { label: 'Xuất sắc', style: 'bg-emerald-500 text-white' };
@@ -56,27 +65,22 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
   const router = useRouter();
 
   const [assessment, setAssessment] = useState<AssessmentDetail | null>(null);
+  const [weights, setWeights] = useState({ WPI: 40, LEI: 25, CEI: 20, SDI: 15 });
   const [loading, setLoading] = useState(true);
 
-  // Điểm Reviewer chấm (mặc định lấy điểm đã lưu hoặc khởi tạo)
   const [reviewerScores, setReviewerScores] = useState<Record<string, number | ''>>({
-    WPI: 90,
-    LEI: 90,
-    CEI: 89,
-    SDI: 90,
+    WPI: '',
+    LEI: '',
+    CEI: '',
+    SDI: '',
   });
+  const [reviewerComment, setReviewerComment] = useState('');
 
-  const [reviewerComment, setReviewerComment] = useState(
-    'Cán bộ có tinh thần trách nhiệm tốt, tuy nhiên một số minh chứng chuyên môn cần điều chỉnh lại sĩ số tham gia cho khớp với báo cáo.'
-  );
-
-  // Modal Yêu cầu bổ sung
   const [isRevisionModalOpen, setIsRevisionModalOpen] = useState(false);
-  const [revisionReason, setRevisionReason] = useState('Minh chứng hoạt động GamApp chưa có xác nhận sĩ số hội viên.');
-  const [revisionDeadline, setRevisionDeadline] = useState('2026-08-25');
+  const [revisionReason, setRevisionReason] = useState('');
+  const [revisionDeadline, setRevisionDeadline] = useState('');
   const [isSubmittingRevision, setIsSubmittingRevision] = useState(false);
 
-  // Modal Phê duyệt kết quả
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isApproving, setIsApproving] = useState(false);
 
@@ -87,56 +91,75 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  // Mock dữ liệu chuẩn xác theo mockup màn hình 9 của BRD
-  const mockAssessmentData: AssessmentDetail = {
-    id: evaluationId || 'eval_01',
-    fullName: 'Nguyễn Văn A',
-    positionName: 'Bí thư Chi đoàn',
-    unitBranch: 'KTPM2025.1',
-    cycleName: 'Quý II/2026',
-    status: 'SUBMITTED',
-    selfScores: {
-      WPI: 94.0,
-      LEI: 92.0,
-      CEI: 91.0,
-      SDI: 93.0,
-    },
-    evidences: [
-      {
-        id: 'evi_01',
-        fileName: 'Kế_hoạch_Tập_huấn_GamApp_2026.pdf',
-        fileSize: '2.4 MB',
-        type: 'file',
-        reviewerNote: 'Thẩm định: Minh chứng đầy đủ, có xác nhận của Cố vấn học tập.',
-      },
-      {
-        id: 'evi_02',
-        fileName: 'https://drive.google.com/folderview?id=gamapp_2026_uit',
-        type: 'url',
-        url: 'https://drive.google.com/folderview?id=gamapp_2026_uit',
-        reviewerNote: 'Thẩm định: Thư mục chứa tài liệu bài giảng và danh sách điểm danh 3 buổi.',
-      },
-    ],
+  const getHeaders = () => {
+    const token = localStorage.getItem('token') || '';
+    let userId = '';
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const parsed = JSON.parse(userStr);
+        const u = parsed.user || parsed;
+        userId = String(u._id || u.id || u.user_id || '').trim();
+      }
+    } catch {}
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (userId) headers['x-user-id'] = userId;
+    return headers;
   };
 
   useEffect(() => {
     const fetchAssessment = async () => {
       try {
-        const token = localStorage.getItem('token') || '';
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/review/${evaluationId}`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+        const headers = getHeaders();
+
+        const [res, indRes] = await Promise.all([
+          fetch(`${apiUrl}/clpi/review/${evaluationId}`, { headers }),
+          fetch(`${apiUrl}/clpi/indicators`, { headers }).catch(() => null),
+        ]);
+
+        if (indRes && indRes.ok) {
+          const indData = await indRes.json();
+          if (indData?.weights) setWeights(indData.weights);
+        }
 
         if (res.ok) {
           const data = await res.json();
-          setAssessment(data);
-          if (data.reviewerScores) setReviewerScores(data.reviewerScores);
-          if (data.reviewerComment) setReviewerComment(data.reviewerComment);
+          const self = {
+            WPI: Number(data.selfScores?.WPI ?? data.wpiScore ?? 0),
+            LEI: Number(data.selfScores?.LEI ?? data.leiScore ?? 0),
+            CEI: Number(data.selfScores?.CEI ?? data.ceiScore ?? 0),
+            SDI: Number(data.selfScores?.SDI ?? data.sdiScore ?? 0),
+          };
+
+          setAssessment({
+            id: String(data.id || data._id || evaluationId),
+            fullName: data.fullName || '',
+            positionName: data.positionName || '',
+            unitBranch: data.unitBranch || data.unitName || '',
+            avatarUrl: data.avatarUrl || '',
+            cycleName: data.cycleName || '',
+            status: data.status || 'SUBMITTED',
+            selfScores: self,
+            reviewerScores: data.reviewerScores,
+            reviewerComment: data.reviewerComment || '',
+            evidences: Array.isArray(data.evidences) ? data.evidences : [],
+          });
+
+          const initialScores = data.reviewerScores || data.draftReviewerScores || self;
+          setReviewerScores({
+            WPI: initialScores.WPI ?? self.WPI,
+            LEI: initialScores.LEI ?? self.LEI,
+            CEI: initialScores.CEI ?? self.CEI,
+            SDI: initialScores.SDI ?? self.SDI,
+          });
+          setReviewerComment(data.reviewerComment || '');
         } else {
-          setAssessment(mockAssessmentData);
+          setAssessment(null);
         }
-      } catch (e) {
-        setAssessment(mockAssessmentData);
+      } catch {
+        setAssessment(null);
       } finally {
         setLoading(false);
       }
@@ -145,25 +168,20 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
     fetchAssessment();
   }, [evaluationId]);
 
-  // Tính tổng điểm Reviewer CLPI dự kiến theo trọng số realtime
   const calculatedReviewerClpi = useMemo(() => {
     const wpi = typeof reviewerScores.WPI === 'number' ? reviewerScores.WPI : 0;
     const lei = typeof reviewerScores.LEI === 'number' ? reviewerScores.LEI : 0;
     const cei = typeof reviewerScores.CEI === 'number' ? reviewerScores.CEI : 0;
     const sdi = typeof reviewerScores.SDI === 'number' ? reviewerScores.SDI : 0;
 
-    const total = 
-      (wpi * INDICATOR_WEIGHTS.WPI +
-       lei * INDICATOR_WEIGHTS.LEI +
-       cei * INDICATOR_WEIGHTS.CEI +
-       sdi * INDICATOR_WEIGHTS.SDI) / 100;
+    const total =
+      (wpi * weights.WPI + lei * weights.LEI + cei * weights.CEI + sdi * weights.SDI) / 100;
 
     return Math.round(total * 10) / 10;
-  }, [reviewerScores]);
+  }, [reviewerScores, weights]);
 
   const classification = getClassification(calculatedReviewerClpi);
 
-  // Tính độ lệch chênh lệch điểm (Reviewer Score - Self Score)
   const getDifference = (code: 'WPI' | 'LEI' | 'CEI' | 'SDI') => {
     if (!assessment) return 0;
     const selfVal = assessment.selfScores[code] || 0;
@@ -182,7 +200,6 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
     }
   };
 
-  // Xử lý gửi Yêu cầu bổ sung hồ sơ
   const handleSubmitRevision = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!revisionReason.trim()) {
@@ -192,13 +209,10 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
 
     setIsSubmittingRevision(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/review/${evaluationId}/request-revision`, {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiUrl}/clpi/review/${evaluationId}/request-revision`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           reason: revisionReason.trim(),
           dueDate: revisionDeadline,
@@ -213,19 +227,17 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
           router.push('/clpi-models/review');
         }, 1200);
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         showToast(err.message || 'Gửi yêu cầu bổ sung thất bại!', 'error');
       }
-    } catch (e) {
+    } catch {
       showToast('Lỗi kết nối máy chủ!', 'error');
     } finally {
       setIsSubmittingRevision(false);
     }
   };
 
-  // Xử lý Phê duyệt kết quả chính thức
   const handleConfirmApprove = async () => {
-    // Kiểm tra đủ điểm 4 nhóm chỉ số
     const hasEmptyScore = Object.values(reviewerScores).some((v) => v === '' || typeof v !== 'number');
     if (hasEmptyScore) {
       showToast('Vui lòng nhập đầy đủ điểm thẩm định cho cả 4 chỉ số!', 'error');
@@ -233,25 +245,24 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
       return;
     }
 
-    // Kiểm tra bắt buộc có nhận xét khi có chênh lệch điểm
     const hasDifference = ['WPI', 'LEI', 'CEI', 'SDI'].some(
-      (code) => getDifference(code as any) !== 0
+      (code) => getDifference(code as 'WPI' | 'LEI' | 'CEI' | 'SDI') !== 0
     );
     if (hasDifference && (!reviewerComment.trim() || reviewerComment.trim().length < 20)) {
-      showToast('Có chênh lệch điểm so với tự chấm, vui lòng ghi rõ lý do điều chỉnh (tối thiểu 20 ký tự)!', 'error');
+      showToast(
+        'Có chênh lệch điểm so với tự chấm, vui lòng ghi rõ lý do điều chỉnh (tối thiểu 20 ký tự)!',
+        'error'
+      );
       setIsApproveModalOpen(false);
       return;
     }
 
     setIsApproving(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/review/${evaluationId}/approve`, {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiUrl}/clpi/review/${evaluationId}/approve`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           scores: reviewerScores,
           finalScore: calculatedReviewerClpi,
@@ -267,20 +278,35 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
           router.push('/clpi-models/review');
         }, 1200);
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         showToast(err.message || 'Phê duyệt kết quả thất bại!', 'error');
       }
-    } catch (e) {
+    } catch {
       showToast('Lỗi kết nối máy chủ!', 'error');
     } finally {
       setIsApproving(false);
     }
   };
 
-  if (loading || !assessment) {
+  if (loading) {
     return (
       <div className="flex h-72 items-center justify-center bg-white rounded-3xl border border-slate-100">
         <Loader2 className="h-8 w-8 animate-spin text-[#0054a5]" />
+      </div>
+    );
+  }
+
+  if (!assessment) {
+    return (
+      <div className="max-w-3xl mx-auto p-12 bg-white rounded-3xl border border-slate-200 text-center space-y-4">
+        <AlertCircle size={32} className="text-slate-400 mx-auto" />
+        <h2 className="text-lg font-black text-slate-800">Không tìm thấy hồ sơ cần thẩm định</h2>
+        <Link
+          href="/clpi-models/review"
+          className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#0054a5] text-white text-xs font-bold rounded-2xl no-underline"
+        >
+          <ArrowLeft size={14} /> Quay lại hàng đợi thẩm định
+        </Link>
       </div>
     );
   }
@@ -289,21 +315,24 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
 
   return (
     <div className="space-y-6 pb-16 text-slate-800 animate-in fade-in duration-200">
-      {/* Toast Alert */}
       {toastMessage && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[160] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold text-white animate-in slide-in-from-top-4 ${
-          toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
-        }`}>
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[160] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold text-white animate-in slide-in-from-top-4 ${
+            toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
+          }`}
+        >
           {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span>{toastMessage.text}</span>
         </div>
       )}
 
-      {/* 1. Header: Breadcrumb điều hướng & 2 Nút hành động chính */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
           <div className="flex items-center gap-2 text-xs font-bold text-slate-400">
-            <Link href="/clpi-models/review" className="text-slate-500 hover:text-[#0054a5] flex items-center gap-1 no-underline">
+            <Link
+              href="/clpi-models/review"
+              className="text-slate-500 hover:text-[#0054a5] flex items-center gap-1 no-underline"
+            >
               <ArrowLeft size={13} /> Quay lại hàng đợi
             </Link>
             <span>/</span>
@@ -314,7 +343,6 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
           </h1>
         </div>
 
-        {/* 2 Nút: Yêu cầu bổ sung & Phê duyệt kết quả */}
         {!isApprovedAlready ? (
           <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
             <button
@@ -340,14 +368,15 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
         )}
       </div>
 
-      {/* 2. Bố cục 2 Cột: Đối chiếu hồ sơ (Trái - 7 cols) & Bảng đánh giá của Reviewer (Phải - 5 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* CỘT TRÁI (7 cols): Thông tin cán bộ, Điểm tự chấm & Minh chứng */}
         <div className="lg:col-span-7 space-y-6">
-          {/* Thông tin cán bộ */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs flex items-center gap-4">
-            <div className="w-14 h-14 rounded-full bg-blue-50 border-2 border-[#0054a5] flex items-center justify-center font-black text-xl text-[#0054a5] shrink-0">
-              <User size={26} />
+            <div className="w-14 h-14 rounded-full bg-blue-50 border-2 border-[#0054a5] flex items-center justify-center font-black text-xl text-[#0054a5] shrink-0 overflow-hidden">
+              {assessment.avatarUrl ? (
+                <img src={assessment.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+              ) : (
+                <User size={26} />
+              )}
             </div>
             <div>
               <h2 className="text-lg font-black text-slate-900">{assessment.fullName}</h2>
@@ -357,7 +386,6 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
             </div>
           </div>
 
-          {/* ĐIỂM TỰ CHẤM CỦA CÁN BỘ (Read-only) */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
             <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">
               ĐIỂM TỰ CHẤM CỦA CÁN BỘ
@@ -386,7 +414,6 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
             </div>
           </div>
 
-          {/* MINH CHỨNG VÀ BÁO CÁO */}
           <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
             <h3 className="text-xs font-black uppercase text-slate-400 tracking-wider">
               MINH CHỨNG VÀ BÁO CÁO
@@ -452,16 +479,14 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
           </div>
         </div>
 
-        {/* CỘT PHẢI (5 cols): BẢNG ĐÁNH GIÁ CỦA REVIEWER */}
         <div className="lg:col-span-5 bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xs space-y-5">
           <h3 className="text-xs font-black uppercase text-[#0054a5] tracking-wider">
             BẢNG ĐÁNH GIÁ CỦA REVIEWER
           </h3>
 
-          {/* 1. WPI Reviewer (40%) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-700">WPI - Hoàn thành NV (40%)</span>
+              <span className="text-slate-700">WPI - Hoàn thành NV ({weights.WPI}%)</span>
               <span className="text-slate-400 text-[11px]">Tự chấm: {assessment.selfScores.WPI}</span>
             </div>
             <div className="flex items-center gap-3">
@@ -475,19 +500,20 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
                 className="w-24 p-2.5 text-center bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 outline-none focus:border-[#0054a5] focus:bg-white transition-all disabled:bg-slate-100"
               />
               {getDifference('WPI') !== 0 && (
-                <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${
-                  getDifference('WPI') > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                }`}>
+                <span
+                  className={`text-xs font-black px-2 py-0.5 rounded-lg ${
+                    getDifference('WPI') > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                  }`}
+                >
                   {getDifference('WPI') > 0 ? `+${getDifference('WPI')}` : getDifference('WPI')}
                 </span>
               )}
             </div>
           </div>
 
-          {/* 2. LEI Reviewer (25%) */}
           <div className="space-y-1.5">
             <div className="flex items-center justify-between text-xs font-bold">
-              <span className="text-slate-700">LEI - Điều hành (25%)</span>
+              <span className="text-slate-700">LEI - Điều hành ({weights.LEI}%)</span>
               <span className="text-slate-400 text-[11px]">Tự chấm: {assessment.selfScores.LEI}</span>
             </div>
             <div className="flex items-center gap-3">
@@ -501,49 +527,51 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
                 className="w-24 p-2.5 text-center bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 outline-none focus:border-[#0054a5] focus:bg-white transition-all disabled:bg-slate-100"
               />
               {getDifference('LEI') !== 0 && (
-                <span className={`text-xs font-black px-2 py-0.5 rounded-lg ${
-                  getDifference('LEI') > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
-                }`}>
+                <span
+                  className={`text-xs font-black px-2 py-0.5 rounded-lg ${
+                    getDifference('LEI') > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'
+                  }`}
+                >
                   {getDifference('LEI') > 0 ? `+${getDifference('LEI')}` : getDifference('LEI')}
                 </span>
               )}
             </div>
           </div>
 
-          {/* 3 & 4. CEI Reviewer & SDI Reviewer (Grid 2 cột) */}
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-slate-700 block truncate">CEI Reviewer</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  disabled={isApprovedAlready}
-                  value={reviewerScores.CEI}
-                  onChange={(e) => handleScoreChange('CEI', e.target.value)}
-                  className="w-full p-2.5 text-center bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 outline-none focus:border-[#0054a5] focus:bg-white transition-all disabled:bg-slate-100"
-                />
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="text-slate-700 truncate">CEI ({weights.CEI}%)</span>
+                <span className="text-slate-400">TC: {assessment.selfScores.CEI}</span>
               </div>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                disabled={isApprovedAlready}
+                value={reviewerScores.CEI}
+                onChange={(e) => handleScoreChange('CEI', e.target.value)}
+                className="w-full p-2.5 text-center bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 outline-none focus:border-[#0054a5] focus:bg-white transition-all disabled:bg-slate-100"
+              />
             </div>
 
             <div className="space-y-1.5">
-              <span className="text-[11px] font-bold text-slate-700 block truncate">SDI Reviewer</span>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={0}
-                  max={100}
-                  disabled={isApprovedAlready}
-                  value={reviewerScores.SDI}
-                  onChange={(e) => handleScoreChange('SDI', e.target.value)}
-                  className="w-full p-2.5 text-center bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 outline-none focus:border-[#0054a5] focus:bg-white transition-all disabled:bg-slate-100"
-                />
+              <div className="flex items-center justify-between text-[11px] font-bold">
+                <span className="text-slate-700 truncate">SDI ({weights.SDI}%)</span>
+                <span className="text-slate-400">TC: {assessment.selfScores.SDI}</span>
               </div>
+              <input
+                type="number"
+                min={0}
+                max={100}
+                disabled={isApprovedAlready}
+                value={reviewerScores.SDI}
+                onChange={(e) => handleScoreChange('SDI', e.target.value)}
+                className="w-full p-2.5 text-center bg-slate-50 border border-slate-300 rounded-xl text-lg font-black text-slate-900 outline-none focus:border-[#0054a5] focus:bg-white transition-all disabled:bg-slate-100"
+              />
             </div>
           </div>
 
-          {/* Nhận xét & Lý do điều chỉnh điểm */}
           <div className="space-y-1.5 pt-2">
             <label className="text-[11px] font-bold uppercase text-slate-500 block">
               Nhận xét & Lý do điều chỉnh điểm:
@@ -553,12 +581,11 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
               disabled={isApprovedAlready}
               value={reviewerComment}
               onChange={(e) => setReviewerComment(e.target.value)}
-              placeholder="Ghi rõ lý do tăng/giảm điểm so với tự chấm..."
+              placeholder="Ghi rõ lý do tăng/giảm điểm so với tự chấm và nhận xét ưu điểm, hướng phát triển..."
               className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium outline-none focus:border-[#0054a5] focus:bg-white resize-none leading-relaxed transition-all disabled:bg-slate-100"
             />
           </div>
 
-          {/* Banner Tối: KẾT QUẢ CLPI CHÍNH THỨC DỰ KIẾN */}
           <div className="bg-[#0b1e36] text-white rounded-3xl p-5 text-center space-y-2 shadow-lg">
             <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
               KẾT QUẢ CLPI CHÍNH THỨC DỰ KIẾN
@@ -575,7 +602,6 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
         </div>
       </div>
 
-      {/* MODAL 1: YÊU CẦU BỔ SUNG HỒ SƠ */}
       {isRevisionModalOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 text-slate-800">
           <div className="bg-white w-full max-w-lg rounded-3xl p-6 sm:p-7 space-y-5 shadow-2xl border border-slate-100 text-left">
@@ -600,14 +626,14 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
                   required
                   value={revisionReason}
                   onChange={(e) => setRevisionReason(e.target.value)}
-                  placeholder="Minh chứng hoạt động GamApp chưa có xác nhận sĩ số hội viên."
+                  placeholder="Nhập nội dung minh chứng hoặc giải trình cần cán bộ bổ sung..."
                   className="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-2xl text-xs font-medium outline-none focus:border-[#0054a5] focus:bg-white resize-none leading-relaxed transition-all"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 block">
-                  Deadline hoàn thành bổ sung: *
+                  Hạn hoàn thành bổ sung: *
                 </label>
                 <input
                   type="date"
@@ -640,7 +666,6 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
         </div>
       )}
 
-      {/* MODAL 2: XÁC NHẬN PHÊ DUYỆT KẾT QUẢ */}
       {isApproveModalOpen && (
         <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200 text-slate-800">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-100 text-center">
@@ -655,11 +680,12 @@ export default function ReviewEvaluationDetailPage({ params }: { params: Promise
               </p>
             </div>
 
-            {/* Bảng tóm tắt kết quả trước khi duyệt */}
             <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs font-bold text-slate-700 space-y-2">
               <div className="flex justify-between border-b border-slate-200 pb-2">
                 <span>Điểm CLPI chính thức dự kiến:</span>
-                <span className="text-emerald-700 text-sm font-black">{calculatedReviewerClpi.toFixed(1)} ({classification.label})</span>
+                <span className="text-emerald-700 text-sm font-black">
+                  {calculatedReviewerClpi.toFixed(1)} ({classification.label})
+                </span>
               </div>
               <div className="grid grid-cols-4 text-center text-[11px] pt-1 text-slate-500">
                 <div>WPI: {reviewerScores.WPI}</div>

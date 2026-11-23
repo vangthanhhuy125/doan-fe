@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useMemo, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { 
-  Award, CheckCircle2, AlertCircle, Send, 
-  Loader2
+import {
+  Award,
+  CheckCircle2,
+  AlertCircle,
+  Send,
+  Loader2,
 } from 'lucide-react';
 
 interface IndicatorConfig {
@@ -16,38 +19,34 @@ interface IndicatorConfig {
   explanationPlaceholder: string;
 }
 
-const INDICATORS: IndicatorConfig[] = [
+const INDICATOR_DEFINITIONS: Omit<IndicatorConfig, 'weight'>[] = [
   {
     code: 'WPI',
     name: 'Chỉ số Hoàn thành nhiệm vụ (Work Performance Index)',
     subTitle: 'Đánh giá số lượng, tiến độ và chất lượng các công việc được giao.',
     description: 'Đánh giá dựa trên tỷ lệ hoàn thành công việc, mức độ đúng hạn và sản phẩm đầu ra thực tế.',
-    weight: 40,
-    explanationPlaceholder: 'VD: Đã hoàn thành 100% công việc trong quý đúng thời hạn. Có 1 nhiệm vụ vượt chỉ tiêu học viên...',
+    explanationPlaceholder: 'Nhập giải trình kết quả thực hiện các nhiệm vụ được giao trong chu kỳ...',
   },
   {
     code: 'LEI',
     name: 'Chỉ số Năng lực điều hành, phối hợp (Leadership & Execution)',
     subTitle: 'Khả năng quản lý nhóm, phân công việc và giải quyết vướng mắc.',
     description: 'Đánh giá khả năng chủ động điều phối, tinh thần làm việc nhóm và xử lý các vấn đề phát sinh.',
-    weight: 25,
-    explanationPlaceholder: 'VD: Phối hợp nhịp nhàng với các Bí thư Chi đoàn bạn. Lãnh đạo Ban Tổ chức hoạt động chu đáo...',
+    explanationPlaceholder: 'Nhập giải trình về công tác điều hành, phân công và phối hợp với các đơn vị...',
   },
   {
     code: 'CEI',
     name: 'Chỉ số Tương tác tổ chức (Community Engagement)',
     subTitle: 'Mức độ tương tác với hội viên và tham gia phong trào Đoàn.',
     description: 'Đánh giá mức độ hiện diện, kết nối với đoàn viên, thanh niên và hưởng ứng các hoạt động cấp khoa/trường.',
-    weight: 20,
-    explanationPlaceholder: 'VD: Tham gia đầy đủ 100% các cuộc họp giao ban BTV và các buổi sinh hoạt Chi đoàn chủ điểm...',
+    explanationPlaceholder: 'Nhập giải trình về mức độ tham gia sinh hoạt và kết nối đoàn viên, thanh niên...',
   },
   {
     code: 'SDI',
     name: 'Chỉ số Phát triển cá nhân (Self-Development Index)',
     subTitle: 'Ý thức học tập, nâng cao trình độ chuyên môn và kỹ năng mềm.',
     description: 'Đánh giá tinh thần cầu tiến, tham gia tập huấn, chứng chỉ chuyên môn và phong cách công tác cán bộ.',
-    weight: 15,
-    explanationPlaceholder: 'VD: Đã hoàn thành chứng chỉ Kỹ năng Lãnh đạo Cán bộ Trẻ do Trường Đại học CNTT cấp...',
+    explanationPlaceholder: 'Nhập giải trình về quá trình rèn luyện, tập huấn và phát triển kỹ năng cá nhân...',
   },
 ];
 
@@ -65,22 +64,23 @@ function SelfAssessmentContent() {
   const isRevisionMode = searchParams.get('mode') === 'revision';
 
   const [loading, setLoading] = useState(true);
-  const [cycleName, setCycleName] = useState('Quý II/2026');
-  const [evaluationId, setEvaluationId] = useState('eval_current');
+  const [cycleName, setCycleName] = useState('');
+  const [evaluationId, setEvaluationId] = useState('');
   const [revisionReason, setRevisionReason] = useState<string | null>(null);
+  const [weights, setWeights] = useState({ WPI: 40, LEI: 25, CEI: 20, SDI: 15 });
 
   const [scores, setScores] = useState<Record<string, number | ''>>({
-    WPI: 94,
-    LEI: 92,
-    CEI: 91,
-    SDI: 93,
+    WPI: '',
+    LEI: '',
+    CEI: '',
+    SDI: '',
   });
 
   const [explanations, setExplanations] = useState<Record<string, string>>({
-    WPI: 'Đã hoàn thành 100% công việc trong quý đúng thời hạn. Có 1 nhiệm vụ vượt chỉ tiêu học viên.',
-    LEI: 'Phối hợp nhịp nhàng với các Bí thư Chi đoàn bạn. Lãnh đạo Ban Tổ chức hoạt động chu đáo.',
-    CEI: 'Tham gia đầy đủ 100% các cuộc họp giao ban BTV và các buổi sinh hoạt Chi đoàn chủ điểm.',
-    SDI: 'Đã hoàn thành chứng chỉ Kỹ năng Lãnh đạo Cán bộ Trẻ do Trường Đại học CNTT cấp.',
+    WPI: '',
+    LEI: '',
+    CEI: '',
+    SDI: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,21 +93,61 @@ function SelfAssessmentContent() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const getHeaders = () => {
+    const token = localStorage.getItem('token') || '';
+    let userId = '';
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const parsed = JSON.parse(userStr);
+        const u = parsed.user || parsed;
+        userId = String(u._id || u.id || u.user_id || '').trim();
+      }
+    } catch {}
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (userId) headers['x-user-id'] = userId;
+    return headers;
+  };
+
   useEffect(() => {
     const fetchExistingData = async () => {
       try {
-        const token = localStorage.getItem('token') || '';
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/self-assessment/current`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+        const headers = getHeaders();
+
+        const [res, indRes] = await Promise.all([
+          fetch(`${apiUrl}/clpi/self-assessment/current`, { headers }),
+          fetch(`${apiUrl}/clpi/indicators`, { headers }).catch(() => null),
+        ]);
+
+        if (indRes && indRes.ok) {
+          const indData = await indRes.json();
+          if (indData?.weights) setWeights(indData.weights);
+        }
 
         if (res.ok) {
           const data = await res.json();
-          if (data.cycleName) setCycleName(data.cycleName);
-          if (data.evaluationId) setEvaluationId(data.evaluationId);
-          if (data.scores) setScores(data.scores);
-          if (data.explanations) setExplanations(data.explanations);
-          if (data.revisionReason) setRevisionReason(data.revisionReason);
+          setCycleName(data.cycleName || '');
+          setEvaluationId(data.evaluationId || '');
+          setRevisionReason(data.revisionReason || null);
+
+          if (data.status && data.status !== 'NOT_STARTED' && data.scores) {
+            setScores({
+              WPI: data.scores.WPI ?? '',
+              LEI: data.scores.LEI ?? '',
+              CEI: data.scores.CEI ?? '',
+              SDI: data.scores.SDI ?? '',
+            });
+          }
+          if (data.explanations) {
+            setExplanations({
+              WPI: data.explanations.WPI || '',
+              LEI: data.explanations.LEI || '',
+              CEI: data.explanations.CEI || '',
+              SDI: data.explanations.SDI || '',
+            });
+          }
         }
       } catch (e) {
         console.error(e);
@@ -119,14 +159,23 @@ function SelfAssessmentContent() {
     fetchExistingData();
   }, []);
 
+  const indicators: IndicatorConfig[] = useMemo(
+    () =>
+      INDICATOR_DEFINITIONS.map((item) => ({
+        ...item,
+        weight: weights[item.code],
+      })),
+    [weights]
+  );
+
   const calculatedClpi = useMemo(() => {
     let total = 0;
-    INDICATORS.forEach((ind) => {
+    indicators.forEach((ind) => {
       const s = typeof scores[ind.code] === 'number' ? (scores[ind.code] as number) : 0;
       total += (s * ind.weight) / 100;
     });
     return Math.round(total * 10) / 10;
-  }, [scores]);
+  }, [scores, indicators]);
 
   const classification = getClassification(calculatedClpi);
 
@@ -139,6 +188,13 @@ function SelfAssessmentContent() {
     if (!isNaN(val)) {
       const clamped = Math.max(0, Math.min(100, val));
       setScores((prev) => ({ ...prev, [code]: clamped }));
+    }
+    if (validationErrors[`${code}_score`]) {
+      setValidationErrors((prev) => {
+        const next = { ...prev };
+        delete next[`${code}_score`];
+        return next;
+      });
     }
   };
 
@@ -156,7 +212,7 @@ function SelfAssessmentContent() {
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
 
-    INDICATORS.forEach((ind) => {
+    indicators.forEach((ind) => {
       const s = scores[ind.code];
       const exp = (explanations[ind.code] || '').trim();
 
@@ -185,7 +241,7 @@ function SelfAssessmentContent() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('token') || '';
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
       const payload = {
         scores,
         explanations,
@@ -193,25 +249,24 @@ function SelfAssessmentContent() {
         isRevision: isRevisionMode,
       };
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/self-assessment/submit`, {
+      const res = await fetch(`${apiUrl}/clpi/self-assessment/submit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers: getHeaders(),
         body: JSON.stringify(payload),
       });
 
       if (res.ok) {
+        const resData = await res.json().catch(() => ({}));
+        const targetId = resData.evaluationId || evaluationId || 'current';
         showToast('Nộp hồ sơ tự đánh giá CLPI thành công!', 'success');
         setTimeout(() => {
-          router.push(`/clpi-models/evaluations/${evaluationId}`);
+          router.push(`/clpi-models/evaluations/${targetId}`);
         }, 1200);
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         showToast(err.message || 'Nộp hồ sơ thất bại!', 'error');
       }
-    } catch (e) {
+    } catch {
       showToast('Lỗi kết nối máy chủ!', 'error');
     } finally {
       setIsSubmitting(false);
@@ -230,9 +285,11 @@ function SelfAssessmentContent() {
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-28 text-slate-800 animate-in fade-in duration-200">
       {toastMessage && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[160] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold text-white animate-in slide-in-from-top-4 ${
-          toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
-        }`}>
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[160] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold text-white animate-in slide-in-from-top-4 ${
+            toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
+          }`}
+        >
           {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span>{toastMessage.text}</span>
         </div>
@@ -253,7 +310,7 @@ function SelfAssessmentContent() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            Tự đánh giá CLPI – {cycleName}
+            Tự đánh giá CLPI {cycleName ? `– ${cycleName}` : ''}
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-1">
             Nhập điểm tự chấm và đính kèm giải trình cho 4 bộ chỉ số năng lực.
@@ -269,7 +326,7 @@ function SelfAssessmentContent() {
       </div>
 
       <form onSubmit={handleOpenConfirm} className="space-y-5">
-        {INDICATORS.map((ind) => {
+        {indicators.map((ind) => {
           const scoreVal = scores[ind.code];
           const expVal = explanations[ind.code] || '';
           const hasScoreError = Boolean(validationErrors[`${ind.code}_score`]);
@@ -290,9 +347,7 @@ function SelfAssessmentContent() {
                       {ind.name}
                     </h2>
                   </div>
-                  <p className="text-xs text-slate-500 font-medium">
-                    {ind.subTitle}
-                  </p>
+                  <p className="text-xs text-slate-500 font-medium">{ind.subTitle}</p>
                 </div>
 
                 <span className="text-xs font-extrabold text-slate-500 bg-slate-50 px-3 py-1 rounded-xl border border-slate-200 shrink-0">
@@ -304,10 +359,13 @@ function SelfAssessmentContent() {
                 <div className="md:col-span-8 space-y-1.5">
                   <label className="text-[11px] font-bold uppercase text-slate-500 flex items-center justify-between">
                     <span>Giải thích kết quả tự đánh giá {ind.code}: *</span>
-                    <span className="text-[10px] text-slate-400 font-normal">{expVal.length} / 2000 ký tự</span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      {expVal.length} / 2000 ký tự
+                    </span>
                   </label>
                   <textarea
                     rows={4}
+                    maxLength={2000}
                     value={expVal}
                     onChange={(e) => handleExplanationChange(ind.code, e.target.value)}
                     placeholder={ind.explanationPlaceholder}
@@ -353,7 +411,6 @@ function SelfAssessmentContent() {
           );
         })}
 
-        {/* Bottom Summary Bar: Nằm gọn bên phải Sidebar ở màn hình lg */}
         <div className="fixed bottom-0 left-0 lg:left-64 right-0 z-30 bg-slate-900 text-white border-t border-slate-800 shadow-2xl p-4 sm:px-8 transition-all">
           <div className="max-w-4xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-0.5 text-center sm:text-left">
@@ -365,7 +422,7 @@ function SelfAssessmentContent() {
                 </span>
               </div>
               <p className="text-[10px] text-slate-400 italic">
-                * Đây là điểm tự chấm, kết quả chính thức do BTV Đoàn Khoa phê duyệt.
+                Đây là điểm tự chấm, kết quả chính thức do BTV Đoàn Khoa phê duyệt.
               </p>
             </div>
 

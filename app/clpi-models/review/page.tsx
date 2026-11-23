@@ -2,9 +2,13 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { 
-  Hourglass, ClockAlert, CheckCircle2, 
-  Search, Filter, ArrowRight, Loader2, RotateCcw 
+import {
+  Hourglass,
+  ClockAlert,
+  CheckCircle2,
+  Search,
+  Loader2,
+  RotateCcw,
 } from 'lucide-react';
 
 export interface ReviewQueueItem {
@@ -12,9 +16,9 @@ export interface ReviewQueueItem {
   fullName: string;
   unitBranch: string;
   positionName: string;
-  submittedAt: string; // dd/MM/yyyy
+  submittedAt: string;
   selfScore: number;
-  reviewerScore: number | null; // null nếu Chưa chấm
+  reviewerScore: number | null;
   status: 'SUBMITTED' | 'UNDER_REVIEW' | 'NEEDS_REVISION' | 'RESUBMITTED' | 'APPROVED' | 'FINALIZED';
   isOverdue?: boolean;
 }
@@ -34,70 +38,55 @@ export default function ReviewQueuePage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
 
-  // Mock dữ liệu chuẩn xác theo mockup màn hình 8 của BRD
-  const mockQueueData: ReviewQueueItem[] = [
-    {
-      id: 'eval_01',
-      fullName: 'Nguyễn Văn A',
-      unitBranch: 'KTPM2025.1',
-      positionName: 'Bí thư Chi đoàn',
-      submittedAt: '15/08/2026',
-      selfScore: 93.0,
-      reviewerScore: null,
-      status: 'SUBMITTED',
-      isOverdue: false,
-    },
-    {
-      id: 'eval_02',
-      fullName: 'Trần Thị B',
-      unitBranch: 'Ban Học thuật',
-      positionName: 'Trưởng Ban',
-      submittedAt: '14/08/2026',
-      selfScore: 88.5,
-      reviewerScore: null,
-      status: 'SUBMITTED',
-      isOverdue: true,
-    },
-    {
-      id: 'eval_03',
-      fullName: 'Lê Hoàng C',
-      unitBranch: 'CLB GamApp',
-      positionName: 'Chủ nhiệm CLB',
-      submittedAt: '12/08/2026',
-      selfScore: 91.0,
-      reviewerScore: 89.0,
-      status: 'NEEDS_REVISION',
-      isOverdue: false,
-    },
-    {
-      id: 'eval_04',
-      fullName: 'Phạm Minh D',
-      unitBranch: 'KTPM2024.2',
-      positionName: 'Phó Bí thư',
-      submittedAt: '10/08/2026',
-      selfScore: 95.0,
-      reviewerScore: 94.2,
-      status: 'APPROVED',
-      isOverdue: false,
-    },
-  ];
+  const getHeaders = () => {
+    const token = localStorage.getItem('token') || '';
+    let userId = '';
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const parsed = JSON.parse(userStr);
+        const u = parsed.user || parsed;
+        userId = String(u._id || u.id || u.user_id || '').trim();
+      }
+    } catch {}
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (userId) headers['x-user-id'] = userId;
+    return headers;
+  };
 
   const fetchQueue = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/review/queue`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiUrl}/clpi/review/queue`, {
+        headers: getHeaders(),
       });
 
       if (res.ok) {
         const data = await res.json();
-        setQueue(Array.isArray(data) && data.length > 0 ? data : mockQueueData);
+        const mapped: ReviewQueueItem[] = (Array.isArray(data) ? data : []).map((item: any) => ({
+          id: String(item.id || item._id),
+          fullName: item.fullName || '',
+          unitBranch: item.unitBranch || item.unitName || '',
+          positionName: item.positionName || '',
+          submittedAt: item.submittedAt || '',
+          selfScore: Number(item.selfScore ?? item.totalSelfClpi ?? 0),
+          reviewerScore:
+            item.reviewerScore !== null && item.reviewerScore !== undefined
+              ? Number(item.reviewerScore)
+              : item.finalClpiScore !== null && item.finalClpiScore !== undefined
+              ? Number(item.finalClpiScore)
+              : null,
+          status: item.status || 'SUBMITTED',
+          isOverdue: Boolean(item.isOverdue),
+        }));
+        setQueue(mapped);
       } else {
-        setQueue(mockQueueData);
+        setQueue([]);
       }
-    } catch (e) {
-      setQueue(mockQueueData);
+    } catch {
+      setQueue([]);
     } finally {
       setLoading(false);
     }
@@ -107,30 +96,39 @@ export default function ReviewQueuePage() {
     fetchQueue();
   }, []);
 
-  // Tính toán số liệu KPI thẻ trên cùng
   const kpiStats = useMemo(() => {
-    const pendingCount = queue.filter(q => q.status === 'SUBMITTED' || q.status === 'RESUBMITTED' || q.status === 'UNDER_REVIEW').length;
-    const overdueCount = queue.filter(q => q.isOverdue && q.status !== 'APPROVED' && q.status !== 'FINALIZED').length;
-    const approvedCount = queue.filter(q => q.status === 'APPROVED' || q.status === 'FINALIZED').length;
+    const pendingCount = queue.filter(
+      (q) => q.status === 'SUBMITTED' || q.status === 'RESUBMITTED' || q.status === 'UNDER_REVIEW'
+    ).length;
+    const overdueCount = queue.filter(
+      (q) => q.isOverdue && q.status !== 'APPROVED' && q.status !== 'FINALIZED'
+    ).length;
+    const approvedCount = queue.filter(
+      (q) => q.status === 'APPROVED' || q.status === 'FINALIZED'
+    ).length;
     return { pendingCount, overdueCount, approvedCount };
   }, [queue]);
 
   const filteredQueue = useMemo(() => {
-    return queue.filter(item => {
+    return queue.filter((item) => {
       const s = searchTerm.toLowerCase().trim();
-      const matchSearch = !s ||
+      const matchSearch =
+        !s ||
         item.fullName.toLowerCase().includes(s) ||
         item.unitBranch.toLowerCase().includes(s) ||
         item.positionName.toLowerCase().includes(s);
 
-      const matchStatus = statusFilter === 'ALL' || item.status === statusFilter;
+      const matchStatus =
+        statusFilter === 'ALL' ||
+        (statusFilter === 'APPROVED'
+          ? item.status === 'APPROVED' || item.status === 'FINALIZED'
+          : item.status === statusFilter);
       return matchSearch && matchStatus;
     });
   }, [queue, searchTerm, statusFilter]);
 
   return (
     <div className="space-y-6 pb-16 text-slate-800 animate-in fade-in duration-200">
-      {/* 1. Header màn hình */}
       <div className="border-b border-slate-200/80 pb-4">
         <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
           Hồ sơ chờ đánh giá
@@ -140,9 +138,7 @@ export default function ReviewQueuePage() {
         </p>
       </div>
 
-      {/* 2. Hàng 3 Thẻ KPI */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        {/* Card 1: Chờ xử lý */}
         <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Chờ xử lý</p>
@@ -155,7 +151,6 @@ export default function ReviewQueuePage() {
           </div>
         </div>
 
-        {/* Card 2: Sắp quá hạn */}
         <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex items-center justify-between">
           <div>
             <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sắp quá hạn</p>
@@ -168,10 +163,9 @@ export default function ReviewQueuePage() {
           </div>
         </div>
 
-        {/* Card 3: Đã duyệt tuần này */}
         <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs flex items-center justify-between">
           <div>
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Đã duyệt tuần này</p>
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Đã duyệt</p>
             <h3 className="text-3xl font-black text-emerald-600 mt-1">
               {String(kpiStats.approvedCount).padStart(2, '0')}
             </h3>
@@ -182,7 +176,6 @@ export default function ReviewQueuePage() {
         </div>
       </div>
 
-      {/* 3. Thanh tìm kiếm & Lọc trạng thái */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <div className="relative w-full sm:max-w-md">
           <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -203,6 +196,7 @@ export default function ReviewQueuePage() {
           >
             <option value="ALL">Tất cả trạng thái</option>
             <option value="SUBMITTED">Chờ đánh giá</option>
+            <option value="RESUBMITTED">Đã nộp lại</option>
             <option value="NEEDS_REVISION">Cần bổ sung</option>
             <option value="APPROVED">Đã duyệt</option>
           </select>
@@ -223,7 +217,6 @@ export default function ReviewQueuePage() {
         </div>
       </div>
 
-      {/* 4. Bảng danh sách hồ sơ cần thẩm định */}
       <div className="bg-white rounded-3xl border border-slate-200/90 shadow-xs overflow-hidden">
         {loading ? (
           <div className="flex h-64 items-center justify-center">
@@ -250,7 +243,6 @@ export default function ReviewQueuePage() {
 
                   return (
                     <tr key={item.id} className="hover:bg-blue-50/20 transition-colors">
-                      {/* Cột Cán bộ */}
                       <td className="py-4 px-6">
                         <Link
                           href={`/clpi-models/review/${item.id}`}
@@ -260,22 +252,18 @@ export default function ReviewQueuePage() {
                         </Link>
                       </td>
 
-                      {/* Cột Đơn vị / Chức vụ */}
                       <td className="py-4 px-4 font-semibold text-slate-600">
                         {item.unitBranch} • {item.positionName}
                       </td>
 
-                      {/* Cột Ngày nộp */}
                       <td className="py-4 px-4 font-semibold text-slate-500 whitespace-nowrap">
-                        {item.submittedAt}
+                        {item.submittedAt || '—'}
                       </td>
 
-                      {/* Cột Tự chấm */}
                       <td className="py-4 px-4 text-center font-black text-[#0054a5]">
                         {item.selfScore.toFixed(1)}
                       </td>
 
-                      {/* Cột BTV chấm */}
                       <td className="py-4 px-4 text-center font-black">
                         {item.reviewerScore !== null ? (
                           <span className="text-slate-800">{item.reviewerScore.toFixed(1)}</span>
@@ -284,14 +272,14 @@ export default function ReviewQueuePage() {
                         )}
                       </td>
 
-                      {/* Cột Trạng thái */}
                       <td className="py-4 px-4 text-center">
-                        <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold border ${statusObj.style}`}>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold border ${statusObj.style}`}
+                        >
                           {statusObj.label}
                         </span>
                       </td>
 
-                      {/* Cột Thao tác: Nút Thẩm định → hoặc Xem chi tiết → */}
                       <td className="py-4 px-6 text-right whitespace-nowrap">
                         <Link
                           href={`/clpi-models/review/${item.id}`}
@@ -311,7 +299,9 @@ export default function ReviewQueuePage() {
                 {filteredQueue.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400 font-semibold italic">
-                      Hiện không có hồ sơ nào cần thẩm định phù hợp với bộ lọc.
+                      {queue.length === 0
+                        ? 'Hiện chưa có hồ sơ nào được nộp để thẩm định.'
+                        : 'Không tìm thấy hồ sơ phù hợp với bộ lọc.'}
                     </td>
                   </tr>
                 )}

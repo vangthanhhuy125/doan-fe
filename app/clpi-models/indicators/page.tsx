@@ -1,9 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { 
-  Layers, Sliders, Save, CheckCircle2, 
-  AlertCircle, ShieldCheck, Check, Sparkles 
+import { useState, useEffect } from 'react';
+import {
+  Layers,
+  Sliders,
+  Save,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+  PlusCircle,
+  Trash2,
+  X,
 } from 'lucide-react';
 
 interface IndicatorInfo {
@@ -12,6 +19,12 @@ interface IndicatorInfo {
   viName: string;
   desc: string;
   evidences: string[];
+}
+
+interface WeightProfileItem {
+  id: string;
+  title: string;
+  weights: { WPI: number; LEI: number; CEI: number; SDI: number };
 }
 
 const INDICATORS_DATA: IndicatorInfo[] = [
@@ -61,91 +74,221 @@ const INDICATORS_DATA: IndicatorInfo[] = [
   },
 ];
 
-const PRESET_PROFILES = [
-  {
-    id: 'faculty_default',
-    title: 'Bộ Chuẩn Đoàn Khoa (Mặc định)',
-    weights: { WPI: 40, LEI: 25, CEI: 20, SDI: 15 },
-  },
-  {
-    id: 'branch_leaders',
-    title: 'Cán bộ Bí thư Chi đoàn',
-    weights: { WPI: 35, LEI: 30, CEI: 25, SDI: 10 },
-  },
-  {
-    id: 'academic_team',
-    title: 'Ban Học thuật & Kỹ thuật',
-    weights: { WPI: 45, LEI: 20, CEI: 15, SDI: 20 },
-  },
-];
-
 export default function IndicatorsAndWeightsPage() {
-  const [weights, setWeights] = useState({
-    WPI: 40,
-    LEI: 25,
-    CEI: 20,
-    SDI: 15,
+  const [weights, setWeights] = useState({ WPI: 0, LEI: 0, CEI: 0, SDI: 0 });
+  const [profiles, setProfiles] = useState<WeightProfileItem[]>([]);
+  const [selectedPreset, setSelectedPreset] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [creatingProfile, setCreatingProfile] = useState(false);
+  const [newProfileError, setNewProfileError] = useState<string | null>(null);
+  const [newProfile, setNewProfile] = useState({
+    title: '',
+    WPI: 0,
+    LEI: 0,
+    CEI: 0,
+    SDI: 0,
   });
 
-  const [selectedPreset, setSelectedPreset] = useState('faculty_default');
-  const [saveSuccess, setSaveSuccess] = useState(false);
+  const getHeaders = () => {
+    const token = localStorage.getItem('token') || '';
+    let userId = '';
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const parsed = JSON.parse(userStr);
+        const u = parsed.user || parsed;
+        userId = String(u._id || u.id || u.user_id || '').trim();
+      }
+    } catch {}
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (userId) headers['x-user-id'] = userId;
+    return headers;
+  };
+
+  const fetchConfig = async () => {
+    try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiUrl}/clpi/indicators`, { headers: getHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        const loadedWeights = data?.weights || { WPI: 0, LEI: 0, CEI: 0, SDI: 0 };
+        const loadedProfiles: WeightProfileItem[] = Array.isArray(data?.profiles)
+          ? data.profiles
+          : [];
+
+        setWeights(loadedWeights);
+        setProfiles(loadedProfiles);
+
+        const matched = loadedProfiles.find(
+          (p) =>
+            p.weights.WPI === loadedWeights.WPI &&
+            p.weights.LEI === loadedWeights.LEI &&
+            p.weights.CEI === loadedWeights.CEI &&
+            p.weights.SDI === loadedWeights.SDI
+        );
+        setSelectedPreset(matched ? matched.id : '');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchConfig();
+  }, []);
 
   const total = weights.WPI + weights.LEI + weights.CEI + weights.SDI;
   const isValid = total === 100;
 
+  const newProfileTotal = newProfile.WPI + newProfile.LEI + newProfile.CEI + newProfile.SDI;
+  const isNewProfileValid = newProfileTotal === 100 && newProfile.title.trim().length > 0;
+
   const handleWeightChange = (key: keyof typeof weights, val: string) => {
     const num = parseInt(val, 10);
+    setSelectedPreset('');
     setWeights((prev) => ({
       ...prev,
       [key]: isNaN(num) ? 0 : Math.max(0, Math.min(100, num)),
     }));
   };
 
-  const handleApplyPreset = (presetId: string) => {
-    setSelectedPreset(presetId);
-    const found = PRESET_PROFILES.find((p) => p.id === presetId);
-    if (found) {
-      setWeights(found.weights);
+  const handleApplyPreset = (profile: WeightProfileItem) => {
+    setSelectedPreset(profile.id);
+    setWeights({ ...profile.weights });
+  };
+
+  const handleSave = async () => {
+    if (!isValid || saving) return;
+    setSaving(true);
+    setErrorMsg(null);
+    try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiUrl}/clpi/indicators/weights`, {
+        method: 'PUT',
+        headers: getHeaders(),
+        body: JSON.stringify(weights),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || 'Không thể lưu cấu hình trọng số.');
+      }
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (e: any) {
+      setErrorMsg(e?.message || 'Lỗi kết nối máy chủ.');
+    } finally {
+      setSaving(false);
     }
   };
 
-  const handleSave = () => {
-    if (!isValid) return;
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const handleCreateProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isNewProfileValid || creatingProfile) return;
+    setCreatingProfile(true);
+    setNewProfileError(null);
+    try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiUrl}/clpi/indicators/profiles`, {
+        method: 'POST',
+        headers: getHeaders(),
+        body: JSON.stringify({
+          title: newProfile.title.trim(),
+          WPI: newProfile.WPI,
+          LEI: newProfile.LEI,
+          CEI: newProfile.CEI,
+          SDI: newProfile.SDI,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.message || 'Không thể tạo bộ trọng số.');
+      }
+      const created = await res.json();
+      setIsCreateModalOpen(false);
+      setNewProfile({ title: '', WPI: 0, LEI: 0, CEI: 0, SDI: 0 });
+      await fetchConfig();
+      if (created?.id) {
+        setSelectedPreset(created.id);
+        setWeights(created.weights);
+      }
+    } catch (e: any) {
+      setNewProfileError(e?.message || 'Lỗi kết nối máy chủ.');
+    } finally {
+      setCreatingProfile(false);
+    }
   };
+
+  const handleDeleteProfile = async (e: React.MouseEvent, profile: WeightProfileItem) => {
+    e.stopPropagation();
+    if (!confirm(`Xóa bộ trọng số "${profile.title}"?`)) return;
+    try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiUrl}/clpi/indicators/profiles/${profile.id}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      if (res.ok) {
+        if (selectedPreset === profile.id) setSelectedPreset('');
+        await fetchConfig();
+      } else {
+        const err = await res.json().catch(() => ({}));
+        alert(err?.message || 'Không thể xóa bộ trọng số này.');
+      }
+    } catch {
+      alert('Lỗi kết nối máy chủ khi xóa.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#0054a5]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200 text-slate-800">
-      {/* 1. Header Trang */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200/80 pb-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">
             Bộ Chỉ số & Trọng số Đánh giá CLPI
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-1">
-            Định nghĩa 4 nhóm năng lực cốt lõi và điều chỉnh tỷ trọng phần trăm trong công thức CLPI.
+            Định nghĩa 4 nhóm năng lực cốt lõi và quản lý các bộ tỷ trọng phần trăm trong công thức CLPI.
           </p>
         </div>
 
         <button
           type="button"
-          disabled={!isValid}
+          disabled={!isValid || saving}
           onClick={handleSave}
           className="flex items-center gap-2 px-6 py-2.5 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider transition-all border-none cursor-pointer shadow-md shadow-blue-500/20 active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0 self-start sm:self-auto"
         >
-          <Save size={16} /> Lưu cấu hình trọng số
+          <Save size={16} /> {saving ? 'Đang lưu...' : 'Lưu cấu hình trọng số'}
         </button>
       </div>
 
       {saveSuccess && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-800 flex items-center gap-2 animate-in slide-in-from-top-2">
           <CheckCircle2 size={18} className="text-emerald-600" />
-          <span>Đã lưu thành công cấu hình Bộ chỉ số & Trọng số CLPI!</span>
+          <span>Đã lưu thành công cấu hình Bộ chỉ số & Trọng số CLPI vào hệ thống!</span>
         </div>
       )}
 
-      {/* 2. KHỐI 1: CẤU HÌNH TRỌNG SỐ (WEIGHT CONFIGURATION) */}
+      {errorMsg && (
+        <div className="p-4 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-bold text-rose-700 flex items-center gap-2">
+          <AlertCircle size={18} className="shrink-0" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
       <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
           <div className="flex items-center gap-2">
@@ -162,7 +305,6 @@ export default function IndicatorsAndWeightsPage() {
             </div>
           </div>
 
-          {/* Badge kiểm tra tổng trọng số */}
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold text-slate-500">Tổng trọng số:</span>
             <span
@@ -180,40 +322,70 @@ export default function IndicatorsAndWeightsPage() {
         {!isValid && (
           <div className="p-3 bg-rose-50 border border-rose-200 rounded-2xl text-xs font-bold text-rose-700 flex items-center gap-2">
             <AlertCircle size={16} className="shrink-0" />
-            <span>Tổng trọng số hiện tại là {total}%. Vui lòng điều chỉnh để tổng chính xác bằng 100%!</span>
+            <span>
+              Tổng trọng số hiện tại là {total}%. Vui lòng điều chỉnh để tổng chính xác bằng 100%!
+            </span>
           </div>
         )}
 
-        {/* Lựa chọn hồ sơ trọng số mẫu */}
-        <div className="space-y-1.5">
-          <label className="text-[11px] font-bold uppercase text-slate-400">
-            Chọn bộ trọng số đề xuất theo nhóm đối tượng:
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-            {PRESET_PROFILES.map((preset) => {
-              const isSelected = selectedPreset === preset.id;
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  onClick={() => handleApplyPreset(preset.id)}
-                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer ${
-                    isSelected
-                      ? 'bg-blue-50/70 border-[#0054a5] text-[#0054a5] ring-2 ring-blue-100'
-                      : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  <p className="text-xs font-extrabold">{preset.title}</p>
-                  <p className="text-[10px] text-slate-400 mt-1 font-mono">
-                    W:{preset.weights.WPI}% | L:{preset.weights.LEI}% | C:{preset.weights.CEI}% | S:{preset.weights.SDI}%
-                  </p>
-                </button>
-              );
-            })}
+        <div className="space-y-2.5">
+          <div className="flex items-center justify-between">
+            <label className="text-[11px] font-bold uppercase text-slate-400">
+              Danh sách bộ trọng số đã thiết lập ({profiles.length}):
+            </label>
+            <button
+              type="button"
+              onClick={() => {
+                setNewProfileError(null);
+                setNewProfile({ title: '', WPI: 0, LEI: 0, CEI: 0, SDI: 0 });
+                setIsCreateModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-[#0054a5] font-bold rounded-xl text-xs border border-blue-200 cursor-pointer transition-colors"
+            >
+              <PlusCircle size={14} /> Tạo bộ trọng số mới
+            </button>
           </div>
+
+          {profiles.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+              {profiles.map((preset) => {
+                const isSelected = selectedPreset === preset.id;
+                return (
+                  <div
+                    key={preset.id}
+                    onClick={() => handleApplyPreset(preset)}
+                    className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex items-start justify-between gap-2 ${
+                      isSelected
+                        ? 'bg-blue-50/70 border-[#0054a5] text-[#0054a5] ring-2 ring-blue-100'
+                        : 'bg-slate-50/70 border-slate-200 text-slate-700 hover:bg-slate-100'
+                    }`}
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-extrabold truncate">{preset.title}</p>
+                      <p className="text-[10px] text-slate-400 mt-1 font-mono">
+                        W:{preset.weights.WPI}% | L:{preset.weights.LEI}% | C:{preset.weights.CEI}% | S:{preset.weights.SDI}%
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteProfile(e, preset)}
+                      title="Xóa bộ trọng số này"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg border-none bg-transparent cursor-pointer shrink-0"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="p-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50 text-center text-xs text-slate-400 font-medium">
+              Chưa có bộ trọng số nào được tạo. Nhấn{' '}
+              <strong className="text-[#0054a5]">"Tạo bộ trọng số mới"</strong> để thiết lập các bộ tỷ trọng riêng cho từng nhóm cán bộ.
+            </div>
+          )}
         </div>
 
-        {/* 4 Ô Input điều chỉnh phần trăm trọng số */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
           {(['WPI', 'LEI', 'CEI', 'SDI'] as const).map((code) => {
             const val = weights[code];
@@ -246,7 +418,6 @@ export default function IndicatorsAndWeightsPage() {
         </div>
       </div>
 
-      {/* 3. KHỐI 2: CHI TIẾT 4 CHỈ SỐ NĂNG LỰC (INDICATOR DEFINITION & EVIDENCES) */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 px-1">
           <Layers size={18} className="text-[#0054a5]" />
@@ -258,14 +429,12 @@ export default function IndicatorsAndWeightsPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {INDICATORS_DATA.map((ind) => {
             const currentWeight = weights[ind.code];
-
             return (
               <div
                 key={ind.code}
                 className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4 flex flex-col justify-between hover:border-[#0054a5]/30 transition-all"
               >
                 <div className="space-y-3">
-                  {/* Header Card: Mã + Tên + Badge Trọng số */}
                   <div className="flex items-start justify-between border-b border-slate-100 pb-3 gap-2">
                     <div>
                       <div className="flex items-center gap-2">
@@ -276,9 +445,7 @@ export default function IndicatorsAndWeightsPage() {
                           {ind.viName}
                         </h3>
                       </div>
-                      <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
-                        {ind.name}
-                      </p>
+                      <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{ind.name}</p>
                     </div>
 
                     <div className="text-right shrink-0">
@@ -288,13 +455,9 @@ export default function IndicatorsAndWeightsPage() {
                     </div>
                   </div>
 
-                  {/* Mô tả nghiệp vụ */}
-                  <p className="text-xs text-slate-600 leading-relaxed font-medium">
-                    {ind.desc}
-                  </p>
+                  <p className="text-xs text-slate-600 leading-relaxed font-medium">{ind.desc}</p>
                 </div>
 
-                {/* Danh sách minh chứng yêu cầu */}
                 <div className="space-y-2 pt-2 border-t border-slate-100">
                   <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
                     Căn cứ minh chứng yêu cầu khi thẩm định:
@@ -313,6 +476,97 @@ export default function IndicatorsAndWeightsPage() {
           })}
         </div>
       </div>
+
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl border border-slate-100 overflow-hidden">
+            <div className="bg-[#0054a5] px-6 py-4 text-white flex items-center justify-between">
+              <h3 className="font-black text-sm uppercase tracking-wider">
+                Tạo bộ trọng số mới
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsCreateModalOpen(false)}
+                className="p-1 hover:bg-white/20 rounded-full text-white border-none bg-transparent cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProfile} className="p-6 space-y-4 text-xs">
+              {newProfileError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 font-bold">
+                  {newProfileError}
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="font-bold text-slate-600">Tên bộ trọng số *</label>
+                <input
+                  type="text"
+                  required
+                  value={newProfile.title}
+                  onChange={(e) => setNewProfile({ ...newProfile, title: e.target.value })}
+                  placeholder="Nhập tên bộ trọng số..."
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold outline-none focus:border-[#0054a5]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                {(['WPI', 'LEI', 'CEI', 'SDI'] as const).map((code) => (
+                  <div key={code} className="space-y-1">
+                    <label className="font-bold text-slate-600">{code} (%)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={100}
+                      value={newProfile[code]}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        setNewProfile({
+                          ...newProfile,
+                          [code]: isNaN(v) ? 0 : Math.max(0, Math.min(100, v)),
+                        });
+                      }}
+                      className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-black text-[#0054a5] outline-none focus:border-[#0054a5]"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between pt-1">
+                <span className="font-bold text-slate-500">Tổng tỷ trọng:</span>
+                <span
+                  className={`font-black px-2.5 py-1 rounded-lg border ${
+                    newProfileTotal === 100
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : 'bg-rose-50 text-rose-700 border-rose-200'
+                  }`}
+                >
+                  {newProfileTotal}% / 100%
+                </span>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl border-none cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={!isNewProfileValid || creatingProfile}
+                  className="flex items-center gap-1.5 px-5 py-2 bg-[#0054a5] text-white font-bold rounded-xl border-none cursor-pointer disabled:opacity-40"
+                >
+                  <CheckCircle2 size={14} /> {creatingProfile ? 'Đang tạo...' : 'Lưu bộ trọng số'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

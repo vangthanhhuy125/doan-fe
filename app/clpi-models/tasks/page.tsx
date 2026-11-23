@@ -2,10 +2,12 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
-import { 
-  Search, Plus, Calendar, Clock, CheckCircle2, 
-  AlertCircle, Paperclip, ChevronRight, RotateCcw, 
-  Loader2, Filter, FolderKanban
+import {
+  Search,
+  Plus,
+  Paperclip,
+  RotateCcw,
+  Loader2,
 } from 'lucide-react';
 import CreateEvidenceModal from './components/CreateEvidenceModal';
 
@@ -37,98 +39,89 @@ const STATUS_CONFIG = {
   cancelled: { label: 'Đã hủy', style: 'bg-slate-100 text-slate-400 border-slate-200' },
 };
 
+const normalizePriority = (val?: string): TaskItem['priority'] => {
+  const lower = String(val || 'normal').toLowerCase();
+  if (lower === 'high' || lower === 'medium' || lower === 'low') return lower;
+  return 'normal';
+};
+
+const normalizeStatus = (val?: string): TaskItem['status'] => {
+  const lower = String(val || 'not_started').toLowerCase();
+  if (lower === 'in_progress' || lower === 'completed' || lower === 'cancelled') return lower;
+  return 'not_started';
+};
+
+const formatDisplayDate = (val?: string): string => {
+  if (!val) return '---';
+  const trimmed = String(val).trim();
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(trimmed)) return trimmed;
+  if (/^\d{4}-\d{2}-\d{2}/.test(trimmed)) {
+    const [y, m, d] = trimmed.slice(0, 10).split('-');
+    return `${d}/${m}/${y}`;
+  }
+  return trimmed;
+};
+
 export default function MyTasksPage() {
   const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Bộ lọc tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedProgram, setSelectedProgram] = useState('ALL');
   const [selectedStatus, setSelectedStatus] = useState('ALL');
-
-  // Modal tạo minh chứng
   const [isEvidenceModalOpen, setIsEvidenceModalOpen] = useState(false);
-
-  // Dữ liệu mẫu chuẩn hóa theo mockup và BRD
-  const mockTasks: TaskItem[] = [
-    {
-      id: 'task_01',
-      title: 'Tổ chức Tập huấn Lập trình GamApp 2026',
-      activityId: 'act_mhx',
-      activityName: 'Mùa Hè Xanh',
-      priority: 'high',
-      deadline: '20/08/2026',
-      deadlineIso: '2026-08-20',
-      progress: 80,
-      status: 'in_progress',
-      evidenceCount: 3,
-    },
-    {
-      id: 'task_02',
-      title: 'Tổng hợp Minh chứng Hoạt động Học thuật Q2',
-      activityId: 'act_ctd',
-      activityName: 'Công tác Đoàn',
-      priority: 'medium',
-      deadline: '25/08/2026',
-      deadlineIso: '2026-08-25',
-      progress: 45,
-      status: 'in_progress',
-      evidenceCount: 1,
-    },
-    {
-      id: 'task_03',
-      title: 'Lập danh sách Cán bộ tham gia Tập huấn Cán bộ Đoàn',
-      activityId: 'act_xdd',
-      activityName: 'Xây dựng Đoàn',
-      priority: 'normal',
-      deadline: '28/08/2026',
-      deadlineIso: '2026-08-28',
-      progress: 15,
-      status: 'in_progress',
-      evidenceCount: 0,
-    },
-    {
-      id: 'task_04',
-      title: 'Thiết kế Backdrop Ngày hội Tân Sinh viên 2026',
-      activityId: 'act_tsv',
-      activityName: 'Chào Tân Sinh viên',
-      priority: 'normal',
-      deadline: '10/08/2026',
-      deadlineIso: '2026-08-10',
-      progress: 100,
-      status: 'completed',
-      evidenceCount: 2,
-    },
-    {
-      id: 'task_05',
-      title: 'Chuẩn bị văn phòng phẩm cho Đại hội Đoàn Khoa',
-      activityId: 'act_ctd',
-      activityName: 'Công tác Đoàn',
-      priority: 'low',
-      deadline: '05/08/2026',
-      deadlineIso: '2026-08-05',
-      progress: 100,
-      status: 'completed',
-      evidenceCount: 1,
-    },
-  ];
 
   const fetchTasks = async () => {
     setLoading(true);
     try {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
       const token = localStorage.getItem('token') || '';
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/tasks`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
+      let userId = '';
+
+      try {
+        const userStr = localStorage.getItem('user');
+        if (userStr) {
+          const parsed = JSON.parse(userStr);
+          const u = parsed.user || parsed;
+          userId = String(u._id || u.id || u.user_id || '').trim();
+        }
+      } catch {}
+
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      if (userId) headers['x-user-id'] = userId;
+
+      const res = await fetch(`${apiUrl}/clpi/tasks`, { headers });
 
       if (res.ok) {
         const data = await res.json();
-        setTasks(Array.isArray(data) && data.length > 0 ? data : mockTasks);
+        const mapped: TaskItem[] = (Array.isArray(data) ? data : []).map((t: any) => {
+          const rawDeadline = t.deadline || t.deadlineIso || '';
+          const iso =
+            t.deadlineIso ||
+            (/^\d{2}\/\d{2}\/\d{4}$/.test(rawDeadline)
+              ? rawDeadline.split('/').reverse().join('-')
+              : String(rawDeadline).slice(0, 10));
+
+          return {
+            id: String(t.id || t._id),
+            title: t.title || '',
+            activityId: t.activityId || '',
+            activityName: t.activityName || '',
+            priority: normalizePriority(t.priority),
+            deadline: formatDisplayDate(rawDeadline),
+            deadlineIso: iso,
+            progress: Number(t.progress || 0),
+            status: normalizeStatus(t.status),
+            evidenceCount: Number(t.evidenceCount || 0),
+          };
+        });
+        setTasks(mapped);
       } else {
-        setTasks(mockTasks);
+        setTasks([]);
       }
     } catch (e) {
-      setTasks(mockTasks);
+      setTasks([]);
     } finally {
       setLoading(false);
     }
@@ -138,7 +131,6 @@ export default function MyTasksPage() {
     fetchTasks();
   }, []);
 
-  // Kiểm tra quá hạn
   const isTaskOverdue = (task: TaskItem) => {
     if (task.status === 'completed' || task.status === 'cancelled') return false;
     if (!task.deadlineIso) return false;
@@ -146,19 +138,19 @@ export default function MyTasksPage() {
     return task.deadlineIso < today;
   };
 
-  // Tính toán số liệu KPI trước khi áp dụng bộ lọc theo BRD
   const kpiStats = useMemo(() => {
     const total = tasks.length;
-    const inProgress = tasks.filter(t => (t.status === 'in_progress' || t.status === 'not_started') && !isTaskOverdue(t)).length;
-    const completed = tasks.filter(t => t.status === 'completed').length;
-    const overdue = tasks.filter(t => isTaskOverdue(t)).length;
+    const inProgress = tasks.filter(
+      (t) => (t.status === 'in_progress' || t.status === 'not_started') && !isTaskOverdue(t)
+    ).length;
+    const completed = tasks.filter((t) => t.status === 'completed').length;
+    const overdue = tasks.filter((t) => isTaskOverdue(t)).length;
     return { total, inProgress, completed, overdue };
   }, [tasks]);
 
-  // Danh sách chương trình động xuất hiện trong tasks
   const programOptions = useMemo(() => {
     const map = new Map<string, string>();
-    tasks.forEach(t => {
+    tasks.forEach((t) => {
       if (t.activityId && t.activityName) {
         map.set(t.activityId, t.activityName);
       }
@@ -166,32 +158,28 @@ export default function MyTasksPage() {
     return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
   }, [tasks]);
 
-  // Bộ lọc kết hợp Search + Chương trình + Trạng thái (Điều kiện AND)
   const filteredTasks = useMemo(() => {
-    return tasks.filter(t => {
-      // 1. Text Search
-      const s = searchTerm.toLowerCase().trim();
-      const matchSearch = !s || 
-        t.title.toLowerCase().includes(s) || 
-        (t.activityName || '').toLowerCase().includes(s);
+    return tasks
+      .filter((t) => {
+        const s = searchTerm.toLowerCase().trim();
+        const matchSearch =
+          !s ||
+          t.title.toLowerCase().includes(s) ||
+          (t.activityName || '').toLowerCase().includes(s);
 
-      // 2. Lọc chương trình
-      const matchProgram = selectedProgram === 'ALL' || t.activityId === selectedProgram;
+        const matchProgram = selectedProgram === 'ALL' || t.activityId === selectedProgram;
 
-      // 3. Lọc trạng thái
-      let matchStatus = true;
-      const overdue = isTaskOverdue(t);
-      if (selectedStatus === 'overdue') {
-        matchStatus = overdue;
-      } else if (selectedStatus !== 'ALL') {
-        matchStatus = !overdue && t.status === selectedStatus;
-      }
+        let matchStatus = true;
+        const overdue = isTaskOverdue(t);
+        if (selectedStatus === 'overdue') {
+          matchStatus = overdue;
+        } else if (selectedStatus !== 'ALL') {
+          matchStatus = !overdue && t.status === selectedStatus;
+        }
 
-      return matchSearch && matchProgram && matchStatus;
-    }).sort((a, b) => {
-      // Sắp xếp mặc định theo Deadline tăng dần
-      return (a.deadlineIso || '').localeCompare(b.deadlineIso || '');
-    });
+        return matchSearch && matchProgram && matchStatus;
+      })
+      .sort((a, b) => (a.deadlineIso || '').localeCompare(b.deadlineIso || ''));
   }, [tasks, searchTerm, selectedProgram, selectedStatus]);
 
   const hasFilter = searchTerm !== '' || selectedProgram !== 'ALL' || selectedStatus !== 'ALL';
@@ -250,7 +238,6 @@ export default function MyTasksPage() {
 
       {/* 3. Thanh tìm kiếm và Bộ lọc kết hợp */}
       <div className="bg-white p-4 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Ô tìm kiếm Textbox */}
         <div className="relative w-full md:max-w-md">
           <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -262,21 +249,20 @@ export default function MyTasksPage() {
           />
         </div>
 
-        {/* Dropdowns lọc chương trình & trạng thái */}
         <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
-          {/* Dropdown Tất cả chương trình */}
           <select
             value={selectedProgram}
             onChange={(e) => setSelectedProgram(e.target.value)}
             className="p-2 px-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none cursor-pointer focus:border-[#0054a5]"
           >
             <option value="ALL">Tất cả chương trình</option>
-            {programOptions.map(p => (
-              <option key={p.id} value={p.id}>{p.name}</option>
+            {programOptions.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
             ))}
           </select>
 
-          {/* Dropdown Tất cả trạng thái */}
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
@@ -335,9 +321,8 @@ export default function MyTasksPage() {
 
                   return (
                     <tr key={task.id} className="hover:bg-blue-50/20 transition-colors">
-                      {/* Cột Công việc: Title & Độ ưu tiên */}
                       <td className="py-4 px-6">
-                        <Link 
+                        <Link
                           href={`/clpi-models/tasks/${task.id}`}
                           className="font-extrabold text-sm text-slate-900 hover:text-[#0054a5] transition-colors leading-snug no-underline block"
                         >
@@ -348,19 +333,16 @@ export default function MyTasksPage() {
                         </span>
                       </td>
 
-                      {/* Cột Chương trình */}
                       <td className="py-4 px-4 font-semibold text-slate-600">
                         {task.activityName || '—'}
                       </td>
 
-                      {/* Cột Deadline */}
                       <td className="py-4 px-4 font-semibold text-slate-600 whitespace-nowrap">
                         <span className={overdue ? 'text-rose-600 font-bold' : ''}>
                           {task.deadline}
                         </span>
                       </td>
 
-                      {/* Cột Tiến độ: Progress Bar + % */}
                       <td className="py-4 px-4">
                         <div className="flex items-center gap-2.5">
                           <div className="w-24 h-2 bg-slate-100 rounded-full overflow-hidden shrink-0">
@@ -377,14 +359,14 @@ export default function MyTasksPage() {
                         </div>
                       </td>
 
-                      {/* Cột Trạng thái */}
                       <td className="py-4 px-4 text-center">
-                        <span className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold border ${statusObj.style}`}>
+                        <span
+                          className={`inline-block px-3 py-1 rounded-full text-[11px] font-bold border ${statusObj.style}`}
+                        >
                           {statusObj.label}
                         </span>
                       </td>
 
-                      {/* Cột Minh chứng: 📎 N */}
                       <td className="py-4 px-4 text-center">
                         <Link
                           href={`/clpi-models/tasks/${task.id}#evidences`}
@@ -395,7 +377,6 @@ export default function MyTasksPage() {
                         </Link>
                       </td>
 
-                      {/* Cột Thao tác: Chi tiết → */}
                       <td className="py-4 px-6 text-right whitespace-nowrap">
                         <Link
                           href={`/clpi-models/tasks/${task.id}`}
@@ -408,12 +389,11 @@ export default function MyTasksPage() {
                   );
                 })}
 
-                {/* Empty State */}
                 {filteredTasks.length === 0 && (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-400 font-semibold italic">
-                      {tasks.length === 0 
-                        ? 'Bạn chưa có công việc nào được phân công.' 
+                      {tasks.length === 0
+                        ? 'Bạn chưa có công việc nào được phân công.'
                         : 'Không tìm thấy công việc phù hợp với điều kiện tìm kiếm.'}
                     </td>
                   </tr>
@@ -424,10 +404,9 @@ export default function MyTasksPage() {
         )}
       </div>
 
-      {/* Modal tạo minh chứng */}
       {isEvidenceModalOpen && (
         <CreateEvidenceModal
-          tasks={tasks.map(t => ({ id: t.id, title: t.title, activityName: t.activityName }))}
+          tasks={tasks.map((t) => ({ id: t.id, title: t.title, activityName: t.activityName }))}
           onClose={() => setIsEvidenceModalOpen(false)}
           onCreated={fetchTasks}
         />

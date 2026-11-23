@@ -2,9 +2,11 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { 
-  FileText, Calendar, Clock, CheckCircle2, 
-  AlertCircle, Send, Save, Loader2, ArrowRight
+import {
+  CheckCircle2,
+  AlertCircle,
+  Send,
+  Loader2,
 } from 'lucide-react';
 
 interface MonthlyTaskSnapshot {
@@ -14,51 +16,48 @@ interface MonthlyTaskSnapshot {
   result: string;
 }
 
-export default function MonthlyReportPage() {
-  const [loading, setLoading] = useState(true);
-  const [reportId, setReportId] = useState<string>('report_08_2026');
-  const [reportingMonth, setReportingMonth] = useState<string>('08/2026');
-  const [cycleName, setCycleName] = useState<string>('Chu kỳ CLPI Quý II/2026');
-  const [unitName, setUnitName] = useState<string>('Đoàn Khoa Công nghệ Phần mềm');
-  const [officerName, setOfficerName] = useState<string>('Nguyễn Văn A');
-  const [positionName, setPositionName] = useState<string>('Bí thư Chi đoàn');
-  const [unitBranch, setUnitBranch] = useState<string>('Chi đoàn KTPM2025.1');
-  const [deadline, setDeadline] = useState<string>('28/08/2026');
-  const [deadlineIso, setDeadlineIso] = useState<string>('2026-08-28');
+const getLastDayOfReportingMonth = (monthYear: string): string => {
+  const parts = String(monthYear || '').split('/');
+  if (parts.length === 2) {
+    const month = parseInt(parts[0], 10);
+    const year = parseInt(parts[1], 10);
+    if (!isNaN(month) && !isNaN(year) && month >= 1 && month <= 12) {
+      const lastDay = new Date(year, month, 0).getDate();
+      return `${String(lastDay).padStart(2, '0')}/${String(month).padStart(2, '0')}/${year}`;
+    }
+  }
+  const now = new Date();
+  const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return `${String(lastDay).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(
+    2,
+    '0'
+  )}/${now.getFullYear()}`;
+};
 
-  // Trạng thái: DRAFT (Đang soạn thảo) | SUBMITTED (Đã nộp) | NEEDS_REVISION (Cần bổ sung)
+export default function MonthlyReportPage() {
+  const now = new Date();
+  const defaultMonth = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+
+  const [loading, setLoading] = useState(true);
+  const [reportId, setReportId] = useState<string>('');
+  const [reportingMonth, setReportingMonth] = useState<string>(defaultMonth);
+  const [cycleName, setCycleName] = useState<string>('');
+  const [unitName] = useState<string>('Đoàn Khoa Công nghệ Phần mềm');
+  const [officerName, setOfficerName] = useState<string>('');
+  const [positionName, setPositionName] = useState<string>('');
+  const [unitBranch, setUnitBranch] = useState<string>('');
+  const [deadline, setDeadline] = useState<string>(getLastDayOfReportingMonth(defaultMonth));
+
   const [status, setStatus] = useState<'DRAFT' | 'SUBMITTED' | 'NEEDS_REVISION'>('DRAFT');
   const [submittedAt, setSubmittedAt] = useState<string | null>(null);
   const [revisionComment, setRevisionComment] = useState<string | null>(null);
 
-  // Section 1: Task snapshot
-  const [tasksSnapshot, setTasksSnapshot] = useState<MonthlyTaskSnapshot[]>([
-    {
-      taskId: 'task_01',
-      title: 'Tập huấn Lập trình GamApp 2026',
-      progress: 80,
-      result: 'Hoàn thành 2/3 buổi học'
-    },
-    {
-      taskId: 'task_04',
-      title: 'Thiết kế Backdrop Ngày hội Tân SV',
-      progress: 100,
-      result: 'Đã in ấn & nghiệm thu'
-    }
-  ]);
+  const [tasksSnapshot, setTasksSnapshot] = useState<MonthlyTaskSnapshot[]>([]);
+  const [selfAssessment, setSelfAssessment] = useState<string>('');
+  const [difficulties, setDifficulties] = useState<string>('');
+  const [supportProposal, setSupportProposal] = useState<string>('');
 
-  // Section 2, 3, 4: Nội dung người dùng nhập
-  const [selfAssessment, setSelfAssessment] = useState<string>(
-    'Trong tháng 08/2026, tôi đã chủ động hoàn thành các công việc được BTV giao đúng tiến độ, phối hợp tốt với Ban Học thuật tổ chức lớp tập huấn GamApp đạt chất lượng cao.'
-  );
-  const [difficulties, setDifficulties] = useState<string>(
-    'Thời gian tổ chức tập huấn trùng với lịch thi cuối kỳ của một số cán bộ hỗ trợ nên công tác điểm danh còn chậm.'
-  );
-  const [supportProposal, setSupportProposal] = useState<string>(
-    'Đề xuất Đoàn Khoa hỗ trợ thêm kinh phí in ấn tài liệu cho học viên trong các đợt tiếp theo.'
-  );
-
-  const [lastSavedAt, setLastSavedAt] = useState<string>('16:45 hôm nay');
+  const [lastSavedAt, setLastSavedAt] = useState<string>('');
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSubmitModal, setShowSubmitModal] = useState(false);
@@ -72,28 +71,56 @@ export default function MonthlyReportPage() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
+  const getHeaders = () => {
+    const token = localStorage.getItem('token') || '';
+    let userId = '';
+    try {
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        const parsed = JSON.parse(userStr);
+        const u = parsed.user || parsed;
+        userId = String(u._id || u.id || u.user_id || '').trim();
+      }
+    } catch {}
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    if (userId) headers['x-user-id'] = userId;
+    return headers;
+  };
+
   const isReadOnly = status === 'SUBMITTED';
 
   useEffect(() => {
     const fetchReport = async () => {
       try {
-        const token = localStorage.getItem('token') || '';
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/monthly-reports/current`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+        const res = await fetch(`${apiUrl}/clpi/monthly-reports/current`, {
+          headers: getHeaders(),
         });
 
         if (res.ok) {
           const data = await res.json();
-          if (data.id) setReportId(data.id);
-          if (data.reportingMonth) setReportingMonth(data.reportingMonth);
+          const rMonth = data.reportingMonth || defaultMonth;
+          setReportId(String(data.id || data._id || ''));
+          setReportingMonth(rMonth);
+          setCycleName(data.cycleName || '');
+          setOfficerName(data.officerName || '');
+          setPositionName(data.positionName || '');
+          setUnitBranch(data.unitBranch || '');
+
+          // Ưu tiên monthlyDeadline riêng; nếu deadline từ DB không thuộc tháng báo cáo thì tự tính ngày cuối tháng báo cáo
+          const rawDeadline = String(data.monthlyDeadline || data.deadline || '');
+          const isSameMonthYear = rawDeadline.endsWith(`/${rMonth}`);
+          setDeadline(isSameMonthYear ? rawDeadline : getLastDayOfReportingMonth(rMonth));
+
           if (data.status) setStatus(data.status);
-          if (data.selfAssessment) setSelfAssessment(data.selfAssessment);
-          if (data.difficulties) setDifficulties(data.difficulties);
-          if (data.supportProposal) setSupportProposal(data.supportProposal);
-          if (data.tasksSnapshot) setTasksSnapshot(data.tasksSnapshot);
-          if (data.lastSavedAt) setLastSavedAt(data.lastSavedAt);
-          if (data.submittedAt) setSubmittedAt(data.submittedAt);
-          if (data.revisionComment) setRevisionComment(data.revisionComment);
+          setSelfAssessment(data.selfAssessment || '');
+          setDifficulties(data.difficulties || '');
+          setSupportProposal(data.supportProposal || '');
+          setTasksSnapshot(Array.isArray(data.tasksSnapshot) ? data.tasksSnapshot : []);
+          setLastSavedAt(data.lastSavedAt || '');
+          setSubmittedAt(data.submittedAt || null);
+          setRevisionComment(data.revisionComment || null);
         }
       } catch (e) {
         console.error(e);
@@ -105,9 +132,8 @@ export default function MonthlyReportPage() {
     fetchReport();
   }, []);
 
-  // Cơ chế Auto-Save debounce 4 giây
   const triggerAutoSave = () => {
-    if (isReadOnly) return;
+    if (isReadOnly || !reportId) return;
     if (autoSaveTimerRef.current) clearTimeout(autoSaveTimerRef.current);
 
     autoSaveTimerRef.current = setTimeout(async () => {
@@ -116,31 +142,31 @@ export default function MonthlyReportPage() {
   };
 
   const handleSaveDraft = async (isAuto = false) => {
-    if (isReadOnly || isSaving) return;
+    if (isReadOnly || isSaving || !reportId) return;
     setIsSaving(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const nowStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' hôm nay';
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const nowStr =
+        new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' hôm nay';
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/monthly-reports/${reportId}/draft`, {
+      const res = await fetch(`${apiUrl}/clpi/monthly-reports/${reportId}/draft`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           selfAssessment,
           difficulties,
           supportProposal,
-          lastSavedAt: nowStr
-        })
+          lastSavedAt: nowStr,
+        }),
       });
 
-      if (res.ok || !isAuto) {
+      if (res.ok) {
         setLastSavedAt(nowStr);
         if (!isAuto) showToast('Đã lưu bản nháp thành công!', 'success');
+      } else if (!isAuto) {
+        showToast('Lưu bản nháp thất bại!', 'error');
       }
-    } catch (e) {
+    } catch {
       if (!isAuto) showToast('Lưu bản nháp thất bại!', 'error');
     } finally {
       setIsSaving(false);
@@ -157,21 +183,20 @@ export default function MonthlyReportPage() {
       return;
     }
 
+    if (!reportId) return;
+
     setIsSubmitting(true);
     try {
-      const token = localStorage.getItem('token') || '';
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/monthly-reports/${reportId}/submit`, {
+      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+      const res = await fetch(`${apiUrl}/clpi/monthly-reports/${reportId}/submit`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
+        headers: getHeaders(),
         body: JSON.stringify({
           selfAssessment: cleanSelf,
           difficulties: difficulties.trim(),
           supportProposal: supportProposal.trim(),
-          tasksSnapshot
-        })
+          tasksSnapshot,
+        }),
       });
 
       if (res.ok) {
@@ -180,10 +205,10 @@ export default function MonthlyReportPage() {
         setShowSubmitModal(false);
         showToast('Nộp báo cáo công tác tháng thành công!', 'success');
       } else {
-        const err = await res.json();
+        const err = await res.json().catch(() => ({}));
         showToast(err.message || 'Nộp báo cáo thất bại!', 'error');
       }
-    } catch (e) {
+    } catch {
       showToast('Lỗi kết nối máy chủ!', 'error');
     } finally {
       setIsSubmitting(false);
@@ -200,17 +225,17 @@ export default function MonthlyReportPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-16 text-slate-800 animate-in fade-in duration-200">
-      {/* Toast Alert */}
       {toastMessage && (
-        <div className={`fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold text-white animate-in slide-in-from-top-4 ${
-          toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
-        }`}>
+        <div
+          className={`fixed top-6 left-1/2 -translate-x-1/2 z-[150] flex items-center gap-2 px-5 py-3 rounded-2xl shadow-2xl text-xs sm:text-sm font-bold text-white animate-in slide-in-from-top-4 ${
+            toastMessage.type === 'success' ? 'bg-emerald-600' : 'bg-rose-600'
+          }`}
+        >
           {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span>{toastMessage.text}</span>
         </div>
       )}
 
-      {/* Cảnh báo nếu báo cáo bị trả về cần bổ sung */}
       {status === 'NEEDS_REVISION' && revisionComment && (
         <div className="p-4 bg-amber-50 border border-amber-300 rounded-3xl text-xs font-bold text-amber-900 flex items-start gap-3">
           <AlertCircle size={18} className="text-amber-600 shrink-0 mt-0.5" />
@@ -221,18 +246,17 @@ export default function MonthlyReportPage() {
         </div>
       )}
 
-      {/* 1. Header: Tiêu đề báo cáo & Badge trạng thái */}
+      {/* Tiêu đề báo cáo & Trạng thái */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
             Báo cáo công tác tháng {reportingMonth}
           </h1>
           <p className="text-xs text-slate-500 font-medium mt-1">
-            {unitName} — {cycleName}
+            {unitName} {cycleName ? `— ${cycleName}` : ''}
           </p>
         </div>
 
-        {/* Badge trạng thái */}
         <div>
           {status === 'DRAFT' && (
             <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-800 border border-amber-200 px-3.5 py-1 rounded-full text-xs font-bold">
@@ -252,19 +276,19 @@ export default function MonthlyReportPage() {
         </div>
       </div>
 
-      {/* 2. Thông tin cán bộ (Read-only) */}
+      {/* Thông tin cán bộ */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs grid grid-cols-2 sm:grid-cols-4 gap-4">
         <div>
           <p className="text-[11px] font-bold uppercase text-slate-400">Cán bộ:</p>
-          <p className="text-xs sm:text-sm font-extrabold text-slate-800 mt-1">{officerName}</p>
+          <p className="text-xs sm:text-sm font-extrabold text-slate-800 mt-1">{officerName || '---'}</p>
         </div>
         <div>
           <p className="text-[11px] font-bold uppercase text-slate-400">Chức vụ:</p>
-          <p className="text-xs sm:text-sm font-extrabold text-slate-800 mt-1">{positionName}</p>
+          <p className="text-xs sm:text-sm font-extrabold text-slate-800 mt-1">{positionName || '---'}</p>
         </div>
         <div>
           <p className="text-[11px] font-bold uppercase text-slate-400">Đơn vị:</p>
-          <p className="text-xs sm:text-sm font-extrabold text-slate-800 mt-1">{unitBranch}</p>
+          <p className="text-xs sm:text-sm font-extrabold text-slate-800 mt-1">{unitBranch || '---'}</p>
         </div>
         <div>
           <p className="text-[11px] font-bold uppercase text-slate-400">Hạn nộp:</p>
@@ -272,10 +296,10 @@ export default function MonthlyReportPage() {
         </div>
       </div>
 
-      {/* 3. SECTION 1: Nhiệm vụ trong tháng (Tự động đồng bộ) */}
+      {/* Phần 1: Nhiệm vụ trong tháng */}
       <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
         <h3 className="text-xs font-black uppercase text-slate-700 tracking-wider">
-          SECTION 1: NHIỆM VỤ TRONG THÁNG (TỰ ĐỘNG ĐỒNG BỘ)
+          PHẦN 1: NHIỆM VỤ TRONG THÁNG (TỰ ĐỘNG ĐỒNG BỘ)
         </h3>
 
         <div className="overflow-x-auto">
@@ -291,7 +315,10 @@ export default function MonthlyReportPage() {
               {tasksSnapshot.map((t) => (
                 <tr key={t.taskId} className="hover:bg-slate-50/60 transition-colors">
                   <td className="py-3.5 px-4 font-extrabold text-slate-900">
-                    <Link href={`/clpi-models/tasks/${t.taskId}`} className="hover:text-[#0054a5] no-underline text-slate-900">
+                    <Link
+                      href={`/clpi-models/tasks/${t.taskId}`}
+                      className="hover:text-[#0054a5] no-underline text-slate-900"
+                    >
                       {t.title}
                     </Link>
                   </td>
@@ -316,10 +343,10 @@ export default function MonthlyReportPage() {
         </div>
       </div>
 
-      {/* 4. SECTION 2: Tự đánh giá kết quả công tác */}
+      {/* Phần 2: Tự đánh giá kết quả công tác */}
       <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xs space-y-3">
         <label className="text-xs font-black uppercase text-slate-700 tracking-wider block">
-          SECTION 2: TỰ ĐÁNH GIÁ KẾT QUẢ CÔNG TÁC *
+          PHẦN 2: TỰ ĐÁNH GIÁ KẾT QUẢ CÔNG TÁC *
         </label>
         <textarea
           rows={4}
@@ -339,10 +366,10 @@ export default function MonthlyReportPage() {
         )}
       </div>
 
-      {/* 5. SECTION 3: Khó khăn, vướng mắc */}
+      {/* Phần 3: Khó khăn, vướng mắc */}
       <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xs space-y-3">
         <label className="text-xs font-black uppercase text-slate-700 tracking-wider block">
-          SECTION 3: KHÓ KHĂN, VƯỚNG MẮC
+          PHẦN 3: KHÓ KHĂN, VƯỚNG MẮC
         </label>
         <textarea
           rows={3}
@@ -357,10 +384,10 @@ export default function MonthlyReportPage() {
         />
       </div>
 
-      {/* 6. SECTION 4: Đề xuất hỗ trợ */}
+      {/* Phần 4: Đề xuất hỗ trợ */}
       <div className="bg-white p-6 sm:p-7 rounded-3xl border border-slate-200/90 shadow-xs space-y-3">
         <label className="text-xs font-black uppercase text-slate-700 tracking-wider block">
-          SECTION 4: ĐỀ XUẤT HỖ TRỢ
+          PHẦN 4: ĐỀ XUẤT HỖ TRỢ
         </label>
         <textarea
           rows={3}
@@ -375,17 +402,23 @@ export default function MonthlyReportPage() {
         />
       </div>
 
-      {/* 7. Bottom Bar: Lần lưu nháp gần nhất & Action Buttons */}
+      {/* Thanh thao tác cuối trang */}
       <div className="bg-white p-4 sm:p-5 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <span className="text-xs font-semibold text-slate-400">
-          Lần lưu nháp gần nhất: <strong>{lastSavedAt}</strong>
+          {lastSavedAt ? (
+            <>
+              Lần lưu nháp gần nhất: <strong>{lastSavedAt}</strong>
+            </>
+          ) : (
+            'Chưa có bản nháp nào được lưu'
+          )}
         </span>
 
         {!isReadOnly ? (
           <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
             <button
               type="button"
-              disabled={isSaving}
+              disabled={isSaving || !reportId}
               onClick={() => handleSaveDraft(false)}
               className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-2xl text-xs uppercase tracking-wider transition-all border-none cursor-pointer disabled:opacity-50"
             >
@@ -394,8 +427,9 @@ export default function MonthlyReportPage() {
 
             <button
               type="button"
+              disabled={!reportId}
               onClick={() => setShowSubmitModal(true)}
-              className="flex items-center gap-1.5 px-6 py-2.5 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-md shadow-blue-500/20 active:scale-95 transition-all border-none cursor-pointer"
+              className="flex items-center gap-1.5 px-6 py-2.5 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider shadow-md shadow-blue-500/20 active:scale-95 transition-all border-none cursor-pointer disabled:opacity-50"
             >
               <span>{status === 'NEEDS_REVISION' ? 'Nộp lại báo cáo →' : 'Nộp báo cáo →'}</span>
             </button>
@@ -407,7 +441,6 @@ export default function MonthlyReportPage() {
         )}
       </div>
 
-      {/* Modal Xác nhận nộp báo cáo */}
       {showSubmitModal && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
           <div className="bg-white w-full max-w-md rounded-3xl p-6 sm:p-7 space-y-4 shadow-2xl border border-slate-100 text-center">

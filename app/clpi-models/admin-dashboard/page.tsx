@@ -1,44 +1,91 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  Users, Award, Calendar, CheckCircle2, 
-  ClockAlert, ArrowUpRight, TrendingUp, BarChart3,
-  Download, PlusCircle, Search, ChevronRight
-} from 'lucide-react';
+import { ClockAlert, TrendingUp, Download, PlusCircle, Loader2 } from 'lucide-react';
 
 export default function AdminDashboardPage() {
-  const [selectedCycle] = useState('Quý II/2026');
+  const [selectedCycle, setSelectedCycle] = useState('');
+  const [stats, setStats] = useState({
+    totalOfficers: 0,
+    submittedReports: 0,
+    approvedEvaluations: 0,
+    pendingReviews: 0,
+    averageCLPI: 0,
+    excellentRate: 0,
+  });
+  const [unitSummaries, setUnitSummaries] = useState<any[]>([]);
+  const [gradeDistribution, setGradeDistribution] = useState([
+    { label: 'Xuất sắc (≥ 90)', count: 0, pct: 0, color: 'bg-emerald-500' },
+    { label: 'Tốt (80 - 89.9)', count: 0, pct: 0, color: 'bg-blue-600' },
+    { label: 'Đạt (65 - 79.9)', count: 0, pct: 0, color: 'bg-amber-500' },
+    { label: 'Cần hỗ trợ (50 - 64.9)', count: 0, pct: 0, color: 'bg-orange-500' },
+    { label: 'Chưa đạt (< 50)', count: 0, pct: 0, color: 'bg-rose-500' },
+  ]);
+  const [loading, setLoading] = useState(true);
 
-  // Thống kê tổng hợp toàn khoa
-  const stats = {
-    totalOfficers: 42,
-    submittedReports: 39,
-    approvedEvaluations: 34,
-    pendingReviews: 5,
-    averageCLPI: 87.2,
-    excellentRate: 28, // %
-  };
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+        const [dashRes, queueRes] = await Promise.all([
+          fetch(`${apiUrl}/clpi/admin-dashboard`),
+          fetch(`${apiUrl}/clpi/review/queue`),
+        ]);
 
-  const unitSummaries = [
-    { id: '1', name: 'Chi đoàn KTPM2025.1', total: 6, submitted: 6, avgCLPI: 89.4, status: 'Hoàn thành' },
-    { id: '2', name: 'Chi đoàn KTPM2024.1', total: 8, submitted: 8, avgCLPI: 88.1, status: 'Hoàn thành' },
-    { id: '3', name: 'Ban Học thuật', total: 10, submitted: 9, avgCLPI: 86.5, status: 'Chờ duyệt 1' },
-    { id: '4', name: 'Ban Phong trào', total: 9, submitted: 8, avgCLPI: 85.0, status: 'Chờ duyệt 1' },
-    { id: '5', name: 'CLB GamApp', total: 9, submitted: 8, avgCLPI: 87.8, status: 'Chờ duyệt 1' },
-  ];
+        if (dashRes.ok) {
+          const data = await dashRes.json();
+          setSelectedCycle(data.cycleName || '');
+          if (data.stats) setStats(data.stats);
+          setUnitSummaries(Array.isArray(data.unitSummaries) ? data.unitSummaries : []);
+        }
+
+        if (queueRes.ok) {
+          const list = await queueRes.json();
+          const finalized = (Array.isArray(list) ? list : []).filter((e: any) =>
+            ['APPROVED', 'FINALIZED'].includes(e.status)
+          );
+          const counts = [0, 0, 0, 0, 0];
+          finalized.forEach((e: any) => {
+            const s = Number(e.finalClpiScore || 0);
+            if (s >= 90) counts[0]++;
+            else if (s >= 80) counts[1]++;
+            else if (s >= 65) counts[2]++;
+            else if (s >= 50) counts[3]++;
+            else counts[4]++;
+          });
+          setGradeDistribution((prev) =>
+            prev.map((g, i) => ({
+              ...g,
+              count: counts[i],
+              pct: finalized.length > 0 ? Math.round((counts[i] / finalized.length) * 100) : 0,
+            }))
+          );
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[#0054a5]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 pb-12 animate-in fade-in duration-200">
-      {/* Header tổng quan */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs">
         <div>
           <span className="text-[11px] font-black uppercase text-[#0054a5] tracking-wider px-2.5 py-0.5 bg-blue-50 border border-blue-200 rounded-lg">
             Quản trị BTV Đoàn Khoa
           </span>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight mt-1.5">
-            Bảng điều khiển BTV — {selectedCycle}
+            Bảng điều khiển BTV {selectedCycle ? `— ${selectedCycle}` : ''}
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
             Theo dõi tiến độ thẩm định, phê duyệt và hiệu suất cán bộ trên quy mô toàn khoa.
@@ -61,15 +108,16 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards toàn khoa */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs space-y-1">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tổng số cán bộ</p>
           <div className="flex items-baseline gap-2 mt-1">
             <h3 className="text-3xl font-black text-slate-900">{stats.totalOfficers}</h3>
-            <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
-              <TrendingUp size={12} /> 100% active
-            </span>
+            {stats.totalOfficers > 0 && (
+              <span className="text-xs font-semibold text-emerald-600 flex items-center gap-0.5">
+                <TrendingUp size={12} /> Active
+              </span>
+            )}
           </div>
           <p className="text-[11px] text-slate-400 font-medium">Bao gồm BTV, BCH, Chi đoàn & CLB</p>
         </div>
@@ -78,31 +126,36 @@ export default function AdminDashboardPage() {
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tỷ lệ nộp hồ sơ</p>
           <div className="flex items-baseline gap-2 mt-1">
             <h3 className="text-3xl font-black text-[#0054a5]">
-              {Math.round((stats.submittedReports / stats.totalOfficers) * 100)}%
+              {stats.totalOfficers > 0 ? Math.round((stats.submittedReports / stats.totalOfficers) * 100) : 0}%
             </h3>
-            <span className="text-xs font-bold text-slate-400">({stats.submittedReports}/{stats.totalOfficers})</span>
+            <span className="text-xs font-bold text-slate-400">
+              ({stats.submittedReports}/{stats.totalOfficers})
+            </span>
           </div>
-          <p className="text-[11px] text-slate-400 font-medium">Hạn nộp tự chấm: 30/06/2026</p>
+          <p className="text-[11px] text-slate-400 font-medium">Tổng hợp theo chu kỳ hiện tại</p>
         </div>
 
         <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs space-y-1">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">CLPI Trung bình</p>
           <div className="flex items-baseline gap-2 mt-1">
-            <h3 className="text-3xl font-black text-emerald-600">{stats.averageCLPI}</h3>
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-              Tốt
-            </span>
+            <h3 className="text-3xl font-black text-emerald-600">
+              {stats.approvedEvaluations > 0 ? stats.averageCLPI : '—'}
+            </h3>
           </div>
-          <p className="text-[11px] text-slate-400 font-medium">Tăng +1.4 điểm so với Quý I/2026</p>
+          <p className="text-[11px] text-slate-400 font-medium">
+            {stats.approvedEvaluations > 0 ? `Trên ${stats.approvedEvaluations} hồ sơ đã duyệt` : 'Chưa có hồ sơ duyệt'}
+          </p>
         </div>
 
         <div className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs space-y-1">
           <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Hồ sơ chờ BTV duyệt</p>
           <div className="flex items-baseline gap-2 mt-1">
             <h3 className="text-3xl font-black text-amber-600">{stats.pendingReviews}</h3>
-            <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
-              <ClockAlert size={12} /> Cần xử lý
-            </span>
+            {stats.pendingReviews > 0 && (
+              <span className="text-xs font-bold text-amber-600 flex items-center gap-1">
+                <ClockAlert size={12} /> Cần xử lý
+              </span>
+            )}
           </div>
           <Link href="/clpi-models/review" className="text-[11px] font-bold text-[#0054a5] hover:underline block">
             Xem danh sách chờ duyệt →
@@ -110,21 +163,13 @@ export default function AdminDashboardPage() {
         </div>
       </div>
 
-      {/* Cơ cấu xếp loại & Tiến độ đơn vị */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Phân bố xếp loại (5 cols) */}
         <div className="lg:col-span-5 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
           <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
             Cơ cấu xếp loại toàn khoa
           </h2>
           <div className="space-y-3 pt-2">
-            {[
-              { label: 'Xuất sắc (≥ 90)', count: 12, pct: 28, color: 'bg-emerald-500' },
-              { label: 'Tốt (80 - 89.9)', count: 20, pct: 48, color: 'bg-blue-600' },
-              { label: 'Đạt (65 - 79.9)', count: 8, pct: 19, color: 'bg-amber-500' },
-              { label: 'Cần hỗ trợ (50 - 64.9)', count: 2, pct: 5, color: 'bg-orange-500' },
-              { label: 'Chưa đạt (< 50)', count: 0, pct: 0, color: 'bg-rose-500' },
-            ].map((grade) => (
+            {gradeDistribution.map((grade) => (
               <div key={grade.label} className="space-y-1 text-xs">
                 <div className="flex justify-between font-bold">
                   <span className="text-slate-700">{grade.label}</span>
@@ -141,7 +186,6 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* Bảng tiến độ theo đơn vị (7 cols) */}
         <div className="lg:col-span-7 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
           <div className="flex items-center justify-between border-b border-slate-100 pb-3">
             <h2 className="text-xs font-black uppercase text-slate-800 tracking-wider">
@@ -163,20 +207,30 @@ export default function AdminDashboardPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {unitSummaries.map((unit) => (
-                  <tr key={unit.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="py-3 px-3 font-extrabold text-slate-900">{unit.name}</td>
-                    <td className="py-3 px-3 text-center font-bold text-[#0054a5]">
-                      {unit.submitted}/{unit.total} ({Math.round((unit.submitted / unit.total) * 100)}%)
-                    </td>
-                    <td className="py-3 px-3 text-center font-black text-emerald-600">{unit.avgCLPI}</td>
-                    <td className="py-3 px-3 text-right">
-                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-[#0054a5] border border-blue-200">
-                        {unit.status}
-                      </span>
+                {unitSummaries.length > 0 ? (
+                  unitSummaries.map((unit) => (
+                    <tr key={unit.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="py-3 px-3 font-extrabold text-slate-900">{unit.name}</td>
+                      <td className="py-3 px-3 text-center font-bold text-[#0054a5]">
+                        {unit.submitted}/{unit.total} ({unit.total > 0 ? Math.round((unit.submitted / unit.total) * 100) : 0}%)
+                      </td>
+                      <td className="py-3 px-3 text-center font-black text-emerald-600">
+                        {unit.avgCLPI > 0 ? unit.avgCLPI : '—'}
+                      </td>
+                      <td className="py-3 px-3 text-right">
+                        <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-[#0054a5] border border-blue-200">
+                          {unit.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-slate-400 italic font-semibold">
+                      Chưa có dữ liệu đơn vị trực thuộc.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>

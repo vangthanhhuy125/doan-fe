@@ -2,11 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { 
-  FileText, CheckCircle2, Clock, AlertTriangle, 
-  Award, Calendar, Check, UserCheck, 
-  BarChart3, ListTodo, FileSpreadsheet, Loader2,
-  Sparkles
+import {
+  FileText,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  Award,
+  Calendar,
+  Check,
+  UserCheck,
+  BarChart3,
+  ListTodo,
+  FileSpreadsheet,
+  Loader2,
+  Sparkles,
 } from 'lucide-react';
 
 const getClassification = (score: number) => {
@@ -26,99 +35,110 @@ const PRIORITY_BADGES: Record<string, { label: string; style: string }> = {
 
 export default function OfficerDashboardPage() {
   const [loading, setLoading] = useState(true);
-  const [officerName, setOfficerName] = useState<string>('Nguyễn Văn A');
-  const [cycleInfo, setCycleInfo] = useState({
-    name: 'Chu kỳ CLPI Quý II/2026',
-    deadline: '30/06/2026',
-    isActive: true
+  const [officerName, setOfficerName] = useState<string>('');
+  const [cycleInfo, setCycleInfo] = useState<{
+    name: string;
+    deadline: string;
+    isActive: boolean;
+  }>({
+    name: '',
+    deadline: '',
+    isActive: false,
   });
 
-  const [evaluationStatus, setEvaluationStatus] = useState<string>('SUBMITTED');
-  const [evaluationId, setEvaluationId] = useState<string>('eval_current');
+  const [evaluationStatus, setEvaluationStatus] = useState<string>('NOT_STARTED');
+  const [evaluationId, setEvaluationId] = useState<string>('');
 
   const [kpi, setKpi] = useState({
-    activeTasks: 5,
-    upcomingTasksCount: 1,
+    activeTasks: 0,
+    upcomingTasksCount: 0,
     overdueTasks: 0,
     ontimeRate: 100,
-    pendingMonthlyReports: 1,
-    pendingMonthLabel: 'Tháng 08/2026 (Chờ gửi)',
-    clpiStatusLabel: 'Đã nộp tự đánh giá',
-    clpiNextStep: 'Chờ BTV Đoàn Khoa duyệt'
+    pendingMonthlyReports: 0,
+    pendingMonthLabel: 'Không có báo cáo chờ gửi',
+    clpiStatusLabel: 'Chưa bắt đầu',
+    clpiNextStep: 'Chờ cán bộ tự đánh giá',
   });
 
-  const [processSteps, setProcessSteps] = useState([
-    { id: 1, label: 'Khởi tạo', status: 'completed' },
-    { id: 2, label: 'Cập nhật CV', status: 'completed' },
-    { id: 3, label: 'Báo cáo tháng', status: 'completed' },
-    { id: 4, label: 'Tự đánh giá', status: 'completed' },
-    { id: 5, label: 'Đã nộp', status: 'current' },
+  const [processSteps, setProcessSteps] = useState<any[]>([
+    { id: 1, label: 'Khởi tạo', status: 'pending' },
+    { id: 2, label: 'Cập nhật CV', status: 'pending' },
+    { id: 3, label: 'Báo cáo tháng', status: 'pending' },
+    { id: 4, label: 'Tự đánh giá', status: 'pending' },
+    { id: 5, label: 'Đã nộp', status: 'pending' },
     { id: 6, label: 'BTV kiểm tra', status: 'pending' },
-    { id: 7, label: 'Phê duyệt', status: 'pending' }
+    { id: 7, label: 'Phê duyệt', status: 'pending' },
   ]);
 
-  const [upcomingTasks, setUpcomingTasks] = useState<any[]>([
-    {
-      id: 'task_01',
-      title: 'Tổ chức Tập huấn Lập trình GamApp 2026',
-      activityName: 'Mùa Hè Xanh 2026',
-      priority: 'high',
-      progress: 80,
-      deadline: '20/08/2026',
-    },
-    {
-      id: 'task_02',
-      title: 'Tổng hợp Minh chứng Hoạt động Học thuật Q2',
-      activityName: 'Công tác Đoàn',
-      priority: 'medium',
-      progress: 45,
-      deadline: '25/08/2026',
-    }
-  ]);
+  const [upcomingTasks, setUpcomingTasks] = useState<any[]>([]);
 
-  const [lastResult, setLastResult] = useState<any>({
-    cycleName: 'Kết quả Quý I/2026',
-    clpiScore: 93.0,
-    hasResult: true,
-    indicators: [
-      { code: 'WPI', name: 'Nhiệm vụ', weight: 40, score: 94.0 },
-      { code: 'LEI', name: 'Điều hành', weight: 25, score: 92.0 },
-      { code: 'CEI', name: 'Tương tác', weight: 20, score: 91.0 },
-      { code: 'SDI', name: 'Phát triển', weight: 15, score: 93.0 }
-    ],
-    trends: [
-      { cycle: 'Q3/2025', score: 88.5 },
-      { cycle: 'Q4/2025', score: 90.2 },
-      { cycle: 'Q1/2026', score: 93.0 }
-    ]
+  const [lastResult, setLastResult] = useState<{
+    cycleName: string;
+    clpiScore: number;
+    hasResult: boolean;
+    indicators: any[];
+    trends?: any[];
+  }>({
+    cycleName: '',
+    clpiScore: 0,
+    hasResult: false,
+    indicators: [],
+    trends: [],
   });
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const userStr = localStorage.getItem('user');
-        if (userStr) {
-          const u = JSON.parse(userStr);
-          if (u.full_name || u.displayName || u.name) {
-            setOfficerName(u.full_name || u.displayName || u.name);
-          }
-        }
-
         const token = localStorage.getItem('token') || '';
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/dashboard`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
-        });
+        let userId = '';
+
+        try {
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            const parsed = JSON.parse(userStr);
+            const u = parsed.user || parsed;
+            userId = String(u._id || u.id || u.user_id || '').trim();
+            if (u.full_name || u.displayName || u.name) {
+              setOfficerName(u.full_name || u.displayName || u.name);
+            }
+          }
+        } catch {}
+
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (userId) headers['x-user-id'] = userId;
+
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+        const res = await fetch(`${apiUrl}/clpi/dashboard`, { headers });
 
         if (res.ok) {
           const data = await res.json();
           if (data.officerName) setOfficerName(data.officerName);
-          if (data.cycle) setCycleInfo(data.cycle);
+
+          if (data.cycle) {
+            setCycleInfo({
+              name: data.cycle.name || '',
+              deadline: data.cycle.selfDeadline || data.cycle.deadline || '',
+              isActive: data.cycle.status !== 'LOCKED',
+            });
+          } else {
+            setCycleInfo({ name: '', deadline: '', isActive: false });
+          }
+
           if (data.evaluationStatus) setEvaluationStatus(data.evaluationStatus);
-          if (data.evaluationId) setEvaluationId(data.evaluationId);
+          setEvaluationId(data.evaluationId || '');
           if (data.kpi) setKpi(data.kpi);
-          if (data.processSteps) setProcessSteps(data.processSteps);
-          if (data.upcomingTasks) setUpcomingTasks(data.upcomingTasks);
-          if (data.lastResult) setLastResult(data.lastResult);
+          if (Array.isArray(data.processSteps)) setProcessSteps(data.processSteps);
+          setUpcomingTasks(Array.isArray(data.upcomingTasks) ? data.upcomingTasks : []);
+          if (data.lastResult) {
+            setLastResult({
+              cycleName: data.lastResult.cycleName || '',
+              clpiScore: Number(data.lastResult.clpiScore || 0),
+              hasResult: Boolean(data.lastResult.hasResult),
+              indicators: Array.isArray(data.lastResult.indicators) ? data.lastResult.indicators : [],
+              trends: Array.isArray(data.lastResult.trends) ? data.lastResult.trends : [],
+            });
+          }
         }
       } catch (e) {
         console.error(e);
@@ -130,17 +150,21 @@ export default function OfficerDashboardPage() {
     fetchDashboardData();
   }, []);
 
+  const targetEvalId = evaluationId || 'current';
+
   const getSelfAssessmentButton = () => {
     switch (evaluationStatus) {
       case 'DRAFT':
         return { label: 'Tiếp tục tự đánh giá', href: '/clpi-models/self-assessment' };
       case 'SUBMITTED':
+      case 'RESUBMITTED':
       case 'UNDER_REVIEW':
-        return { label: 'Xem hồ sơ đã nộp', href: `/clpi-models/evaluations/${evaluationId}` };
+        return { label: 'Xem hồ sơ đã nộp', href: `/clpi-models/evaluations/${targetEvalId}` };
       case 'NEEDS_REVISION':
-        return { label: 'Bổ sung hồ sơ', href: `/clpi-models/self-assessment?mode=revision` };
+        return { label: 'Bổ sung hồ sơ', href: '/clpi-models/self-assessment?mode=revision' };
+      case 'APPROVED':
       case 'FINALIZED':
-        return { label: 'Xem kết quả CLPI', href: `/clpi-models/evaluations/${evaluationId}/result` };
+        return { label: 'Xem kết quả CLPI', href: `/clpi-models/evaluations/${targetEvalId}/result` };
       default:
         return { label: 'Tự đánh giá CLPI', href: '/clpi-models/self-assessment' };
     }
@@ -159,7 +183,6 @@ export default function OfficerDashboardPage() {
 
   return (
     <div className="space-y-6 pb-12 text-slate-800 animate-in fade-in duration-200">
-      {/* 1. SECTION HEADER CHUẨN PHONG CÁCH ĐOÀN KHOA[cite: 7] */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs">
         <div className="flex items-center gap-3.5">
           <div className="w-12 h-12 rounded-2xl bg-[#0054a5] text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -167,12 +190,19 @@ export default function OfficerDashboardPage() {
           </div>
           <div>
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Xin chào, {officerName} 👋
+              Xin chào, {officerName || 'Cán bộ Đoàn'} 👋
             </h1>
             <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">
-              {cycleInfo.isActive ? (
+              {cycleInfo.isActive && cycleInfo.name ? (
                 <>
-                  {cycleInfo.name} đang diễn ra. Hạn nộp báo cáo tự đánh giá: <strong className="text-[#0054a5] font-bold">{cycleInfo.deadline}</strong>.
+                  {cycleInfo.name} đang diễn ra.
+                  {cycleInfo.deadline && (
+                    <>
+                      {' '}
+                      Hạn nộp báo cáo tự đánh giá:{' '}
+                      <strong className="text-[#0054a5] font-bold">{cycleInfo.deadline}</strong>.
+                    </>
+                  )}
                 </>
               ) : (
                 'Hiện chưa có chu kỳ CLPI đang diễn ra.'
@@ -198,11 +228,9 @@ export default function OfficerDashboardPage() {
         </div>
       </div>
 
-      {/* 2. 4 THẺ KPI CARD DẠNG SQUIRCLE BADGE[cite: 7] */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* KPI 1 */}
         <Link
-          href="/clpi-models/tasks?status=active"
+          href="/clpi-models/tasks"
           className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs hover:border-[#0054a5]/40 hover:shadow-md transition-all no-underline flex flex-col justify-between group"
         >
           <div className="flex items-start justify-between">
@@ -221,9 +249,8 @@ export default function OfficerDashboardPage() {
           </p>
         </Link>
 
-        {/* KPI 2 */}
         <Link
-          href="/clpi-models/tasks?status=overdue"
+          href="/clpi-models/tasks"
           className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs hover:border-emerald-300 hover:shadow-md transition-all no-underline flex flex-col justify-between group"
         >
           <div className="flex items-start justify-between">
@@ -242,7 +269,6 @@ export default function OfficerDashboardPage() {
           </p>
         </Link>
 
-        {/* KPI 3 */}
         <Link
           href="/clpi-models/monthly-report"
           className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs hover:border-amber-300 hover:shadow-md transition-all no-underline flex flex-col justify-between group"
@@ -263,9 +289,8 @@ export default function OfficerDashboardPage() {
           </p>
         </Link>
 
-        {/* KPI 4 */}
         <Link
-          href={`/clpi-models/evaluations/${evaluationId}`}
+          href={`/clpi-models/evaluations/${targetEvalId}`}
           className="bg-white p-5 rounded-3xl border border-slate-200/90 shadow-xs hover:border-purple-300 hover:shadow-md transition-all no-underline flex flex-col justify-between group"
         >
           <div className="flex items-start justify-between">
@@ -285,14 +310,13 @@ export default function OfficerDashboardPage() {
         </Link>
       </div>
 
-      {/* 3. STEPPER TIẾN TRÌNH THỰC HIỆN ĐÁNH GIÁ CLPI */}
       <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-4">
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h2 className="text-xs font-black text-[#0054a5] uppercase tracking-wider">
-            Tiến độ thực hiện đánh giá Chu kỳ {cycleInfo.name.replace('Chu kỳ CLPI ', '')}
+            Tiến độ thực hiện đánh giá {cycleInfo.name ? cycleInfo.name.replace('Chu kỳ CLPI ', 'Chu kỳ ') : 'CLPI'}
           </h2>
           <Link
-            href={`/clpi-models/evaluations/${evaluationId}`}
+            href={`/clpi-models/evaluations/${targetEvalId}`}
             className="text-xs font-bold text-[#0054a5] hover:underline flex items-center gap-1 no-underline"
           >
             Hồ sơ chi tiết →
@@ -338,9 +362,7 @@ export default function OfficerDashboardPage() {
         </div>
       </div>
 
-      {/* 4. CỘT CÔNG VIỆC SẮP ĐẾN HẠN & KẾT QUẢ CLPI GẦN NHẤT */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Cột trái (7 cols) */}
         <div className="lg:col-span-7 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
@@ -371,12 +393,15 @@ export default function OfficerDashboardPage() {
                     </h3>
                   </div>
 
-                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${PRIORITY_BADGES[t.priority]?.style || 'bg-slate-100 text-slate-600'}`}>
+                  <span
+                    className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border shrink-0 ${
+                      PRIORITY_BADGES[t.priority]?.style || 'bg-slate-100 text-slate-600'
+                    }`}
+                  >
                     {PRIORITY_BADGES[t.priority]?.label || t.priority}
                   </span>
                 </div>
 
-                {/* Progress bar */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs font-bold">
                     <span className="text-slate-400">Tiến độ</span>
@@ -392,7 +417,7 @@ export default function OfficerDashboardPage() {
 
                 <div className="flex items-center justify-between pt-1 border-t border-slate-50 text-xs">
                   <span className="text-slate-400 flex items-center gap-1 font-semibold">
-                    <Calendar size={13} /> Hạn: {t.deadline}
+                    <Calendar size={13} /> Hạn: {t.deadline || '—'}
                   </span>
                   <Link
                     href={`/clpi-models/tasks/${t.id}`}
@@ -412,68 +437,87 @@ export default function OfficerDashboardPage() {
           </div>
         </div>
 
-        {/* Cột phải: CLPI Kỳ gần nhất (5 cols) */}
         <div className="lg:col-span-5 space-y-4">
           <h2 className="text-base font-extrabold text-slate-900 tracking-tight">
             CLPI Kỳ gần nhất
           </h2>
 
           <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-5">
-            <div className="p-6 bg-gradient-to-b from-blue-50/70 to-white rounded-2xl border border-blue-100 text-center space-y-2">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                {lastResult.cycleName}
-              </span>
-              <div className="text-5xl font-black text-[#0054a5] tracking-tight">
-                {Number(lastResult.clpiScore).toFixed(1)}
-              </div>
-              <span className={`inline-block px-3.5 py-1 rounded-full text-xs font-extrabold border ${classification.color}`}>
-                {classification.label}
-              </span>
-            </div>
-
-            {/* 4 Nhóm chỉ số Squircle */}
-            <div className="grid grid-cols-2 gap-3">
-              {lastResult.indicators.map((ind: any) => (
-                <div key={ind.code} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
-                  <span className="text-[11px] font-bold text-slate-400">{ind.code} ({ind.weight}%)</span>
-                  <div className="text-xl font-black text-slate-900">
-                    {Number(ind.score).toFixed(1)}
+            {lastResult.hasResult ? (
+              <>
+                <div className="p-6 bg-gradient-to-b from-blue-50/70 to-white rounded-2xl border border-blue-100 text-center space-y-2">
+                  <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                    {lastResult.cycleName}
+                  </span>
+                  <div className="text-5xl font-black text-[#0054a5] tracking-tight">
+                    {Number(lastResult.clpiScore).toFixed(1)}
                   </div>
-                  <p className="text-[10px] text-slate-500 font-semibold truncate">{ind.name}</p>
+                  <span
+                    className={`inline-block px-3.5 py-1 rounded-full text-xs font-extrabold border ${classification.color}`}
+                  >
+                    {classification.label}
+                  </span>
                 </div>
-              ))}
-            </div>
 
-            {/* Biểu đồ xu hướng 3 quý gần nhất */}
-            {lastResult.trends && lastResult.trends.length > 0 && (
-              <div className="p-4 bg-slate-50/60 rounded-2xl border border-slate-100 space-y-2">
-                <p className="text-[11px] font-extrabold text-slate-400 uppercase">Xu hướng 3 quý gần nhất</p>
-                <div className="flex items-end justify-between gap-3 h-20 pt-2">
-                  {lastResult.trends.map((tr: any) => {
-                    const heightPct = Math.max(20, Math.min(100, tr.score));
-                    return (
-                      <div key={tr.cycle} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
-                        <span className="text-[10px] font-bold text-[#0054a5]">{tr.score}</span>
-                        <div className="w-full bg-slate-200 rounded-t-md h-full max-h-12 flex items-end">
-                          <div
-                            className="w-full bg-[#1d92ff] rounded-t-md transition-all duration-500"
-                            style={{ height: `${heightPct}%` }}
-                          />
+                {lastResult.indicators.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3">
+                    {lastResult.indicators.map((ind: any) => (
+                      <div key={ind.code} className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 space-y-1">
+                        <span className="text-[11px] font-bold text-slate-400">
+                          {ind.code} ({ind.weight}%)
+                        </span>
+                        <div className="text-xl font-black text-slate-900">
+                          {Number(ind.score).toFixed(1)}
                         </div>
-                        <span className="text-[10px] text-slate-500 font-semibold">{tr.cycle}</span>
+                        <p className="text-[10px] text-slate-500 font-semibold truncate">{ind.name}</p>
                       </div>
-                    );
-                  })}
+                    ))}
+                  </div>
+                )}
+
+                {lastResult.trends && lastResult.trends.length > 0 && (
+                  <div className="p-4 bg-slate-50/60 rounded-2xl border border-slate-100 space-y-2">
+                    <p className="text-[11px] font-extrabold text-slate-400 uppercase">Xu hướng các kỳ gần nhất</p>
+                    <div className="flex items-end justify-between gap-3 h-20 pt-2">
+                      {lastResult.trends.map((tr: any) => {
+                        const heightPct = Math.max(20, Math.min(100, tr.score));
+                        return (
+                          <div key={tr.cycle} className="flex-1 flex flex-col items-center gap-1.5 h-full justify-end">
+                            <span className="text-[10px] font-bold text-[#0054a5]">{tr.score}</span>
+                            <div className="w-full bg-slate-200 rounded-t-md h-full max-h-12 flex items-end">
+                              <div
+                                className="w-full bg-[#1d92ff] rounded-t-md transition-all duration-500"
+                                style={{ height: `${heightPct}%` }}
+                              />
+                            </div>
+                            <span className="text-[10px] text-slate-500 font-semibold">{tr.cycle}</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <Link
+                  href={`/clpi-models/evaluations/${targetEvalId}/result`}
+                  className="w-full py-3 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all no-underline block text-center shadow-md shadow-blue-500/20"
+                >
+                  <BarChart3 size={15} /> Xem bảng phân tích chi tiết
+                </Link>
+              </>
+            ) : (
+              <div className="py-12 px-4 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-50 text-[#0054a5] flex items-center justify-center mx-auto">
+                  <Award size={24} />
                 </div>
+                <p className="text-sm font-extrabold text-slate-800">
+                  Chưa có kết quả CLPI được công bố
+                </p>
+                <p className="text-xs text-slate-400 font-medium leading-relaxed">
+                  Điểm số và bảng phân tích 4 chỉ số sẽ hiển thị tại đây sau khi Ban Thường vụ phê duyệt hồ sơ đánh giá của bạn.
+                </p>
               </div>
             )}
-
-            <Link
-              href={`/clpi-models/evaluations/${evaluationId}/result`}
-              className="w-full py-3 bg-[#0054a5] hover:bg-blue-700 text-white font-bold rounded-2xl text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all no-underline block text-center shadow-md shadow-blue-500/20"
-            >
-              <BarChart3 size={15} /> Xem bảng phân tích chi tiết
-            </Link>
           </div>
         </div>
       </div>

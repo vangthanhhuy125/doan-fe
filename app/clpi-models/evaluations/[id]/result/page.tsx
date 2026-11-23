@@ -2,9 +2,14 @@
 
 import { useState, useEffect, use } from 'react';
 import Link from 'next/link';
-import { 
-  Award, ThumbsUp, Compass, User, 
-  ArrowLeft, FileText, CheckCircle2, AlertCircle, Loader2 
+import {
+  ThumbsUp,
+  Compass,
+  User,
+  ArrowLeft,
+  FileText,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 
 interface FinalClpiResult {
@@ -22,6 +27,7 @@ interface FinalClpiResult {
   leiFinalScore: number;
   ceiFinalScore: number;
   sdiFinalScore: number;
+  weights?: { WPI: number; LEI: number; CEI: number; SDI: number };
   strengths: string;
   developmentRecommendation: string;
   isPublished: boolean;
@@ -40,44 +46,65 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
   const evaluationId = resolvedParams.id;
 
   const [result, setResult] = useState<FinalClpiResult | null>(null);
+  const [weights, setWeights] = useState({ WPI: 40, LEI: 25, CEI: 20, SDI: 15 });
   const [loading, setLoading] = useState(true);
-
-  // Mock dữ liệu chuẩn xác theo mockup màn hình 7 của BRD
-  const mockResultData: FinalClpiResult = {
-    id: evaluationId || 'eval_current',
-    cycleName: 'Quý II/2026',
-    fullName: 'Nguyễn Văn A',
-    positionName: 'Bí thư Chi đoàn KTPM2025.1',
-    unitName: 'Đoàn Khoa Công nghệ Phần mềm',
-    approvedBy: 'Ban Thường vụ Đoàn Khoa CNPM',
-    approvedAt: '28/06/2026',
-    finalClpiScore: 93.0,
-    finalClassification: 'Xuất sắc',
-    wpiFinalScore: 94.0,
-    leiFinalScore: 92.0,
-    ceiFinalScore: 91.0,
-    sdiFinalScore: 93.0,
-    strengths: 'Đồng chí hoàn thành xuất sắc công tác chuyên môn học thuật, có sáng kiến hay trong hoạt động Mùa Hè Xanh. Tương tác tích cực với đoàn viên.',
-    developmentRecommendation: 'Khuyến khích tiếp tục đăng ký tham gia các khóa đào tạo Lãnh đạo Cấp cao Đoàn Trường để nâng cao thêm chỉ số SDI.',
-    isPublished: true,
-  };
 
   useEffect(() => {
     const fetchResult = async () => {
       try {
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
         const token = localStorage.getItem('token') || '';
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/clpi/evaluations/${evaluationId}/result`, {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        });
+        let userId = '';
+        try {
+          const userStr = localStorage.getItem('user');
+          if (userStr) {
+            const parsed = JSON.parse(userStr);
+            const u = parsed.user || parsed;
+            userId = String(u._id || u.id || u.user_id || '').trim();
+          }
+        } catch {}
+
+        const headers: Record<string, string> = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        if (userId) headers['x-user-id'] = userId;
+
+        const [res, indRes] = await Promise.all([
+          fetch(`${apiUrl}/clpi/evaluations/${evaluationId}/result`, { headers }),
+          fetch(`${apiUrl}/clpi/indicators`, { headers }).catch(() => null),
+        ]);
+
+        if (indRes && indRes.ok) {
+          const indData = await indRes.json();
+          if (indData?.weights) setWeights(indData.weights);
+        }
 
         if (res.ok) {
           const data = await res.json();
-          setResult(data);
+          if (data?.weights) setWeights(data.weights);
+          setResult({
+            id: String(data.id || data._id || evaluationId),
+            cycleName: data.cycleName || '',
+            fullName: data.fullName || '',
+            positionName: data.positionName || '',
+            unitName: data.unitName || data.unitBranch || '',
+            avatarUrl: data.avatarUrl || '',
+            approvedBy: data.approvedBy || '',
+            approvedAt: data.approvedAt || '',
+            finalClpiScore: Number(data.finalClpiScore || 0),
+            finalClassification: data.finalClassification || '',
+            wpiFinalScore: Number(data.wpiFinalScore || 0),
+            leiFinalScore: Number(data.leiFinalScore || 0),
+            ceiFinalScore: Number(data.ceiFinalScore || 0),
+            sdiFinalScore: Number(data.sdiFinalScore || 0),
+            strengths: data.strengths || '',
+            developmentRecommendation: data.developmentRecommendation || '',
+            isPublished: Boolean(data.isPublished || ['APPROVED', 'FINALIZED', 'PUBLISHED'].includes(data.status)),
+          });
         } else {
-          setResult(mockResultData);
+          setResult(null);
         }
-      } catch (e) {
-        setResult(mockResultData);
+      } catch {
+        setResult(null);
       } finally {
         setLoading(false);
       }
@@ -103,7 +130,7 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
         <div className="space-y-1">
           <h2 className="text-lg font-black text-slate-800">Kết quả CLPI chưa được công bố</h2>
           <p className="text-xs text-slate-500 leading-relaxed font-medium">
-            Hồ sơ đánh giá của chu kỳ này hiện đang trong quá trình thẩm định hoặc chờ Ban Thường vụ phê duyệt chính thức.
+            Hồ sơ đánh giá của chu kỳ này hiện chưa có dữ liệu hoặc đang chờ Ban Thường vụ phê duyệt chính thức.
           </p>
         </div>
         <Link
@@ -120,7 +147,6 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
 
   return (
     <div className="max-w-5xl mx-auto space-y-6 pb-16 text-slate-800 animate-in fade-in duration-200">
-      {/* 1. Header Card: Thông tin cán bộ, Người phê duyệt & Thẻ Điểm chính thức */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-5">
           <div className="w-18 h-18 rounded-full bg-blue-50 border-2 border-[#0054a5] flex items-center justify-center font-black text-2xl text-[#0054a5] shrink-0 overflow-hidden">
@@ -137,13 +163,14 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
             <p className="text-xs sm:text-sm text-slate-600 font-semibold">
               Cán bộ: <strong className="text-slate-900">{result.fullName}</strong> • {result.positionName}
             </p>
-            <p className="text-[11px] sm:text-xs text-slate-400 font-medium">
-              Phê duyệt bởi: {result.approvedBy} ngày {result.approvedAt}
-            </p>
+            {result.approvedBy && (
+              <p className="text-[11px] sm:text-xs text-slate-400 font-medium">
+                Phê duyệt bởi: {result.approvedBy} {result.approvedAt ? `ngày ${result.approvedAt}` : ''}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Khối Điểm chính thức (Final Score Box - Góc phải) */}
         <div className="w-full md:w-48 bg-[#002855] text-white rounded-3xl p-5 text-center space-y-2 shrink-0 shadow-lg shadow-blue-900/20">
           <span className="text-[10px] font-black uppercase tracking-wider text-blue-200">
             ĐIỂM CHÍNH THỨC
@@ -159,9 +186,7 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      {/* 2. Hàng 4 Card chỉ số năng lực: WPI, LEI, CEI, SDI (Final Scores) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* WPI Card */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-2">
           <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
             WPI - Hoàn thành nhiệm vụ
@@ -170,11 +195,10 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
             <span className="text-3xl font-black text-[#0054a5]">
               {result.wpiFinalScore.toFixed(1)}
             </span>
-            <span className="text-xs font-bold text-slate-400">(40%)</span>
+            <span className="text-xs font-bold text-slate-400">({weights.WPI}%)</span>
           </div>
         </div>
 
-        {/* LEI Card */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-2">
           <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
             LEI - Điều hành & Phối hợp
@@ -183,11 +207,10 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
             <span className="text-3xl font-black text-emerald-600">
               {result.leiFinalScore.toFixed(1)}
             </span>
-            <span className="text-xs font-bold text-slate-400">(25%)</span>
+            <span className="text-xs font-bold text-slate-400">({weights.LEI}%)</span>
           </div>
         </div>
 
-        {/* CEI Card */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-2">
           <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
             CEI - Tương tác tổ chức
@@ -196,11 +219,10 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
             <span className="text-3xl font-black text-amber-600">
               {result.ceiFinalScore.toFixed(1)}
             </span>
-            <span className="text-xs font-bold text-slate-400">(20%)</span>
+            <span className="text-xs font-bold text-slate-400">({weights.CEI}%)</span>
           </div>
         </div>
 
-        {/* SDI Card */}
         <div className="bg-white p-6 rounded-3xl border border-slate-200/90 shadow-xs space-y-2">
           <p className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider">
             SDI - Phát triển cá nhân
@@ -209,19 +231,17 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
             <span className="text-3xl font-black text-purple-600">
               {result.sdiFinalScore.toFixed(1)}
             </span>
-            <span className="text-xs font-bold text-slate-400">(15%)</span>
+            <span className="text-xs font-bold text-slate-400">({weights.SDI}%)</span>
           </div>
         </div>
       </div>
 
-      {/* 3. Khối Nhận xét của Ban Thường vụ & Hướng phát triển */}
       <div className="bg-white p-6 sm:p-8 rounded-3xl border border-slate-200/90 shadow-xs space-y-5">
         <h3 className="text-xs font-black uppercase text-slate-700 tracking-wider">
           NHẬN XÉT CỦA BAN THƯỜNG VỤ & HƯỚNG PHÁT TRIỂN
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Ưu điểm nổi bật */}
           <div className="p-5 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl space-y-2.5">
             <div className="flex items-center gap-2 text-emerald-800 font-extrabold text-xs uppercase tracking-wide">
               <ThumbsUp size={16} />
@@ -232,7 +252,6 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
             </p>
           </div>
 
-          {/* Nội dung cần phát triển thêm */}
           <div className="p-5 bg-blue-50/70 border border-blue-200/80 rounded-2xl space-y-2.5">
             <div className="flex items-center gap-2 text-[#0054a5] font-extrabold text-xs uppercase tracking-wide">
               <Compass size={16} />
@@ -245,7 +264,6 @@ export default function IndividualClpiResultPage({ params }: { params: Promise<{
         </div>
       </div>
 
-      {/* 4. Link chuyển hướng xem lại bản tự đánh giá ban đầu */}
       <div className="flex justify-start">
         <Link
           href={`/clpi-models/evaluations/${evaluationId}`}
